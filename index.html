@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discipline OS</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0F7B4A">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Cloud sync: only used if you set a sync code with the "Sync" button -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+    <script>
+        // Apply saved theme before first paint so there is no flash
+        try { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); } catch (e) {}
+    </script>
+    <style>
+        @property --pct { syntax: '<number>'; inherits: false; initial-value: 0; }
+
+        /* ============ THEMES ============ */
+        html[data-theme="light"] {
+            --bg: #F3F5F4;
+            --glow-1: rgba(15, 123, 74, 0.09);
+            --glow-2: rgba(240, 180, 40, 0.08);
+            --panel: #FFFFFF;
+            --panel-2: #F1F4F2;
+            --border: #E1E6E3;
+            --border-strong: #C6CEC9;
+            --primary: #0F7B4A;
+            --primary-2: #2BB673;
+            --primary-ink: #FFFFFF;
+            --primary-soft: rgba(15, 123, 74, 0.09);
+            --text: #121816;
+            --muted: #62706A;
+            --danger: #D2352E;
+            --ok: #0F7B4A;
+            --warn: #B98008;
+            --orange: #D35F0B;
+            --shadow: 0 1px 2px rgba(18, 24, 22, 0.05), 0 12px 32px -14px rgba(18, 24, 22, 0.16);
+            --nav-bg: rgba(255, 255, 255, 0.8);
+            --track: #E4E9E6;
+            --overlay: rgba(12, 18, 15, 0.5);
+            --grad: linear-gradient(120deg, #0F7B4A, #2BB673);
+            --truth-bg: #14181A;
+        }
+        html[data-theme="goggins"] {
+            --bg: #0A0A0A;
+            --glow-1: rgba(226, 42, 36, 0.18);
+            --glow-2: rgba(255, 110, 60, 0.06);
+            --panel: #131313;
+            --panel-2: #1B1B1B;
+            --border: #262626;
+            --border-strong: #3B3B3B;
+            --primary: #E32B25;
+            --primary-2: #FF6B45;
+            --primary-ink: #FFFFFF;
+            --primary-soft: rgba(227, 43, 37, 0.14);
+            --text: #F4F2EF;
+            --muted: #9B9893;
+            --danger: #FF4A40;
+            --ok: #3DD47F;
+            --warn: #F3C13A;
+            --orange: #FF9A3D;
+            --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 16px 40px -14px rgba(0, 0, 0, 0.85);
+            --nav-bg: rgba(10, 10, 10, 0.85);
+            --track: #292929;
+            --overlay: rgba(0, 0, 0, 0.78);
+            --grad: linear-gradient(120deg, #B81216, #FF5A3D);
+            --truth-bg: #050505;
+        }
+
+        :root {
+            --font-display: 'Oswald', 'Arial Narrow', Impact, sans-serif;
+            --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background:
+                radial-gradient(900px 520px at 12% -8%, var(--glow-1), transparent 62%),
+                radial-gradient(800px 500px at 100% 0%, var(--glow-2), transparent 60%),
+                var(--bg);
+            background-attachment: fixed;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 15px;
+            line-height: 1.5;
+            overflow-x: hidden;
+            transition: background-color .35s, color .35s;
+        }
+        h1, h2, h3, h4, .brand-logo { font-family: var(--font-display); font-weight: 600; letter-spacing: .02em; }
+        button { font-family: inherit; }
+        :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        /* ============ LOGIN ============ */
+        #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity .5s ease, transform .5s ease; }
+        #login-screen.unlocking { opacity: 0; transform: scale(1.04); pointer-events: none; }
+        .pin-container { background: var(--panel); padding: 44px 36px 36px; border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); text-align: center; max-width: 380px; width: 90%; }
+        .pin-container h2 { font-size: 30px; margin-bottom: 4px; }
+        .pin-container p { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+        .pin-input { background: var(--panel-2); border: 1.5px solid var(--border-strong); color: var(--text); font-size: 30px; padding: 10px; width: 100%; text-align: center; outline: none; letter-spacing: 12px; font-weight: 600; border-radius: 10px; transition: border-color .2s, box-shadow .2s; }
+        .pin-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+        .pin-container.shake { animation: shake .4s; }
+        .pin-container.shake .pin-input { border-color: var(--danger); }
+        @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(4px); } }
+
+        /* ============ NAV ============ */
+        nav { background: var(--nav-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 10px 28px; min-height: 68px; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 10px; transition: background-color .35s; }
+        .brand-logo { font-size: 24px; text-transform: uppercase; letter-spacing: .08em; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .nav-links { display: flex; gap: 2px; flex-wrap: wrap; align-items: center; }
+        .nav-btn { background: none; border: 1px solid transparent; color: var(--muted); font-size: 13.5px; cursor: pointer; padding: 8px 12px; font-weight: 500; border-radius: 8px; transition: color .15s, background .15s; }
+        .nav-btn:hover { color: var(--text); background: var(--panel-2); }
+        .nav-btn.active { color: var(--primary-ink); background: var(--primary); }
+        .theme-toggle { margin-left: 8px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: transform .15s, border-color .15s; }
+        .theme-toggle:hover { transform: translateY(-1px); border-color: var(--primary); }
+        .punish-active-btn { color: var(--danger) !important; border-color: var(--danger) !important; animation: pulse-punish 1.6s infinite; }
+        .nav-btn.active.punish-active-btn { background: var(--danger); color: #fff !important; }
+        @keyframes pulse-punish { 0%,100% { background: color-mix(in srgb, var(--danger) 6%, transparent); } 50% { background: color-mix(in srgb, var(--danger) 22%, transparent); } }
+
+        .container { max-width: 1600px; margin: 24px auto; padding: 0 20px; }
+        .section { display: none; }
+        .section.active { display: block; animation: tabIn .22s ease-out both; }
+        @keyframes tabIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+        .dash-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 20px; transition: background-color .35s, border-color .35s; }
+        .dash-card-title { font-family: var(--font-display); font-size: 17px; font-weight: 500; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: baseline; }
+        .dash-card-title small { font-family: var(--font-body); font-size: 12px; color: var(--muted); font-weight: 500; }
+
+        .btn-exception { background: var(--panel); border: 1.5px solid var(--primary); color: var(--primary); padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 8px; transition: background .15s, color .15s, transform .12s; }
+        .btn-exception:hover { background: var(--primary); color: var(--primary-ink); transform: translateY(-1px); }
+        .btn-exception:active { transform: translateY(0) scale(.98); }
+        .btn-exception.danger { border-color: var(--danger); color: var(--danger); }
+        .btn-exception.danger:hover { background: var(--danger); color: #fff; }
+        .btn-exception.muted { border-color: var(--border-strong); color: var(--muted); }
+        .btn-exception.muted:hover { background: var(--panel-2); color: var(--text); }
+        .link-btn { background: none; border: none; color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+        /* ============ HOME ============ */
+        .home-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+        .today-date-display { font-family: var(--font-display); font-size: 22px; font-weight: 500; }
+        .home-day { color: var(--muted); font-size: 14px; }
+        .hero { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; min-height: 340px; }
+        .hero-streak { padding: 34px 32px; background: var(--grad); color: #fff; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        .hero-streak::after { content: ''; position: absolute; width: 320px; height: 320px; right: -110px; bottom: -130px; border-radius: 50%; background: rgba(255,255,255,.10); }
+        .flame { font-size: 40px; width: fit-content; transform-origin: 50% 90%; }
+        .flame.lit { animation: flicker 1.8s ease-in-out infinite; }
+        .flame.out { filter: grayscale(1); opacity: .6; }
+        @keyframes flicker { 0%,100% { transform: scale(1) rotate(-2deg); } 25% { transform: scale(1.08, 1.14) rotate(2deg); } 50% { transform: scale(.98, 1.05) rotate(-1deg); } 75% { transform: scale(1.06, 1.1) rotate(3deg); } }
+        .streak-num { font-family: var(--font-display); font-weight: 700; font-size: 132px; line-height: 1; letter-spacing: -.02em; margin-top: 4px; }
+        .streak-label { font-family: var(--font-display); font-size: 26px; font-weight: 500; }
+        .streak-note { margin-top: 14px; font-size: 13px; opacity: .88; max-width: 260px; position: relative; z-index: 1; }
+        .hero-quote { padding: 38px 44px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        .hero-quote::before { content: '\201C'; position: absolute; top: -34px; left: 26px; font-family: var(--font-display); font-size: 220px; line-height: 1; color: var(--primary); opacity: .10; pointer-events: none; }
+        .home-quote-text { font-size: 25px; line-height: 1.5; font-weight: 500; font-style: italic; max-width: 62ch; transition: opacity .25s, transform .25s; position: relative; }
+        .home-quote-author { margin-top: 16px; font-weight: 600; color: var(--primary); transition: opacity .25s; }
+        .hero-quote .btn-exception { margin-top: 26px; align-self: flex-start; }
+        .hero-quote.swap .home-quote-text { opacity: 0; transform: translateY(8px); }
+        .hero-quote.swap .home-quote-author { opacity: 0; }
+        .home-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .home-stat-box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; box-shadow: var(--shadow); }
+        .home-stat-label { font-size: 13px; color: var(--muted); font-weight: 500; display: block; margin-bottom: 6px; }
+        .home-stat-value { font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--text); line-height: 1.1; }
+        .home-stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+        .mini-track { height: 6px; background: var(--track); border-radius: 99px; margin-top: 10px; overflow: hidden; }
+        .mini-fill { height: 100%; width: 0; background: var(--grad); border-radius: 99px; transition: width .9s cubic-bezier(.2,.7,.2,1); }
+
+        /* ============ QUOTES ============ */
+        .quote-box { padding: 14px 20px; margin-bottom: 20px; font-style: italic; border-left: 4px solid; background: var(--panel); border-radius: 0 10px 10px 0; font-size: 14px; box-shadow: var(--shadow); }
+        .quote-krishna { border-left-color: var(--primary); }
+        .quote-goggins { border-left-color: var(--danger); }
+        .quote-box strong { font-style: normal; }
+
+        .month-selector { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 12px 18px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); gap: 10px; }
+        .month-selector h2 { font-size: 22px; margin: 0 10px; text-align: center; }
+        .month-selector button { background: transparent; border: 1.5px solid var(--border-strong); color: var(--text); padding: 7px 14px; cursor: pointer; font-size: 13px; font-weight: 600; border-radius: 8px; transition: all .15s; }
+        .month-selector button:hover { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+
+        /* ============ DASHBOARD ============ */
+        .dash-top-grid { display: grid; grid-template-columns: 2fr 1.2fr 2fr; gap: 18px; margin-bottom: 4px; }
+        .dash-top-grid.two { grid-template-columns: 2fr 1fr; }
+        .bars-container { display: flex; justify-content: space-around; align-items: flex-end; gap: 10px; height: 150px; padding-top: 16px; border-bottom: 1px solid var(--border-strong); }
+        .bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+        .bar-val { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+        .bar-track { width: 100%; max-width: 42px; background: var(--track); height: 100%; display: flex; align-items: flex-end; border-radius: 6px 6px 0 0; overflow: hidden; }
+        .bar-fill { width: 100%; background: var(--grad); transition: height .8s cubic-bezier(.2,.7,.2,1); border-radius: 6px 6px 0 0; }
+        .bar-label { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 600; }
+
+        .overall-stats-flex { display: flex; align-items: center; justify-content: space-between; gap: 15px; height: 100%; }
+        .stats-num-box { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .stat-item { background: var(--panel-2); padding: 7px 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .stat-item label { font-size: 13px; color: var(--muted); font-weight: 500; }
+        .stat-item span { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+
+        .stat-circle-ring { --pct: 0; width: 104px; height: 104px; border-radius: 50%; background: conic-gradient(var(--primary) calc(var(--pct) * 1%), var(--track) 0); display: flex; justify-content: center; align-items: center; position: relative; flex-shrink: 0; transition: --pct .9s cubic-bezier(.2,.7,.2,1); }
+        .stat-circle-ring::before { content: ''; position: absolute; inset: 11px; border-radius: 50%; background: var(--panel); }
+        .stat-circle-pct { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--text); position: relative; z-index: 2; }
+
+        /* ============ REPORTS ============ */
+        .report-section-title { font-size: 24px; border-bottom: 1px solid var(--border-strong); padding-bottom: 10px; margin-bottom: 8px; margin-top: 40px; }
+        .report-section-title:first-of-type { margin-top: 0; }
+        .report-note { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+        .multi-month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+        .mm-box { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; transition: transform .15s, border-color .15s; }
+        .mm-box:hover { transform: translateY(-2px); }
+        .mm-box.active-month-box { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+        .mm-box.empty { opacity: .6; }
+        .mm-month-name { font-weight: 600; margin-bottom: 10px; font-size: 14px; }
+        .mm-stats { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); }
+        .mm-pct { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--text); }
+        .mm-bar { height: 5px; background: var(--track); border-radius: 99px; margin-top: 10px; overflow: hidden; }
+        .mm-bar > div { height: 100%; width: 0; border-radius: 99px; transition: width .9s cubic-bezier(.2,.7,.2,1); }
+        .band-good { background: var(--ok); }
+        .band-mid { background: var(--warn); }
+        .band-low { background: var(--danger); }
+
+        .detailed-breakdown-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 24px; margin-bottom: 36px; }
+        .db-header { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--font-display); font-size: 20px; font-weight: 500; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 24px; }
+        .db-gauges { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 22px; }
+        .db-gauge-item { display: flex; flex-direction: column; align-items: center; }
+        .db-gauge-label { margin-top: 10px; font-size: 13px; font-weight: 500; color: var(--muted); }
+        .stat-circle-ring.lg { width: 112px; height: 112px; }
+
+        /* ============ GRID TABLE ============ */
+        .table-wrapper { overflow-x: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 4px; }
+        table.grid-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1150px; }
+        table.grid-table th, table.grid-table td { padding: 7px 4px; text-align: center; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 12px; }
+        table.grid-table th { background: var(--panel-2); font-weight: 600; }
+        th.week-group-header { font-family: var(--font-display); font-size: 13px; font-weight: 500; letter-spacing: .04em; }
+        .habit-title-col { text-align: left !important; padding-left: 12px !important; font-weight: 600; min-width: 250px; background: var(--panel-2); font-size: 13px; position: sticky; left: 0; z-index: 3; }
+        table.grid-table tbody tr:hover td { background: var(--primary-soft); }
+        table.grid-table tbody tr:hover td.habit-title-col { background: var(--panel-2); }
+        .col-today { background: var(--primary-soft) !important; }
+        th.col-today { color: var(--primary); box-shadow: inset 0 -2px 0 var(--primary); }
+
+        .cell-check { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; border: 1.5px solid var(--border-strong); border-radius: 5px; background: var(--panel); cursor: pointer; display: inline-grid; place-content: center; vertical-align: middle; transition: background .15s, border-color .15s; }
+        .cell-check::after { content: ''; width: 9px; height: 5px; border-left: 2px solid var(--primary-ink); border-bottom: 2px solid var(--primary-ink); transform: rotate(-45deg) scale(0); margin-top: -2px; transition: transform .15s; }
+        .cell-check:checked { background: var(--primary); border-color: var(--primary); }
+        .cell-check:checked::after { transform: rotate(-45deg) scale(1); }
+        .cell-check.pop, .pop { animation: pop .32s; }
+        @keyframes pop { 0% { transform: scale(.7); } 60% { transform: scale(1.28); } 100% { transform: scale(1); } }
+
+        .scroll-level-btn { font-weight: 700; font-size: 11px; width: 24px; height: 22px; line-height: 20px; border-radius: 5px; cursor: pointer; display: inline-block; border: 1px solid; user-select: none; }
+        .scroll-level-0 { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); border-color: var(--ok); }
+        .scroll-level-1 { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); border-color: var(--warn); }
+        .scroll-level-2 { background: color-mix(in srgb, var(--orange) 20%, transparent); color: var(--orange); border-color: var(--orange); }
+        .scroll-level-3 { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); border-color: var(--danger); }
+        .class-attendance-btn { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; cursor: pointer; border: 1px solid var(--border-strong); display: inline-block; user-select: none; }
+        .att-yes { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); border-color: var(--ok); }
+        .att-met { background: color-mix(in srgb, #3B82F6 18%, transparent); color: #3B82F6; border-color: #3B82F6; }
+        .att-no { background: var(--panel-2); color: var(--muted); }
+        .cell-exempt { background: var(--panel-2); color: var(--muted); font-size: 9px; font-style: italic; }
+
+        /* ============ TIMETABLE ============ */
+        .punish-banner-tt { display: none; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: color-mix(in srgb, var(--danger) 10%, var(--panel)); border: 1px solid var(--danger); border-left: 6px solid var(--danger); border-radius: 12px; color: var(--text); padding: 14px 20px; margin-bottom: 20px; font-size: 14px; animation: bannerIn .4s ease-out; }
+        .punish-banner-tt strong { color: var(--danger); }
+        @keyframes bannerIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+        .bunk-bank-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 16px; }
+        .bunk-bank-card h3 { font-size: 15px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .bunk-row { margin-bottom: 12px; }
+        .bunk-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+        .bunk-track { background: var(--track); height: 8px; border-radius: 99px; overflow: hidden; }
+        .bunk-fill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.2,.7,.2,1); }
+        .bunk-msg { font-size: 11px; font-weight: 600; margin-top: 3px; }
+        .schedule-grid-container { display: grid; grid-template-columns: repeat(7, minmax(180px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 10px; }
+        .schedule-day-col { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; }
+        .schedule-day-col.is-today { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft), var(--shadow); }
+        .schedule-day-head { background: var(--panel-2); padding: 10px 12px; border-bottom: 1px solid var(--border); font-family: var(--font-display); font-weight: 500; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .schedule-day-head small { font-family: var(--font-body); font-size: 11px; color: var(--muted); font-weight: 500; display: block; }
+        .day-prog { font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-soft); padding: 2px 8px; border-radius: 99px; }
+        .schedule-day-col.is-today .schedule-day-head { background: var(--primary); color: var(--primary-ink); }
+        .schedule-day-col.is-today .schedule-day-head small { color: rgba(255,255,255,.8); }
+        .schedule-day-col.is-today .day-prog { background: rgba(255,255,255,.22); color: #fff; }
+        .schedule-events-list { padding: 8px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .schedule-event-card { background: var(--panel-2); border-radius: 8px; padding: 9px 10px; position: relative; border-left: 4px solid var(--border-strong); transition: background .2s, border-color .2s, opacity .2s; }
+        .schedule-event-card.status-completed { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--panel)); }
+        .schedule-event-card.status-missed { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--panel)); }
+        .schedule-event-card.status-excepted { border-left-color: var(--muted); opacity: .7; }
+        .schedule-event-card.custom-event { border-left-color: var(--orange); }
+        .event-time { font-size: 11px; color: var(--muted); font-weight: 600; }
+        .event-title { font-weight: 600; font-size: 13px; line-height: 1.25; }
+        .event-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+        .event-actions { margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap; }
+        .event-action-btn { background: var(--panel); border: 1px solid var(--border-strong); font-size: 12px; padding: 2px 9px; cursor: pointer; border-radius: 6px; font-weight: 600; color: var(--text); transition: transform .12s, background .12s; }
+        .event-action-btn:hover { transform: translateY(-1px); }
+        .event-action-btn:active { transform: scale(.92); }
+        .btn-green:hover { background: var(--ok); color: #fff; border-color: var(--ok); }
+        .btn-red:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+        .btn-grey:hover { background: var(--muted); color: #fff; }
+
+        /* ============ MODAL ============ */
+        .modal-overlay { position: fixed; inset: 0; background: var(--overlay); display: none; justify-content: center; align-items: center; z-index: 10000; backdrop-filter: blur(3px); padding: 16px; }
+        .modal-overlay.show { display: flex; animation: fadeIn .2s; }
+        .modal-card { background: var(--panel); border: 1px solid var(--border-strong); border-radius: 16px; padding: 26px; width: 100%; max-width: 480px; box-shadow: var(--shadow); animation: popIn .25s cubic-bezier(.2,.9,.3,1.2); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { from { opacity: 0; transform: scale(.94) translateY(8px); } to { opacity: 1; transform: none; } }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 9px 10px; font-family: inherit; font-size: 14px; background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: 8px; color: var(--text); }
+        .form-group input:focus, .aar-form textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+        /* ============ TIMER ============ */
+        .timer-card { background: var(--panel); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 30px; text-align: center; max-width: 620px; margin: 0 auto; transition: box-shadow .4s, border-color .4s; }
+        .timer-card.running { border-color: var(--primary); animation: glow 2.6s ease-in-out infinite; }
+        @keyframes glow { 0%,100% { box-shadow: 0 0 0 0 var(--primary-soft), var(--shadow); } 50% { box-shadow: 0 0 0 14px var(--primary-soft), var(--shadow); } }
+        .timer-tag { background: var(--primary-soft); color: var(--primary); padding: 5px 12px; font-weight: 600; font-size: 13px; border-radius: 99px; }
+        .timer-card h2 { font-size: 30px; margin-top: 12px; }
+        .timer-ring-wrap { position: relative; width: 250px; height: 250px; margin: 22px auto; }
+        .timer-ring-wrap svg { width: 100%; height: 100%; }
+        .tr-bg { fill: none; stroke: var(--track); stroke-width: 9; }
+        .tr-fg { fill: none; stroke: var(--primary); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset .3s linear; }
+        .timer-clock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 58px; font-weight: 600; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+        .timer-presets { display: flex; justify-content: center; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
+        .timer-presets .btn-exception.sel { background: var(--primary); color: var(--primary-ink); }
+        .timer-ctrl-btn { background: var(--primary); color: var(--primary-ink); border: none; padding: 12px 28px; font-size: 15px; font-weight: 600; cursor: pointer; margin: 4px; border-radius: 10px; transition: transform .12s, filter .15s; }
+        .timer-ctrl-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .timer-ctrl-btn:active { transform: scale(.97); }
+        .timer-ctrl-btn.quit { background: var(--danger); }
+        .timer-souls { margin-top: 18px; color: var(--muted); font-size: 13px; }
+
+        /* ============ PUNISHMENT / AAR ============ */
+        .punish-card, .aar-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); padding: 28px; margin-bottom: 24px; }
+        .punish-card h3 { font-size: 22px; margin-bottom: 16px; }
+        .punish-log-item { background: color-mix(in srgb, var(--danger) 9%, var(--panel)); border-left: 4px solid var(--danger); border-radius: 0 10px 10px 0; padding: 12px 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; animation: tabIn .3s ease-out; }
+        .punish-log-item.served { opacity: .55; border-left-color: var(--ok); background: var(--panel-2); }
+        .empty-state { color: var(--muted); padding: 22px; text-align: center; border: 1px dashed var(--border-strong); border-radius: 10px; }
+        .aar-form label { display: block; font-weight: 600; margin-bottom: 6px; }
+        .aar-form textarea { width: 100%; background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: 8px; padding: 10px; font-family: inherit; font-size: 14px; margin-bottom: 14px; color: var(--text); }
+
+        /* ============ ACHIEVEMENTS ============ */
+        .achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 15px; }
+        .ach-badge { background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px; padding: 18px; text-align: center; opacity: .55; filter: grayscale(1); transition: .3s; }
+        .ach-badge.unlocked { opacity: 1; filter: none; border-color: var(--primary); background: var(--primary-soft); }
+        .ach-badge.just-unlocked { animation: unlock 1s cubic-bezier(.2,.9,.3,1.3); }
+        @keyframes unlock { 0% { transform: scale(.85); box-shadow: 0 0 0 0 var(--primary); } 50% { transform: scale(1.06); } 100% { transform: scale(1); box-shadow: 0 0 0 16px transparent; } }
+        .ach-icon { font-size: 34px; margin-bottom: 8px; }
+        .ach-title { font-family: var(--font-display); font-weight: 500; font-size: 18px; margin-bottom: 4px; }
+        .ach-desc { font-size: 12.5px; color: var(--muted); }
+
+        .hard-truth-box { background: var(--truth-bg); color: #F4F2EF; padding: 28px; border-left: 6px solid #E32B25; border-radius: 0 12px 12px 0; font-family: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace; font-size: 15.5px; line-height: 1.7; margin-bottom: 20px; white-space: pre-wrap; min-height: 200px; }
+        .hard-truth-box.typing::after { content: '\258C'; animation: blink .8s steps(1) infinite; color: #E32B25; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* ============ TOAST ============ */
+        #toast-wrap { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+        .toast { background: var(--text); color: var(--bg); padding: 11px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,.3); animation: toastIn .3s cubic-bezier(.2,.9,.3,1.2); }
+        .toast.danger { background: var(--danger); color: #fff; }
+        .toast.win { background: var(--primary); color: var(--primary-ink); font-family: var(--font-display); font-size: 22px; letter-spacing: .06em; padding: 14px 30px; }
+        .toast.out { opacity: 0; transform: translateY(10px); transition: .35s; }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+
+        /* ============ RESPONSIVE ============ */
+        @media (max-width: 1000px) {
+            .dash-top-grid, .dash-top-grid.two { grid-template-columns: 1fr; }
+            .multi-month-grid { grid-template-columns: repeat(2, 1fr); }
+            .hero { grid-template-columns: 1fr; }
+            .hero-quote { padding: 30px 26px; }
+            .home-quote-text { font-size: 20px; }
+        }
+        @media (max-width: 640px) {
+            nav { padding: 10px 14px; }
+            .nav-links { overflow-x: auto; flex-wrap: nowrap; max-width: 100%; padding-bottom: 4px; }
+            .nav-btn { white-space: nowrap; }
+            .home-stats-row { grid-template-columns: 1fr; }
+            .streak-num { font-size: 100px; }
+            .container { padding: 0 12px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <div class="pin-container" id="pin-box">
+            <h2>Discipline OS</h2>
+            <p>Enter your PIN to open the system.</p>
+            <input type="password" id="pin-input" class="pin-input" maxlength="6" inputmode="numeric" autocomplete="off" autofocus />
+        </div>
+    </div>
+
+    <div id="toast-wrap"></div>
+
+    <div id="app-content">
+        <nav>
+            <div class="brand-logo">Discipline OS</div>
+            <div class="nav-links">
+                <button class="nav-btn" data-tab="home" onclick="switchTab('home')">Home</button>
+                <button class="nav-btn" data-tab="tick" onclick="switchTab('tick')">Daily Grid</button>
+                <button class="nav-btn" data-tab="timetable" onclick="switchTab('timetable')">Time Table</button>
+                <button class="nav-btn" data-tab="soul" onclick="switchTab('soul')">Soul Timer</button>
+                <button class="nav-btn" data-tab="punishment" id="nav-punish-btn" onclick="switchTab('punishment')">Punishment</button>
+                <button class="nav-btn" data-tab="report" onclick="switchTab('report')">Reports</button>
+                <button class="nav-btn" data-tab="hard-truth" onclick="switchTab('hard-truth')">Hard Truth</button>
+                <button class="nav-btn" data-tab="achievements" onclick="switchTab('achievements')">Achievements</button>
+                <button class="nav-btn" data-tab="aar" onclick="switchTab('aar')">Weekly AAR</button>
+                <button class="theme-toggle" id="sync-btn" onclick="syncPromptCode()" aria-label="Set up sync" title="Sync across devices">🔗 Sync</button>
+                <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"></button>
+            </div>
+        </nav>
+
+        <div class="container">
+
+            <!-- 0. HOME -->
+            <div id="tab-home" class="section">
+                <div class="home-head">
+                    <div class="today-date-display" id="home-today-date">Loading date...</div>
+                    <div class="home-day" id="home-start-date"></div>
+                    <button class="link-btn" onclick="editStartDate()">Change start date</button>
+                </div>
+
+                <div class="hero">
+                    <div class="hero-streak">
+                        <div class="flame out" id="flame">🔥</div>
+                        <div class="streak-num" id="home-streak">0</div>
+                        <div class="streak-label" id="home-streak-label">day streak</div>
+                        <div class="streak-note" id="home-streak-note"></div>
+                    </div>
+                    <div class="hero-quote" id="hero-quote">
+                        <div class="home-quote-text" id="home-quote-text"></div>
+                        <div class="home-quote-author" id="home-quote-author"></div>
+                        <button class="btn-exception" onclick="generateHomeQuote()">New quote</button>
+                    </div>
+                </div>
+
+                <div class="home-stats-row">
+                    <div class="home-stat-box">
+                        <span class="home-stat-label">Best streak</span>
+                        <span class="home-stat-value" id="home-best-streak">0 days</span>
+                        <div class="home-stat-sub">Since your start date</div>
+                    </div>
+                    <div class="home-stat-box">
+                        <span class="home-stat-label">This month so far</span>
+                        <span class="home-stat-value" id="home-month-completion">0%</span>
+                        <div class="mini-track"><div class="mini-fill" id="home-month-bar"></div></div>
+                    </div>
+                    <div class="home-stat-box">
+                        <span class="home-stat-label">Habits done today</span>
+                        <span class="home-stat-value" id="home-today-progress">0 / 0</span>
+                        <div class="mini-track"><div class="mini-fill" id="home-today-bar"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. DAILY GRID -->
+            <div id="tab-tick" class="section">
+                <div class="month-selector">
+                    <button onclick="changeDateScope(-1, 'month')">&larr; Prev month</button>
+                    <h2 id="current-month-display">August 2026</h2>
+                    <button onclick="changeDateScope(1, 'month')">Next month &rarr;</button>
+                </div>
+
+                <div class="dash-top-grid two">
+                    <div class="dash-card">
+                        <div class="dash-card-title"><span>Weekly progress</span><small>Days elapsed only</small></div>
+                        <div class="bars-container" id="bars-container"></div>
+                    </div>
+                    <div class="dash-card">
+                        <div class="dash-card-title"><span>Month goal</span></div>
+                        <div class="overall-stats-flex">
+                            <div class="stats-num-box">
+                                <div class="stat-item"><label>Goal</label><span id="stat-goal-val">0</span></div>
+                                <div class="stat-item"><label>Completed</label><span id="stat-completed-val">0</span></div>
+                                <div class="stat-item"><label>Left</label><span id="stat-left-val">0</span></div>
+                            </div>
+                            <div class="stat-circle-ring" id="stat-ring-element"><div class="stat-circle-pct" id="stat-ring-pct">0%</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="grid-table">
+                        <thead><tr id="table-week-header-row"></tr><tr id="table-day-header-row"></tr></thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. TIMETABLE -->
+            <div id="tab-timetable" class="section">
+                <div id="tt-punish-alert" class="punish-banner-tt">
+                    <div><strong>Discipline breach:</strong> you have an unserved punishment.</div>
+                    <button class="btn-exception danger" onclick="switchTab('punishment')">Open punishment chamber</button>
+                </div>
+
+                <div class="dash-top-grid two">
+                    <div class="dash-card">
+                        <div class="dash-card-title"><span>Daily routine and exceptions</span><small id="tt-today-lbl"></small></div>
+                        <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+                            Sleep is 8h 20m, counted back from the next day's wake-up. Gym blocks 2.5 hours on 8AM class days. The last 30 minutes before sleep are screen-free.
+                        </p>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="btn-exception" onclick="openCustomEventModal('study')">+ Study session</button>
+                            <button class="btn-exception" onclick="openCustomEventModal('exception')">+ Time exception</button>
+                            <button class="btn-exception" onclick="openCustomEventModal('movie')">+ Movie slot (2x/week)</button>
+                        </div>
+                    </div>
+                    <div class="bunk-bank-card">
+                        <h3>🎓 Bunk bank (75% guard)</h3>
+                        <div id="bunk-bank-rows" style="max-height:170px; overflow-y:auto; padding-right:5px;"></div>
+                    </div>
+                </div>
+
+                <div class="month-selector" style="margin-top:20px;">
+                    <button onclick="changeDateScope(-1, 'week')">&larr; Prev week</button>
+                    <h2 id="tt-week-dates"></h2>
+                    <button onclick="changeDateScope(1, 'week')">Next week &rarr;</button>
+                </div>
+                <div class="schedule-grid-container" id="schedule-grid-cols"></div>
+            </div>
+
+            <!-- 3. SOUL TIMER -->
+            <div id="tab-soul" class="section">
+                <div class="quote-box quote-goggins">
+                    "I don't stop when I'm tired. I stop when I'm done. Take their soul." — <strong>David Goggins</strong>
+                </div>
+                <div class="timer-card" id="timer-card">
+                    <span class="timer-tag">The Soul-Taking Timer</span>
+                    <h2>Zero distraction chamber</h2>
+                    <div class="timer-ring-wrap">
+                        <svg viewBox="0 0 220 220" aria-hidden="true">
+                            <circle class="tr-bg" cx="110" cy="110" r="100"></circle>
+                            <circle class="tr-fg" id="timer-progress" cx="110" cy="110" r="100" stroke-dasharray="628.32" stroke-dashoffset="0" transform="rotate(-90 110 110)"></circle>
+                        </svg>
+                        <div class="timer-clock" id="timer-display">90:00</div>
+                    </div>
+                    <div class="timer-presets">
+                        <button class="btn-exception sel" id="preset-90" onclick="setTimerDuration(90)">📚 90m study block</button>
+                        <button class="btn-exception" id="preset-30" onclick="setTimerDuration(30)">💻 30m project sprint</button>
+                    </div>
+                    <div>
+                        <button class="timer-ctrl-btn" id="timer-start-btn" onclick="toggleTimer()">Start session</button>
+                        <button class="timer-ctrl-btn quit" onclick="quitTimerWithGoggins()">Quit</button>
+                    </div>
+                    <div class="timer-souls" id="timer-souls"></div>
+                </div>
+            </div>
+
+            <!-- 4. PUNISHMENT -->
+            <div id="tab-punishment" class="section">
+                <div class="punish-card">
+                    <h3>⚖️ The punishment protocol</h3>
+                    <div id="punishment-list-container"></div>
+                    <button class="btn-exception danger" style="margin-top:18px;" onclick="clearServedPunishments()">Clear served penalties</button>
+                </div>
+            </div>
+
+            <!-- 5. REPORTS -->
+            <div id="tab-report" class="section">
+                <div class="quote-box quote-goggins">
+                    "You are in danger of living a life so comfortable and soft, that you will die without ever realizing your true potential." — <strong>David Goggins</strong>
+                </div>
+                <h3 class="report-section-title">Daily grid report</h3>
+                <p class="report-note">Each month is scored from your start date up to today. Months outside that range show a dash.</p>
+                <div class="multi-month-grid" id="mm-grid-habits"></div>
+
+                <div class="detailed-breakdown-card">
+                    <div class="db-header">
+                        <span id="db-title-habits">Detailed breakdown</span>
+                        <span id="db-total-habits">—</span>
+                    </div>
+                    <div class="db-gauges" id="db-gauges-habits"></div>
+                </div>
+
+                <div class="quote-box quote-krishna">
+                    "The mind is restless and difficult to restrain, but it is subdued by practice." — <strong>Shri Krishna (Bhagavad Gita 6.35)</strong>
+                </div>
+                <h3 class="report-section-title" style="margin-top:44px;">Time table compliance report</h3>
+                <p class="report-note">Completed blocks divided by blocks that were due. Blocks marked with the scales are excused, and blocks that have not ended yet are not counted.</p>
+                <div class="multi-month-grid" id="mm-grid-timetable"></div>
+
+                <div class="detailed-breakdown-card">
+                    <div class="db-header">
+                        <span id="db-title-timetable">Detailed breakdown</span>
+                        <span id="db-total-timetable">—</span>
+                    </div>
+                    <div class="db-gauges" id="db-gauges-timetable"></div>
+                </div>
+            </div>
+
+            <!-- 6. HARD TRUTH -->
+            <div id="tab-hard-truth" class="section">
+                <div class="dash-card">
+                    <h3 style="font-size:24px; margin-bottom:16px;">🗣️ Hard truth analysis</h3>
+                    <div class="hard-truth-box" id="hard-truth-text"></div>
+                    <button class="btn-exception" onclick="generateHardTruth()">Regenerate analysis</button>
+                </div>
+            </div>
+
+            <!-- 7. ACHIEVEMENTS -->
+            <div id="tab-achievements" class="section">
+                <div class="dash-card">
+                    <h3 style="font-size:24px; margin-bottom:6px;">🏅 Milestones and trophies</h3>
+                    <div class="achievement-grid" id="achievement-grid-container"></div>
+                </div>
+            </div>
+
+            <!-- 8. AAR -->
+            <div id="tab-aar" class="section">
+                <div class="dash-card">
+                    <h3 style="font-size:24px; margin-bottom:16px;">📋 Weekly after action report</h3>
+                    <div class="aar-form">
+                        <label for="aar-failure">1. Biggest failure this week</label><textarea id="aar-failure" rows="3"></textarea>
+                        <label for="aar-plan">2. Battle plan for next week</label><textarea id="aar-plan" rows="3"></textarea>
+                        <button class="btn-exception" onclick="saveAAR()">Submit and archive AAR</button>
+                    </div>
+                    <h4 style="margin-top:30px; border-top:1px solid var(--border); padding-top:16px; font-size:19px;">Archived AAR logs</h4>
+                    <div id="aar-history-list" style="margin-top:12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM EVENT MODAL -->
+    <div id="custom-event-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-bottom:16px; font-size:22px;" id="modal-event-title">Schedule event</h3>
+            <div class="form-group">
+                <label for="ev-date">Date</label>
+                <input type="date" id="ev-date" />
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label for="ev-start">Start time</label><input type="time" id="ev-start" value="12:00"/></div>
+                <div class="form-group" style="flex:1;"><label for="ev-end">End time</label><input type="time" id="ev-end" value="13:30"/></div>
+            </div>
+            <div class="form-group">
+                <label for="ev-desc">Title</label>
+                <input type="text" id="ev-desc" placeholder="e.g. Deep work session" />
+            </div>
+            <input type="hidden" id="ev-type" />
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn-exception muted" onclick="closeCustomEventModal()">Cancel</button>
+                <button class="btn-exception" onclick="saveCustomEvent()">Add to timetable</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* =====================================================
+           CONFIG
+        ===================================================== */
+        const CORRECT_PIN = "976084";
+        const DEFAULT_START_ISO = "2026-08-20";   // first day counted in streaks and reports
+        const STREAK_MIN_PCT = 70;                // a day counts toward the streak at this % of habits done
+
+        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const DAY_ABBR = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+        const MASTER_QUOTES = [
+            "\"Don't stop when you're tired. Stop when you are done.\" — David Goggins",
+            "\"For him who has conquered the mind, the mind is the best of friends; but for one who has failed to do so, his mind will remain the greatest enemy.\" — Shri Krishna (Gita 6.6)",
+            "\"You are in danger of living a life so comfortable and soft, that you will die without ever realizing your true potential.\" — David Goggins",
+            "\"The mind is restless and difficult to restrain, but it is subdued by practice.\" — Shri Krishna (Gita 6.35)",
+            "\"Nobody cares what you did yesterday. What have you done today to better yourself?\" — David Goggins",
+            "\"A man's own self is his friend. A man's own self is his foe.\" — Shri Krishna",
+            "\"The only way to grow is to suffer. You have to callous your mind.\" — David Goggins",
+            "\"He who has no attachments can really love others, for his love is pure and divine.\" — Shri Krishna",
+            "\"Motivation is crap. Motivation comes and goes. When you’re driven, whatever is in front of you will get destroyed.\" — David Goggins",
+            "\"Perform your obligatory duty, because action is indeed better than inaction.\" — Shri Krishna",
+            "\"It’s so easy to be great nowadays, because everyone else is weak.\" — David Goggins",
+            "\"You have the right to work, but never to the fruit of work.\" — Shri Krishna",
+            "\"There is no magic pill. There is no special hack. You just have to put in the work.\" — David Goggins",
+            "\"Set thy heart upon thy work, but never on its reward.\" — Shri Krishna",
+            "\"Be more than motivated, be more than driven, become literally obsessed to the point where people think you're fucking nuts.\" — David Goggins",
+            "\"We must elevate ourselves by our own mind, not degrade ourselves.\" — Shri Krishna",
+            "\"Suffering is the true test of life.\" — David Goggins",
+            "\"One who sees inaction in action, and action in inaction, is intelligent among men.\" — Shri Krishna",
+            "\"Take their souls. Show them what you are capable of.\" — David Goggins",
+            "\"When a man dwells on the pleasure of sense, attraction for them arises in him.\" — Shri Krishna",
+            "\"Do not let your mind control you. Control your mind.\" — David Goggins",
+            "\"The wise work for the welfare of the world, without thought for themselves.\" — Shri Krishna",
+            "\"You're gonna have to go to the darkest place in your mind to find who you really are.\" — David Goggins",
+            "\"Reshape yourself through the power of your will.\" — Shri Krishna",
+            "\"Greatness pulls mediocrity into the mud. Get out there and get after it.\" — David Goggins",
+            "\"A mind completely controlled is a friend, otherwise it acts like an enemy.\" — Shri Krishna",
+            "\"To grow, you must be willing to suffer.\" — David Goggins",
+            "\"Lust, anger, and greed are the three doors to hell.\" — Shri Krishna",
+            "\"Mental toughness is a lifestyle.\" — David Goggins",
+            "\"Sever the ignorant doubt in your heart with the sword of self-knowledge.\" — Shri Krishna",
+            "\"I don’t care if you're the smartest person in the world, you have to outwork everyone.\" — David Goggins",
+            "\"Whatever happened, happened for the good. Whatever is happening, is happening for the good.\" — Shri Krishna",
+            "\"Pain unlocks a secret doorway in the mind, one that leads to both peak performance and beautiful silence.\" — David Goggins",
+            "\"Through selfless service, you will always be fruitful and find the fulfillment of your desires.\" — Shri Krishna",
+            "\"Embrace the suck.\" — David Goggins",
+            "\"There is nothing lost or wasted in this life.\" — Shri Krishna"
+        ];
+
+        const HABITS = [
+            { id: "sleep", name: "😴 7–9h Sleep", freq: "daily" },
+            { id: "classes", name: "🎓 Classes / 75%+ Attendance", freq: "daily", type: "tristate" },
+            { id: "study", name: "📚 90 Min Self Study", freq: "daily" },
+            { id: "project_work", name: "💻 30+ Min Project Work (Mon & Sun)", freq: "mon_sun_only" },
+            { id: "gym", name: "🏋️ Gym Workout", freq: "daily" },
+            { id: "media_scroll", name: "📵 Scrolling Control (Level 0–3)", freq: "daily", type: "scroll_numeric" },
+            { id: "no_phone_morning", name: "☀️ No Phone First 30 Min", freq: "daily" },
+            { id: "no_phone_night", name: "📱 No Phone Last 30 Min", freq: "daily" },
+            { id: "water", name: "💧 3L Water Target", freq: "daily" },
+            { id: "skin_care", name: "🧴 Skin Care", freq: "daily" },
+            { id: "reading", name: "📖 Reading Daily", freq: "daily" },
+            { id: "fruit", name: "🍎 Eat a Fruit Daily", freq: "daily" }
+        ];
+
+        const TT_BLUEPRINT = {
+            "Monday": [
+                { id: "mon_1", time: "05:30-05:45", title: "Wake Up & 🍎 Fruit", type: "routine" },
+                { id: "mon_gym", time: "05:45-07:00", title: "🏋️ Morning Gym", type: "gym" },
+                { id: "mon_4", time: "11:00-11:55", title: "Operating Systems", room: "10204", type: "class", subCode: "OS" },
+                { id: "mon_online", time: "16:00-17:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "mon_6", time: "17:30-19:00", title: "📚 90 Min Self Study", type: "study" },
+                { id: "mon_7", time: "20:40-21:10", title: "Night Routine (Read/No Screens) -> Sleep at 21:10", type: "routine" }
+            ],
+            "Tuesday": [
+                { id: "tue_1", time: "05:30-05:45", title: "Wake Up & 🍎 Fruit", type: "routine" },
+                { id: "tue_2", time: "05:45-07:00", title: "🏋️ Morning Gym", type: "gym" },
+                { id: "tue_4", time: "08:00-08:55", title: "Frontend Development", room: "4003", type: "class", subCode: "Frontend" },
+                { id: "tue_5", time: "14:00-14:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
+                { id: "tue_online", time: "16:00-17:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "tue_8", time: "21:40-22:10", title: "Night Routine (Read/No Screens) -> Sleep at 22:10", type: "routine" }
+            ],
+            "Wednesday": [
+                { id: "wed_1", time: "06:30-06:45", title: "Wake Up & 🍎 Fruit", type: "routine" },
+                { id: "wed_2", time: "06:45-08:00", title: "🏋️ Morning Gym", type: "gym" },
+                { id: "wed_4", time: "09:00-09:55", title: "Frontend Development", room: "4004", type: "class", subCode: "Frontend" },
+                { id: "wed_5", time: "11:00-11:55", title: "DCN", room: "4001", type: "class", subCode: "DCN" },
+                { id: "wed_6", time: "16:00-16:55", title: "DAA", room: "9208", type: "class", subCode: "DAA" },
+                { id: "wed_9", time: "20:40-21:10", title: "Night Routine (Read/No Screens) -> Sleep at 21:10", type: "routine" }
+            ],
+            "Thursday": [
+                { id: "thu_1", time: "05:30-05:45", title: "Wake Up & 🍎 Fruit", type: "routine" },
+                { id: "thu_2", time: "05:45-07:00", title: "🏋️ Morning Gym", type: "gym" },
+                { id: "thu_4", time: "08:00-08:55", title: "Frontend Development", room: "2004", type: "class", subCode: "Frontend" },
+                { id: "thu_5", time: "09:00-09:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
+                { id: "thu_6", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
+                { id: "thu_online", time: "13:00-14:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "thu_8", time: "15:00-15:55", title: "Operating Systems", room: "9201", type: "class", subCode: "OS" },
+                { id: "thu_9", time: "16:00-16:55", title: "DCN", room: "4002", type: "class", subCode: "DCN" },
+                { id: "thu_11", time: "22:40-23:10", title: "Night Routine (Read/No Screens) -> Sleep at 23:10", type: "routine" }
+            ],
+            "Friday": [
+                { id: "fri_1", time: "07:30-07:45", title: "Wake Up & 🍎 Fruit", type: "routine" },
+                { id: "fri_2", time: "07:45-09:00", title: "🏋️ Morning Gym", type: "gym" },
+                { id: "fri_4", time: "10:00-11:55", title: "Frontend (Lab)", room: "IT 201", type: "class", subCode: "Frontend" },
+                { id: "fri_5", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
+                { id: "fri_online", time: "13:00-14:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "fri_7", time: "14:00-15:55", title: "DCN (Lab)", room: "AB-11 L-006", type: "class", subCode: "DCN" },
+                { id: "fri_8", time: "16:00-16:55", title: "Operating Systems", room: "9205", type: "class", subCode: "OS" },
+                { id: "fri_10", time: "20:40-21:10", title: "Night Routine (Read/No Screens) -> Sleep at 21:10", type: "routine" }
+            ],
+            "Saturday": [
+                { id: "sat_1", time: "05:30-05:45", title: "Wake Up & 🍎 Fruit", type: "routine" },
+                { id: "sat_2", time: "05:45-07:00", title: "🏋️ Morning Gym", type: "gym" },
+                { id: "sat_4", time: "08:00-08:55", title: "Frontend Development", room: "2004", type: "class", subCode: "Frontend" },
+                { id: "sat_5", time: "10:00-11:55", title: "DAA", room: "11104", type: "class", subCode: "DAA" },
+                { id: "sat_online", time: "13:00-14:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "sat_7", time: "14:00-14:55", title: "DCN", room: "4003", type: "class", subCode: "DCN" },
+                { id: "sat_8", time: "15:00-15:55", title: "COA", room: "4003", type: "class", subCode: "COA" },
+                { id: "sat_10", time: "23:10-23:40", title: "Night Routine (Read/No Screens) -> Sleep at 23:40", type: "routine" }
+            ],
+            "Sunday": [
+                { id: "sun_1", time: "08:00-08:15", title: "Wake Up & 🍎 Fruit (No Gym)", type: "routine" },
+                { id: "sun_3", time: "12:00-12:30", title: "💻 Project Work", type: "study" },
+                { id: "sun_4", time: "23:40-00:10", title: "Night Routine (Read/No Screens) -> Sleep at 00:10", type: "routine" }
+            ]
+        };
+
+        const BASE_ATTENDANCE = {
+            "OS": { attended: 17, total: 18 }, "COA": { attended: 14, total: 19 },
+            "DAA": { attended: 18, total: 23 }, "Frontend": { attended: 23, total: 30 }, "DCN": { attended: 21, total: 21 }
+        };
+
+        /* =====================================================
+           HELPERS
+        ===================================================== */
+        const pad = n => String(n).padStart(2, '0');
+        const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const parseISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+        const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const pctOf = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
+        const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const $ = id => document.getElementById(id);
+        const bandClass = p => p >= 85 ? 'band-good' : p >= 70 ? 'band-mid' : 'band-low';
+
+        function readJSON(key, fallback) {
+            try { const v = JSON.parse(localStorage.getItem(key)); return v === null || v === undefined ? fallback : v; }
+            catch (e) { return fallback; }
+        }
+        function writeJSON(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+        /* =====================================================
+           CLOUD SYNC (Firebase) — fully additive.
+           Nothing above or below this block had to change: every
+           existing localStorage.setItem/removeItem call in this file
+           is mirrored to the cloud automatically by the monkey-patch
+           at the bottom of this section. If you never click "Sync",
+           none of this runs and the app behaves exactly as before.
+        ===================================================== */
+        const firebaseConfig = {
+            apiKey: "AIzaSyCHuDSjQmoES5DYE2bLFZdeoMdWgtnoCmE",
+            authDomain: "da-hb-4a82b.firebaseapp.com",
+            projectId: "da-hb-4a82b",
+            storageBucket: "da-hb-4a82b.firebasestorage.app",
+            messagingSenderId: "336980709406",
+            appId: "1:336980709406:web:da53e9e220c7a4e48d1e0f"
+        };
+
+        let syncDb = null;
+        let syncCode = localStorage.getItem('sync_code') || '';
+        let syncApplyingRemote = false;   // true while we're writing incoming data, so we don't re-upload it
+        let syncPushTimer = null;
+        const SYNC_PENDING = {};
+
+        function syncInit() {
+            if (!syncCode || firebaseConfig.apiKey === "PASTE_YOUR_API_KEY") return;
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                syncDb = firebase.firestore();
+                syncListen();
+                syncUpdateBtn();
+            } catch (e) { console.warn('Sync init failed', e); }
+        }
+
+        function syncUpdateBtn() {
+            const b = $('sync-btn');
+            if (b) b.innerHTML = syncCode ? '🔗 Synced' : '🔗 Sync';
+        }
+
+        function syncPromptCode() {
+            const v = prompt("Enter a sync code (make one up — use the SAME code on every device you want linked, e.g. a password only you know):", syncCode || '');
+            if (v === null) return;
+            syncCode = v.trim();
+            localStorage.setItem('sync_code', syncCode);
+            if (syncCode) {
+                syncInit();
+                toast('Sync code saved. Open this app on your other device and enter the exact same code.', 'win');
+            }
+            syncUpdateBtn();
+        }
+
+        // Called by the monkey-patched localStorage below on every write/removal
+        function syncQueueKey(key, value) {
+            if (!syncDb || !syncCode || syncApplyingRemote) return;
+            SYNC_PENDING[key] = value;
+            clearTimeout(syncPushTimer);
+            syncPushTimer = setTimeout(syncFlush, 600);
+        }
+        function syncQueueRemoval(key) {
+            if (!syncDb || !syncCode || syncApplyingRemote) return;
+            SYNC_PENDING[key] = firebase.firestore.FieldValue.delete();
+            clearTimeout(syncPushTimer);
+            syncPushTimer = setTimeout(syncFlush, 600);
+        }
+        function syncFlush() {
+            if (!syncDb || !syncCode) return;
+            const batch = { ...SYNC_PENDING };
+            for (const k in SYNC_PENDING) delete SYNC_PENDING[k];
+            syncDb.collection('discipline-os').doc(syncCode).set(batch, { merge: true })
+                .catch(e => console.warn('Sync push failed', e));
+        }
+
+        function syncListen() {
+            syncDb.collection('discipline-os').doc(syncCode).onSnapshot(doc => {
+                if (!doc.exists) return;
+                const data = doc.data();
+                syncApplyingRemote = true;
+                let changed = false;
+                for (const key in data) {
+                    const incoming = data[key];
+                    const current = localStorage.getItem(key);
+                    if (current !== incoming) { localStorage.setItem(key, incoming); changed = true; }
+                }
+                syncApplyingRemote = false;
+                if (changed) { toast('Synced from your other device', 'info'); location.reload(); }
+            }, err => console.warn('Sync listen failed', err));
+        }
+
+        // Every existing call to localStorage.setItem/removeItem anywhere in this
+        // file now also mirrors to the cloud — the 30+ call sites above did not
+        // need to be touched.
+        (function () {
+            const _setItem = localStorage.setItem.bind(localStorage);
+            const _removeItem = localStorage.removeItem.bind(localStorage);
+            localStorage.setItem = function (key, value) { _setItem(key, value); syncQueueKey(key, value); };
+            localStorage.removeItem = function (key) { _removeItem(key); syncQueueRemoval(key); };
+        })();
+
+        function animateNumber(el, to, fmt = (n => n), dur = 700) {
+            if (!el) return;
+            const from = parseFloat(el.dataset.val ?? '0') || 0;
+            el.dataset.val = to;
+            const tok = el._tok = (el._tok || 0) + 1;
+            if (from === to) { el.textContent = fmt(to); return; }
+            const t0 = performance.now();
+            (function frame(t) {
+                if (el._tok !== tok) return;
+                const p = Math.min(1, (t - t0) / dur);
+                const e = 1 - Math.pow(1 - p, 3);
+                el.textContent = fmt(Math.round(from + (to - from) * e));
+                if (p < 1) requestAnimationFrame(frame);
+            })(t0);
+        }
+
+        function toast(msg, kind = 'info') {
+            const wrap = $('toast-wrap');
+            const t = document.createElement('div');
+            t.className = 'toast ' + kind;
+            t.textContent = msg;
+            wrap.appendChild(t);
+            setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, kind === 'win' ? 4200 : 3200);
+        }
+
+        /* =====================================================
+           THEME
+        ===================================================== */
+        function applyTheme(t) {
+            document.documentElement.setAttribute('data-theme', t);
+            localStorage.setItem('theme', t);
+            const b = $('theme-toggle');
+            if (b) b.innerHTML = t === 'goggins' ? '☀️ Light mode' : '🔥 Stay hard mode';
+        }
+        function toggleTheme() {
+            applyTheme(document.documentElement.getAttribute('data-theme') === 'goggins' ? 'light' : 'goggins');
+        }
+
+        /* =====================================================
+           STATE + INIT
+        ===================================================== */
+        let activeDate = new Date();
+        let popKey = null;
+
+        function getStartISO() { return localStorage.getItem('system_start_iso') || DEFAULT_START_ISO; }
+
+        function editStartDate() {
+            const v = prompt("Start date for streaks and reports (YYYY-MM-DD):", getStartISO());
+            if (!v) return;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(v) || isNaN(parseISO(v))) { toast('Use the format YYYY-MM-DD, for example 2026-08-20.', 'danger'); return; }
+            localStorage.setItem('system_start_iso', v);
+            renderHomePage();
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            applyTheme(localStorage.getItem('theme') || 'light');
+            if (!localStorage.getItem("bunk_bank_data")) writeJSON("bunk_bank_data", BASE_ATTENDANCE);
+
+            // Migrate the old free-text start date if it exists, otherwise use the default
+            if (!localStorage.getItem('system_start_iso')) {
+                const old = new Date(localStorage.getItem('system_start_date') || '');
+                localStorage.setItem('system_start_iso', isNaN(old) ? DEFAULT_START_ISO : isoDate(old));
+            }
+
+            const savedDate = localStorage.getItem('last_active_date');
+            if (savedDate) { const d = new Date(savedDate); if (!isNaN(d)) activeDate = d; }
+
+            $("pin-input").addEventListener("input", (e) => {
+                const v = e.target.value;
+                if (v.length < 6) return;
+                if (v === CORRECT_PIN) {
+                    $("login-screen").classList.add("unlocking");
+                    setTimeout(() => { $("login-screen").style.display = "none"; }, 500);
+                    switchTab('home');
+                } else {
+                    const box = $("pin-box");
+                    box.classList.remove("shake"); void box.offsetWidth; box.classList.add("shake");
+                    e.target.value = "";
+                }
+            });
+
+            // Timetable buttons use event delegation so titles with quotes cannot break anything
+            $("schedule-grid-cols").addEventListener("click", (e) => {
+                const b = e.target.closest("[data-act]");
+                if (!b) return;
+                if (b.dataset.act === "del") deleteCustomEvent(b.dataset.date, b.dataset.ev);
+                else ttMark(b.dataset.act, b.dataset.date, b.dataset.ev);
+            });
+
+            paintTimer();
+            refreshSoulCount();
+            checkActivePunishments();
+
+            syncInit();
+            syncUpdateBtn();
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW registration failed', e));
+            }
+        });
+
+        function saveActiveDate() { localStorage.setItem('last_active_date', activeDate.toISOString()); }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+            const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+            if (btn) btn.classList.add("active");
+            $(`tab-${tabId}`).classList.add("active");
+
+            if (tabId === 'home') renderHomePage();
+            if (tabId === 'tick') renderExecutionGrid(true);
+            if (tabId === 'timetable') renderTimetableSection();
+            if (tabId === 'punishment') renderPunishmentSection();
+            if (tabId === 'aar') renderAARSection();
+            if (tabId === 'report') renderMultiMonthReports();
+            if (tabId === 'hard-truth') generateHardTruth();
+            if (tabId === 'achievements') renderAchievements();
+            window.scrollTo({ top: 0 });
+        }
+
+        function changeDateScope(delta, scope) {
+            if (scope === 'month') {
+                const day = activeDate.getDate();
+                activeDate.setDate(1);
+                activeDate.setMonth(activeDate.getMonth() + delta);
+                const dim = new Date(activeDate.getFullYear(), activeDate.getMonth() + 1, 0).getDate();
+                activeDate.setDate(Math.min(day, dim));
+            }
+            if (scope === 'week') activeDate.setDate(activeDate.getDate() + (delta * 7));
+            saveActiveDate();
+            if ($('tab-tick').classList.contains('active')) renderExecutionGrid();
+            if ($('tab-timetable').classList.contains('active')) renderTimetableSection();
+        }
+
+        /* =====================================================
+           SCORING ENGINE (real data for streaks and reports)
+        ===================================================== */
+        function isExempt(h, dow) {
+            if (h.freq === "mon_sun_only" && dow !== 0 && dow !== 1) return true;
+            if (h.id === "classes" && dow === 0) return true;
+            return false;
+        }
+
+        // Habits done vs possible on one day
+        function dayHabitScore(dt) {
+            const y = dt.getFullYear(), m = dt.getMonth(), d = dt.getDate(), dow = dt.getDay();
+            let done = 0, possible = 0;
+            HABITS.forEach((h, i) => {
+                if (isExempt(h, dow)) return;
+                possible++;
+                const v = localStorage.getItem(`habit_${y}_${m}_${i}_${d}`);
+                if (h.type === "tristate") { if (v === "YES" || v === "MET") done++; }
+                else if (h.type === "scroll_numeric") { if (parseInt(v || "0") <= 1) done++; }
+                else if (v === "true") done++;
+            });
+            return { done, possible };
+        }
+
+        // Timetable blocks done vs due on one day
+        function eventsFor(dt, custom) {
+            const bp = TT_BLUEPRINT[DAY_NAMES[dt.getDay()]] || [];
+            return bp.concat(custom[isoDate(dt)] || []);
+        }
+        function getTTState(iso, id) { return localStorage.getItem(`tt_state_${iso}_${id}`) || "pending"; }
+        function eventEnd(dt, ev) {
+            const [s, e] = ev.time.split('-');
+            const [sh, sm] = s.split(':').map(Number), [eh, em] = e.split(':').map(Number);
+            const end = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), eh, em);
+            if (eh * 60 + em <= sh * 60 + sm) end.setDate(end.getDate() + 1); // crosses midnight
+            return end;
+        }
+        function dayTTScore(dt, now, custom) {
+            const iso = isoDate(dt);
+            let done = 0, possible = 0;
+            eventsFor(dt, custom).forEach(ev => {
+                const st = getTTState(iso, ev.id);
+                if (st === "excepted") return;
+                if (st === "pending" && eventEnd(dt, ev) > now) return;   // not due yet
+                possible++;
+                if (st === "completed") done++;
+            });
+            return { done, possible };
+        }
+
+        // Score a month day by day from the start date up to today, grouped in the same weeks as the grid
+        function monthStats(y, m, scoreFn) {
+            const start = startOfDay(parseISO(getStartISO())), today = startOfDay(new Date());
+            const dim = new Date(y, m + 1, 0).getDate();
+            let done = 0, possible = 0;
+            const weeks = [{ done: 0, possible: 0 }];
+            for (let d = 1; d <= dim; d++) {
+                const dt = new Date(y, m, d);
+                const wk = weeks[weeks.length - 1];
+                if (dt >= start && dt <= today) {
+                    const s = scoreFn(dt);
+                    done += s.done; possible += s.possible; wk.done += s.done; wk.possible += s.possible;
+                }
+                if (dt.getDay() === 0 && d < dim) weeks.push({ done: 0, possible: 0 });
+            }
+            return { done, possible, weeks };
+        }
+        const habitMonthStats = (y, m) => monthStats(y, m, dayHabitScore);
+        function ttMonthStats(y, m) {
+            const custom = readJSON('custom_tt_events', {}), now = new Date();
+            return monthStats(y, m, dt => dayTTScore(dt, now, custom));
+        }
+
+        // Real streak: consecutive days at or above STREAK_MIN_PCT. Today never breaks a streak while it is still in progress.
+        function calcStreaks() {
+            const today = startOfDay(new Date()), start = startOfDay(parseISO(getStartISO()));
+            let run = 0, best = 0;
+            for (let t = new Date(start); t <= today; t.setDate(t.getDate() + 1)) {
+                const { done, possible } = dayHabitScore(t);
+                const ok = possible > 0 && (done / possible) * 100 >= STREAK_MIN_PCT;
+                if (ok) { run++; best = Math.max(best, run); }
+                else if (t.getTime() !== today.getTime()) run = 0;
+            }
+            return { current: run, best };
+        }
+
+        /* =====================================================
+           HOME
+        ===================================================== */
+        function renderHomePage() {
+            const today = new Date();
+            $("home-today-date").innerText = `${DAY_NAMES[today.getDay()]}, ${MONTH_NAMES[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
+
+            const start = parseISO(getStartISO());
+            const dayN = Math.floor((startOfDay(today) - startOfDay(start)) / 86400000) + 1;
+            $("home-start-date").innerText = dayN >= 1
+                ? `Day ${dayN}, started ${MONTH_NAMES[start.getMonth()].substring(0, 3)} ${start.getDate()}, ${start.getFullYear()}`
+                : `Starts ${MONTH_NAMES[start.getMonth()].substring(0, 3)} ${start.getDate()}, ${start.getFullYear()}`;
+
+            generateHomeQuote(true);
+
+            const { current, best } = calcStreaks();
+            const streakEl = $("home-streak");
+            streakEl.dataset.val = 0;
+            animateNumber(streakEl, current, n => n, 900);
+            $("home-streak-label").innerText = current === 1 ? "day streak" : "day streak";
+            $("home-streak-note").innerText = `A day counts when you finish ${STREAK_MIN_PCT}% or more of its habits. Today keeps the streak alive until it ends.`;
+            const fl = $("flame");
+            fl.classList.toggle("lit", current > 0);
+            fl.classList.toggle("out", current === 0);
+
+            animateNumber($("home-best-streak"), best, n => `${n} ${n === 1 ? 'day' : 'days'}`);
+
+            const ms = habitMonthStats(today.getFullYear(), today.getMonth());
+            const mp = pctOf(ms.done, ms.possible);
+            animateNumber($("home-month-completion"), mp, n => n + '%');
+            const ts = dayHabitScore(startOfDay(today));
+            $("home-today-progress").innerText = `${ts.done} / ${ts.possible}`;
+            $("home-month-bar").style.width = '0%';
+            $("home-today-bar").style.width = '0%';
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                $("home-month-bar").style.width = mp + '%';
+                $("home-today-bar").style.width = pctOf(ts.done, ts.possible) + '%';
+            }));
+        }
+
+        let lastQuoteIdx = -1;
+        function generateHomeQuote(instant) {
+            let idx;
+            do { idx = Math.floor(Math.random() * MASTER_QUOTES.length); } while (idx === lastQuoteIdx && MASTER_QUOTES.length > 1);
+            lastQuoteIdx = idx;
+            const q = MASTER_QUOTES[idx];
+            const cut = q.lastIndexOf(' — ');
+            const text = cut > -1 ? q.slice(0, cut) : q, author = cut > -1 ? q.slice(cut + 3) : '';
+            const box = $("hero-quote");
+            const apply = () => { $("home-quote-text").innerText = text; $("home-quote-author").innerText = author; box.classList.remove("swap"); };
+            if (instant) { apply(); return; }
+            box.classList.add("swap");
+            setTimeout(apply, 250);
+        }
+
+        /* =====================================================
+           DAILY GRID
+        ===================================================== */
+        function renderWeekBars(weeks, key, intro) {
+            const c = $("bars-container");
+            if (intro || c.dataset.key !== key) {
+                c.innerHTML = weeks.map((w, i) => `<div class="bar-col"><div class="bar-val" data-val="0">0%</div><div class="bar-track"><div class="bar-fill" style="height:0%"></div></div><div class="bar-label">W${i + 1}</div></div>`).join('');
+                c.dataset.key = key;
+                void c.offsetHeight;
+            }
+            c.querySelectorAll('.bar-col').forEach((col, i) => {
+                const w = weeks[i];
+                const p = w && w.possible ? pctOf(w.done, w.possible) : 0;
+                col.querySelector('.bar-fill').style.height = p + '%';
+                animateNumber(col.querySelector('.bar-val'), p, n => n + '%');
+            });
+        }
+
+        function renderExecutionGrid(intro = false) {
+            const y = activeDate.getFullYear(), m = activeDate.getMonth();
+            $("current-month-display").innerText = `${MONTH_NAMES[m]} ${y}`;
+            const dim = new Date(y, m + 1, 0).getDate();
+            const now = new Date(), todayStart = startOfDay(now);
+            const todayNum = (now.getFullYear() === y && now.getMonth() === m) ? now.getDate() : -1;
+
+            let h1 = "", h2 = "", wGrp = 1, dCnt = 0;
+            for (let d = 1; d <= dim; d++) {
+                dCnt++;
+                const dt = new Date(y, m, d);
+                h2 += `<th class="${d === todayNum ? 'col-today' : ''}">${d}<br><span style="font-size:10px; color:var(--muted); font-weight:500;">${DAY_ABBR[dt.getDay()]}</span></th>`;
+                if (dt.getDay() === 0 || d === dim) { h1 += `<th class="week-group-header" colspan="${dCnt}">Week ${wGrp++}</th>`; dCnt = 0; }
+            }
+            $("table-week-header-row").innerHTML = `<th class="habit-title-col" rowspan="2">Habits</th>` + h1;
+            $("table-day-header-row").innerHTML = h2;
+
+            let body = "", checked = 0, possible = 0;
+            HABITS.forEach((h, hIdx) => {
+                body += `<tr><td class="habit-title-col">${h.name}</td>`;
+                for (let d = 1; d <= dim; d++) {
+                    const dt = new Date(y, m, d);
+                    const key = `habit_${y}_${m}_${hIdx}_${d}`;
+                    const tc = d === todayNum ? 'col-today' : '';
+                    if (isExempt(h, dt.getDay())) { body += `<td class="cell-exempt ${tc}">REST</td>`; continue; }
+                    possible++;
+                    const pop = key === popKey ? 'pop' : '';
+
+                    if (h.type === "tristate") {
+                        const v = localStorage.getItem(key) || "NO";
+                        if (v === "YES" || v === "MET") checked++;
+                        const cls = v === "YES" ? "att-yes" : v === "MET" ? "att-met" : "att-no";
+                        body += `<td class="${tc}"><span class="class-attendance-btn ${cls} ${pop}" onclick="cycleH('${key}','tri',${d})">${v === "YES" ? "✓" : v === "MET" ? "75%" : "—"}</span></td>`;
+                    } else if (h.type === "scroll_numeric") {
+                        const v = parseInt(localStorage.getItem(key) || "0");
+                        if (v <= 1 && dt <= todayStart) checked++;
+                        body += `<td class="${tc}"><span class="scroll-level-btn scroll-level-${v} ${pop}" onclick="cycleH('${key}','scr',${d})">${v}</span></td>`;
+                    } else {
+                        const on = localStorage.getItem(key) === "true";
+                        if (on) checked++;
+                        body += `<td class="${tc}"><input type="checkbox" class="cell-check ${pop}" ${on ? "checked" : ""} onchange="onHabitCheck('${key}', this.checked, ${d})" aria-label="${esc(h.name)}, day ${d}" /></td>`;
+                    }
+                }
+                body += `</tr>`;
+            });
+            $("table-body").innerHTML = body;
+            popKey = null;
+
+            updateDashboardStats(checked, possible, intro);
+            const ms = habitMonthStats(y, m);
+            renderWeekBars(ms.weeks, `${y}-${m}-${ms.weeks.length}`, intro);
+        }
+
+        function updateDashboardStats(completed, total, intro) {
+            const ring = $("stat-ring-element");
+            if (intro) { ring.style.setProperty('--pct', 0); void ring.offsetHeight; }
+            animateNumber($("stat-goal-val"), total);
+            animateNumber($("stat-completed-val"), completed);
+            animateNumber($("stat-left-val"), total - completed);
+            const pct = pctOf(completed, total);
+            ring.style.setProperty('--pct', pct);
+            animateNumber($("stat-ring-pct"), pct, n => n + '%');
+        }
+
+        function onHabitCheck(key, checked, d) {
+            popKey = key;
+            localStorage.setItem(key, checked);
+            syncDate(d);
+            renderExecutionGrid();
+        }
+
+        function cycleH(key, type, d) {
+            popKey = key;
+            if (type === 'tri') {
+                const curr = localStorage.getItem(key) || "NO";
+                localStorage.setItem(key, curr === "YES" ? "MET" : curr === "MET" ? "NO" : "YES");
+            } else if (type === 'scr') {
+                const cur = parseInt(localStorage.getItem(key) || "0");
+                const n = (cur + 1) % 4;
+                localStorage.setItem(key, n);
+                if (n === 3) {
+                    // keys look like habit_YEAR_MONTH_INDEX_DAY: one scroll penalty per calendar day, however often you cycle
+                    const [, ky, km, , kd] = key.split('_');
+                    const made = assignPunishment("Level 3 Media Scrolling", "Forced 45m study + 100 pushups.", `pun_scroll_${ky}_${km}_${kd}`);
+                    if (made) toast("Level 3 scrolling logged. Penalty assigned.", "danger");
+                    else toast("Level 3 logged. Today's scrolling penalty was already issued.");
+                }
+            }
+            syncDate(d);
+            renderExecutionGrid();
+        }
+        function syncDate(d) { activeDate.setDate(d); saveActiveDate(); }
+
+        /* =====================================================
+           TIMETABLE + BUNK BANK
+        ===================================================== */
+        function openCustomEventModal(type) {
+            const t = type === 'study' ? "Create study session" : type === 'movie' ? "Schedule movie" : "Create time exception";
+            $("modal-event-title").innerText = t;
+            $("ev-type").value = type;
+            $("ev-date").value = isoDate(activeDate);
+            $("ev-desc").value = "";
+            $("custom-event-modal").classList.add("show");
+        }
+        function closeCustomEventModal() { $("custom-event-modal").classList.remove("show"); }
+
+        function saveCustomEvent() {
+            const dt = $("ev-date").value;
+            if (!dt) { toast("Pick a date first.", "danger"); return; }
+            const start = $("ev-start").value, end = $("ev-end").value;
+            const desc = $("ev-desc").value.trim() || "Custom block";
+            const type = $("ev-type").value;
+            const list = readJSON('custom_tt_events', {});
+            if (!list[dt]) list[dt] = [];
+            list[dt].push({ id: `cust_${Date.now()}`, time: `${start}-${end}`, title: desc, type, custom: true });
+            writeJSON('custom_tt_events', list);
+            closeCustomEventModal();
+            activeDate = parseISO(dt); saveActiveDate();
+            renderTimetableSection();
+        }
+
+        function deleteCustomEvent(dt, id) {
+            const list = readJSON('custom_tt_events', {});
+            if (!list[dt]) return;
+            list[dt] = list[dt].filter(e => e.id !== id);
+            if (!list[dt].length) delete list[dt];
+            writeJSON('custom_tt_events', list);
+            localStorage.removeItem(`tt_state_${dt}_${id}`);
+            renderTimetableSection();
+        }
+
+        function renderTimetableSection() {
+            renderBunkBank();
+            $("tt-today-lbl").innerText = `Focus day: ${DAY_NAMES[activeDate.getDay()]}`;
+            const sow = startOfDay(activeDate);
+            sow.setDate(sow.getDate() - ((sow.getDay() + 6) % 7));   // Monday
+            const eow = new Date(sow); eow.setDate(eow.getDate() + 6);
+            $("tt-week-dates").innerText = `${sow.getDate()} ${MONTH_NAMES[sow.getMonth()].substring(0, 3)} to ${eow.getDate()} ${MONTH_NAMES[eow.getMonth()].substring(0, 3)} ${eow.getFullYear()}`;
+
+            const custom = readJSON('custom_tt_events', {});
+            const todayIso = isoDate(new Date());
+            let html = "";
+            for (let i = 0; i < 7; i++) {
+                const dDt = new Date(sow); dDt.setDate(sow.getDate() + i);
+                const iso = isoDate(dDt);
+                const evs = eventsFor(dDt, custom).sort((a, b) => a.time.localeCompare(b.time));
+                let done = 0, tot = 0;
+                evs.forEach(ev => { const s = getTTState(iso, ev.id); if (s !== "excepted") { tot++; if (s === "completed") done++; } });
+
+                html += `<div class="schedule-day-col ${iso === todayIso ? 'is-today' : ''}">
+                    <div class="schedule-day-head"><div>${DAY_NAMES[dDt.getDay()]}<small>${dDt.getDate()} ${MONTH_NAMES[dDt.getMonth()].substring(0, 3)}</small></div><span class="day-prog">${done}/${tot}</span></div>
+                    <div class="schedule-events-list">`;
+                evs.forEach(ev => {
+                    const state = getTTState(iso, ev.id);
+                    const stCls = state === "completed" ? "status-completed" : state === "missed" ? "status-missed" : state === "excepted" ? "status-excepted" : ev.custom ? "custom-event" : "";
+                    html += `<div class="schedule-event-card ${stCls}">
+                        <div class="event-time">${esc(ev.time)}</div><div class="event-title">${esc(ev.title)}</div>${ev.room ? `<div class="event-meta">${esc(ev.room)}</div>` : ''}
+                        <div class="event-actions">
+                            <button class="event-action-btn btn-green" title="Done" data-act="completed" data-date="${iso}" data-ev="${ev.id}">✓</button>
+                            <button class="event-action-btn btn-red" title="Missed" data-act="missed" data-date="${iso}" data-ev="${ev.id}">✗</button>
+                            <button class="event-action-btn btn-grey" title="Excused" data-act="excepted" data-date="${iso}" data-ev="${ev.id}">⚖️</button>
+                            ${ev.custom ? `<button class="event-action-btn btn-red" title="Delete block" data-act="del" data-date="${iso}" data-ev="${ev.id}">🗑</button>` : ''}
+                        </div>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            }
+            $("schedule-grid-cols").innerHTML = html;
+        }
+
+        // Clicking the same button twice undoes it
+        function ttMark(state, dtStr, evId) {
+            const custom = readJSON('custom_tt_events', {});
+            const ev = eventsFor(parseISO(dtStr), custom).find(e => e.id === evId);
+            if (!ev) return;
+            const key = `tt_state_${dtStr}_${ev.id}`;
+            const old = localStorage.getItem(key) || "pending";
+            const next = old === state ? "pending" : state;
+            if (next === "pending") localStorage.removeItem(key); else localStorage.setItem(key, next);
+
+            if (ev.subCode) {
+                const b = readJSON("bunk_bank_data", {});
+                const s = b[ev.subCode];
+                if (s) {
+                    if (old === "completed") { s.attended--; s.total--; } else if (old === "missed") { s.total--; }
+                    if (next === "completed") { s.attended++; s.total++; } else if (next === "missed") { s.total++; }
+                    writeJSON("bunk_bank_data", b);
+                }
+            }
+            if (next === "missed" && (ev.type === "gym" || ev.type === "class")) {
+                const made = assignPunishment(`Missed schedule: ${ev.title}`, "Unexcused absence. Sentence: 50 Burpees or Extra Study Block.", `pun_miss_${key}`);
+                if (made) toast("Missed block logged. Penalty assigned.", "danger");
+            }
+            activeDate = parseISO(dtStr); saveActiveDate();
+            renderTimetableSection();
+        }
+
+        function renderBunkBank() {
+            const data = readJSON("bunk_bank_data", {});
+            let html = "";
+            for (const [sub, s] of Object.entries(data)) {
+                const pct = s.total > 0 ? (s.attended / s.total) * 100 : 100;
+                const safe = pct >= 75;
+                const allowed = Math.max(0, Math.floor((s.attended / 0.75) - s.total));
+                const need = Math.max(0, Math.ceil(3 * s.total - 4 * s.attended));
+                const msg = safe
+                    ? `<span style="color:var(--ok);">Safe skips: ${allowed}</span>`
+                    : `<span style="color:var(--danger);">Deficit: attend the next ${need} in a row</span>`;
+                html += `<div class="bunk-row"><div class="bunk-header"><span>${esc(sub)}</span><span>${s.attended}/${s.total} (${pct.toFixed(1)}%)</span></div>
+                    <div class="bunk-track"><div class="bunk-fill" style="width:${Math.min(100, pct)}%; background:${safe ? 'var(--ok)' : 'var(--danger)'};"></div></div>
+                    <div class="bunk-msg">${msg}</div></div>`;
+            }
+            $("bunk-bank-rows").innerHTML = html;
+        }
+
+        /* =====================================================
+           PUNISHMENTS
+        ===================================================== */
+        // flagKey makes a punishment fire only once per reason. Returns false if it was already issued.
+        function assignPunishment(reason, sentence, flagKey) {
+            if (flagKey) {
+                if (localStorage.getItem(flagKey)) return false;
+                localStorage.setItem(flagKey, "1");
+            }
+            const list = readJSON("punishment_list", []);
+            list.unshift({ id: `pun_${Date.now()}`, reason, sentence, served: false });
+            writeJSON("punishment_list", list);
+            checkActivePunishments();
+            return true;
+        }
+        function checkActivePunishments() {
+            const active = readJSON("punishment_list", []).some(p => !p.served);
+            const alertBox = $("tt-punish-alert");
+            if (alertBox) alertBox.style.display = active ? "flex" : "none";
+            $("nav-punish-btn").classList.toggle("punish-active-btn", active);
+        }
+        function renderPunishmentSection() {
+            const list = readJSON("punishment_list", []);
+            if (!list.length) { $("punishment-list-container").innerHTML = `<div class="empty-state">No penalties. Keep it that way.</div>`; return; }
+            $("punishment-list-container").innerHTML = list.map(p => `
+                <div class="punish-log-item ${p.served ? 'served' : ''}">
+                    <div style="flex:1;"><strong>${esc(p.reason)}</strong><br><span style="font-size:13px; color:var(--muted);">Sentence: ${esc(p.sentence)}</span></div>
+                    <div>${p.served ? 'Served ✓' : `<button class="btn-exception" onclick="servePunishment('${p.id}')">Mark served</button>`}</div>
+                </div>`).join('');
+        }
+        function servePunishment(id) {
+            const list = readJSON("punishment_list", []);
+            const p = list.find(x => x.id === id);
+            if (p) p.served = true;
+            writeJSON("punishment_list", list);
+            renderPunishmentSection(); checkActivePunishments();
+        }
+        function clearServedPunishments() {
+            writeJSON("punishment_list", readJSON("punishment_list", []).filter(p => !p.served));
+            renderPunishmentSection(); checkActivePunishments();
+        }
+
+        /* =====================================================
+           SOUL TIMER
+        ===================================================== */
+        const RING_LEN = 628.32;
+        let timerTotalSec = 90 * 60, timerRemainingSec = 90 * 60;
+        let timerInterval = null, timerRunning = false, timerStarted = false, timerEndTs = 0;
+
+        function paintTimer() {
+            const s = Math.max(0, timerRemainingSec);
+            $("timer-display").innerText = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
+            $("timer-progress").style.strokeDashoffset = RING_LEN * (1 - s / timerTotalSec);
+            document.title = timerRunning ? `${$("timer-display").innerText} | Discipline OS` : "Discipline OS";
+        }
+        function refreshSoulCount() {
+            const n = parseInt(localStorage.getItem('timer_sessions') || '0');
+            $("timer-souls").innerText = n === 0 ? "No souls taken yet. Finish a full session to earn the first." : `Souls taken: ${n}`;
+        }
+        function setTimerDuration(m) {
+            if (timerRunning || timerStarted) { toast("Finish or quit the current session first."); return; }
+            timerTotalSec = timerRemainingSec = m * 60;
+            $("preset-90").classList.toggle("sel", m === 90);
+            $("preset-30").classList.toggle("sel", m === 30);
+            paintTimer();
+        }
+        function toggleTimer() {
+            const btn = $("timer-start-btn");
+            if (!timerRunning) {
+                timerRunning = true; timerStarted = true;
+                timerEndTs = Date.now() + timerRemainingSec * 1000;
+                btn.innerText = "Pause";
+                $("timer-card").classList.add("running");
+                timerInterval = setInterval(tickTimer, 250);
+            } else {
+                clearInterval(timerInterval); timerRunning = false;
+                timerRemainingSec = Math.max(0, Math.ceil((timerEndTs - Date.now()) / 1000));
+                btn.innerText = "Resume";
+                $("timer-card").classList.remove("running");
+                paintTimer();
+            }
+        }
+        function tickTimer() {
+            const rem = Math.max(0, Math.ceil((timerEndTs - Date.now()) / 1000));
+            if (rem !== timerRemainingSec) { timerRemainingSec = rem; paintTimer(); }
+            if (rem <= 0) finishTimer();
+        }
+        function resetTimerState() {
+            clearInterval(timerInterval);
+            timerRunning = false; timerStarted = false;
+            timerRemainingSec = timerTotalSec;
+            $("timer-start-btn").innerText = "Start session";
+            $("timer-card").classList.remove("running");
+            paintTimer();
+        }
+        function finishTimer() {
+            const minutes = Math.round(timerTotalSec / 60);
+            resetTimerState();
+            localStorage.setItem('timer_sessions', (parseInt(localStorage.getItem('timer_sessions') || '0') + 1));
+            const log = readJSON('timer_log', []);
+            log.unshift({ date: new Date().toISOString(), minutes });
+            writeJSON('timer_log', log.slice(0, 200));
+            refreshSoulCount();
+            toast("SOULS TAKEN!", "win");
+        }
+        function quitTimerWithGoggins() {
+            if (!timerStarted) { toast("No session is running. Start one first."); return; }
+            resetTimerState();
+            assignPunishment("Quit timer early", "Failed deep work discipline. 50 pushups.");
+            toast("Quitting is for the weak. Don't stop when you're tired, stop when you are done.", "danger");
+        }
+
+        /* =====================================================
+           AAR
+        ===================================================== */
+        function renderAARSection() {
+            const logs = readJSON("aar_logs", []);
+            $("aar-history-list").innerHTML = logs.length ? logs.map(l => `
+                <div style="background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px;">
+                    <div style="font-size:12px; font-weight:600; color:var(--primary); margin-bottom:6px;">AAR debrief: ${esc(l.date)}</div>
+                    <div style="font-size:14px;"><strong>Weakness:</strong> ${esc(l.failure)}<br><strong>Strategy:</strong> ${esc(l.plan)}</div>
+                </div>`).join('') : `<div class="empty-state">No reports yet. Write your first one above.</div>`;
+        }
+        function saveAAR() {
+            const f = $("aar-failure").value.trim(), p = $("aar-plan").value.trim();
+            if (!f || !p) { toast("Fill in both fields first.", "danger"); return; }
+            const logs = readJSON("aar_logs", []);
+            logs.unshift({ date: new Date().toLocaleDateString(), failure: f, plan: p });
+            writeJSON("aar_logs", logs);
+            $("aar-failure").value = ""; $("aar-plan").value = "";
+            renderAARSection();
+            toast("AAR archived.");
+        }
+
+        /* =====================================================
+           REPORTS
+        ===================================================== */
+        function runReportAnim(root) {
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                root.querySelectorAll('[data-ring]').forEach(el => el.style.setProperty('--pct', el.dataset.ring));
+                root.querySelectorAll('[data-w]').forEach(el => el.style.width = el.dataset.w + '%');
+                root.querySelectorAll('[data-count]').forEach(el => { el.dataset.val = 0; animateNumber(el, +el.dataset.count, n => n + '%', 900); });
+            }));
+        }
+
+        function ringHTML(label, pct) {
+            const has = pct !== null;
+            return `<div class="db-gauge-item">
+                <div class="stat-circle-ring lg" data-ring="${has ? pct : 0}"><div class="stat-circle-pct" ${has ? `data-count="${pct}"` : ''}>${has ? '0%' : '—'}</div></div>
+                <div class="db-gauge-label">${label}</div></div>`;
+        }
+
+        function monthGridHTML(statFn, y, activeM) {
+            let html = "";
+            for (let i = 0; i < 12; i++) {
+                const s = statFn(y, i);
+                const has = s.possible > 0;
+                const p = has ? pctOf(s.done, s.possible) : null;
+                html += `<div class="mm-box ${i === activeM ? 'active-month-box' : ''} ${has ? '' : 'empty'}">
+                    <div class="mm-month-name">${MONTH_NAMES[i]}</div>
+                    <div class="mm-stats"><span>Completion</span><span class="mm-pct" ${has ? `data-count="${p}"` : ''}>${has ? '0%' : '—'}</span></div>
+                    <div class="mm-bar"><div class="${has ? bandClass(p) : ''}" ${has ? `data-w="${p}"` : ''}></div></div>
+                </div>`;
+            }
+            return html;
+        }
+
+        function breakdownHTML(s) {
+            const overall = s.possible > 0 ? pctOf(s.done, s.possible) : null;
+            let html = ringHTML('Overall', overall);
+            s.weeks.forEach((w, i) => { html += ringHTML(`Week ${i + 1}`, w.possible > 0 ? pctOf(w.done, w.possible) : null); });
+            return html;
+        }
+
+        function renderMultiMonthReports() {
+            const y = activeDate.getFullYear(), m = activeDate.getMonth();
+
+            $("mm-grid-habits").innerHTML = monthGridHTML(habitMonthStats, y, m);
+            const hs = habitMonthStats(y, m);
+            $("db-title-habits").innerText = `${MONTH_NAMES[m]} ${y} detailed breakdown`;
+            $("db-total-habits").innerText = hs.possible > 0 ? (hs.done / hs.possible * 100).toFixed(2) + '%' : '—';
+            $("db-gauges-habits").innerHTML = breakdownHTML(hs);
+
+            $("mm-grid-timetable").innerHTML = monthGridHTML(ttMonthStats, y, m);
+            const ts = ttMonthStats(y, m);
+            $("db-title-timetable").innerText = `${MONTH_NAMES[m]} ${y} detailed breakdown`;
+            $("db-total-timetable").innerText = ts.possible > 0 ? (ts.done / ts.possible * 100).toFixed(2) + '%' : '—';
+            $("db-gauges-timetable").innerHTML = breakdownHTML(ts);
+
+            runReportAnim($("tab-report"));
+        }
+
+        /* =====================================================
+           HARD TRUTH + ACHIEVEMENTS
+        ===================================================== */
+        function getComputedStats() {
+            const activePenalties = readJSON("punishment_list", []).filter(p => !p.served).length;
+            const bdata = readJSON("bunk_bank_data", {});
+            let lowAttend = false;
+            for (const sub in bdata) { if (bdata[sub].total > 0 && bdata[sub].attended / bdata[sub].total < 0.75) lowAttend = true; }
+            const now = new Date();
+            const hs = habitMonthStats(now.getFullYear(), now.getMonth());
+            const { current, best } = calcStreaks();
+            return {
+                activePenalties, lowAttend,
+                hasData: hs.possible > 0,
+                hPct: pctOf(hs.done, hs.possible),
+                streak: current, bestStreak: best,
+                sessions: parseInt(localStorage.getItem('timer_sessions') || '0'),
+                aars: readJSON("aar_logs", []).length
+            };
+        }
+
+        let truthToken = 0;
+        function generateHardTruth() {
+            const s = getComputedStats();
+            let txt = "ANALYZING YOUR MINDSET...\n\n";
+            if (s.activePenalties > 0) txt += `> DAVID GOGGINS SAYS: "You have ${s.activePenalties} ACTIVE PUNISHMENT${s.activePenalties > 1 ? 'S' : ''}. Stop making excuses. You don't get better by hiding from your failures. Do the work."\n\n`;
+            if (s.lowAttend) txt += `> SHRI KRISHNA SAYS: "The restless mind is driving you to avoid your duties. Control your mind through practice. Get back to your classes."\n\n`;
+            if (!s.hasData) {
+                txt += `> NO DATA YET THIS MONTH. Nothing logged means nothing earned. Open the grid and start.\n\n`;
+            } else {
+                txt += `> GRID SCORE: ${s.hPct}% this month so far. STREAK: ${s.streak} day${s.streak === 1 ? '' : 's'} (best ${s.bestStreak}).\n\n`;
+                if (s.hPct < 70) txt += `> Unacceptable. You are letting the days run you instead of running the day. Fix your routine.\n\n`;
+                else if (s.hPct < 85) txt += `> Decent is not the goal. You are ${85 - s.hPct} points from dominating. Close the gap.\n\n`;
+            }
+            if (s.activePenalties === 0 && !s.lowAttend && s.hasData && s.hPct >= 85) {
+                txt += `> You are executing. Good. But as Goggins says, don't get comfortable. The moment you think you've made it is the moment you start losing.\n\n`;
+            }
+            txt += "CONQUER THE MIND. STAY HARD.";
+
+            const el = $("hard-truth-text"), tok = ++truthToken;
+            el.textContent = ""; el.classList.add("typing");
+            let i = 0;
+            (function step() {
+                if (tok !== truthToken) return;
+                i += 2;
+                el.textContent = txt.slice(0, i);
+                if (i < txt.length) setTimeout(step, 14); else el.classList.remove("typing");
+            })();
+        }
+
+        function renderAchievements() {
+            const s = getComputedStats();
+            const achs = [
+                { id: "bunk", icon: "🏛️", title: "Bunk Bank Billionaire", desc: "No subject below 75% attendance.", unlocked: !s.lowAttend },
+                { id: "iron", icon: "🛡️", title: "Iron Mind", desc: "Zero active punishments.", unlocked: s.activePenalties === 0 },
+                { id: "grid", icon: "🔥", title: "Grid Dominator", desc: `85% or more of this month's habits so far. Now: ${s.hPct}%.`, unlocked: s.hasData && s.hPct >= 85 },
+                { id: "soul", icon: "💀", title: "Soul Taker", desc: s.sessions > 0 ? `Finished ${s.sessions} timer session${s.sessions > 1 ? 's' : ''}.` : "Finish a full Soul-Taking Timer session.", unlocked: s.sessions > 0 },
+                { id: "streak7", icon: "⛓️", title: "Seven Day Chain", desc: `Reach a 7 day streak. Best so far: ${s.bestStreak}.`, unlocked: s.bestStreak >= 7 },
+                { id: "aar", icon: "📋", title: "Debriefed", desc: "Archive your first weekly AAR.", unlocked: s.aars > 0 }
+            ];
+            const seen = readJSON("ach_seen", []);
+            const html = achs.map(a => {
+                const fresh = a.unlocked && !seen.includes(a.id);
+                return `<div class="ach-badge ${a.unlocked ? 'unlocked' : ''} ${fresh ? 'just-unlocked' : ''}">
+                    <div class="ach-icon">${a.unlocked ? a.icon : '🔒'}</div>
+                    <div class="ach-title">${a.title}</div>
+                    <div class="ach-desc">${a.desc}</div></div>`;
+            }).join("");
+            $("achievement-grid-container").innerHTML = html;
+            writeJSON("ach_seen", achs.filter(a => a.unlocked).map(a => a.id));
+        }
+    </script>
+</body>
+</html>
