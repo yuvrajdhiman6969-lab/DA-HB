@@ -362,11 +362,27 @@
         }
         @media (max-width: 640px) {
             nav { padding: 10px 14px; }
-            .nav-links { overflow-x: auto; flex-wrap: nowrap; max-width: 100%; padding-bottom: 4px; }
-            .nav-btn { white-space: nowrap; }
+            .nav-links { overflow-x: auto; flex-wrap: nowrap; max-width: 100%; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+            .nav-btn { white-space: nowrap; padding: 10px 14px; min-height: 40px; }
             .home-stats-row { grid-template-columns: 1fr; }
             .streak-num { font-size: 100px; }
             .container { padding: 0 12px; }
+            /* iOS Safari zooms the page on focus if an input's font-size is under 16px — this stops that */
+            .form-group input, .form-group textarea, .form-group select, .aar-form textarea { font-size: 16px; }
+            .modal-card { padding: 20px; max-height: 88vh; overflow-y: auto; }
+            .btn-exception, .timer-ctrl-btn, .theme-toggle { min-height: 40px; }
+        }
+        @media (max-width: 480px) {
+            .streak-num { font-size: 68px; }
+            .multi-month-grid { grid-template-columns: 1fr; }
+            .achievement-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+            .timer-ring-wrap { width: 190px; height: 190px; }
+            .timer-clock { font-size: 42px; }
+            .timer-card { padding: 24px 16px; }
+            .punish-card, .aar-card { padding: 18px; }
+            .home-quote-text { font-size: 17px; }
+            .hero-quote { padding: 20px 18px; }
+            .pin-container { padding: 32px 22px 26px; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -637,6 +653,22 @@
         </div>
     </div>
 
+    <!-- SYNC CODE MODAL -->
+    <div id="sync-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-bottom:8px; font-size:22px;">Sync across devices</h3>
+            <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">Enter any code you like. Use the exact same code on every device you want linked together.</p>
+            <div class="form-group">
+                <label for="sync-code-input">Sync code</label>
+                <input type="text" id="sync-code-input" placeholder="e.g. yuvraj123" autocapitalize="off" autocorrect="off" spellcheck="false" />
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn-exception muted" onclick="closeSyncModal()">Cancel</button>
+                <button class="btn-exception" onclick="submitSyncCode()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /* =====================================================
            CONFIG
@@ -828,14 +860,19 @@
         }
 
         function syncPromptCode() {
-            const v = prompt("Enter a sync code (make one up — use the SAME code on every device you want linked, e.g. a password only you know):", syncCode || '');
-            if (v === null) return;
-            syncCode = v.trim();
+            $('sync-code-input').value = syncCode || '';
+            $('sync-modal').classList.add('show');
+            setTimeout(() => $('sync-code-input').focus(), 50);
+        }
+        function closeSyncModal() { $('sync-modal').classList.remove('show'); }
+        function submitSyncCode() {
+            const v = $('sync-code-input').value.trim();
+            closeSyncModal();
+            if (!v) return;
+            syncCode = v;
             localStorage.setItem('sync_code', syncCode);
-            if (syncCode) {
-                syncInit();
-                toast('Sync code saved. Open this app on your other device and enter the exact same code.', 'win');
-            }
+            syncInit();
+            toast('Sync code saved. Open this app on your other device and enter the exact same code.', 'win');
             syncUpdateBtn();
         }
 
