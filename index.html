@@ -372,6 +372,18 @@
             .modal-card { padding: 20px; max-height: 88vh; overflow-y: auto; }
             .btn-exception, .timer-ctrl-btn, .theme-toggle { min-height: 40px; }
         }
+        @media (max-width: 700px) {
+            /* Timetable: 7 squeezed columns don't work on a phone — turn it into
+               one full-width day per swipe instead, with a little peek of the next day. */
+            .schedule-grid-container {
+                grid-template-columns: none;
+                grid-auto-flow: column;
+                grid-auto-columns: 88%;
+                scroll-snap-type: x mandatory;
+                align-items: start;
+            }
+            .schedule-day-col { scroll-snap-align: start; }
+        }
         @media (max-width: 480px) {
             .streak-num { font-size: 68px; }
             .multi-month-grid { grid-template-columns: 1fr; }
@@ -1384,6 +1396,9 @@
                 html += `</div></div>`;
             }
             $("schedule-grid-cols").innerHTML = html;
+            // On phones the days now swipe one-at-a-time — jump straight to today's column
+            const todayCol = $("schedule-grid-cols").querySelector(".is-today");
+            if (todayCol) todayCol.scrollIntoView({ behavior: "instant", inline: "start", block: "nearest" });
         }
 
         // Clicking the same button twice undoes it
