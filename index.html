@@ -160,7 +160,7 @@
         .hero-quote .btn-exception { margin-top: 26px; align-self: flex-start; }
         .hero-quote.swap .home-quote-text { opacity: 0; transform: translateY(8px); }
         .hero-quote.swap .home-quote-author { opacity: 0; }
-        .home-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .home-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
         .home-stat-box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; box-shadow: var(--shadow); }
         .home-stat-label { font-size: 13px; color: var(--muted); font-weight: 500; display: block; margin-bottom: 6px; }
         .home-stat-value { font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--text); line-height: 1.1; }
@@ -290,6 +290,46 @@
         .btn-green:hover { background: var(--ok); color: #fff; border-color: var(--ok); }
         .btn-red:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
         .btn-grey:hover { background: var(--muted); color: #fff; }
+        .btn-blue:hover { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+
+        /* ============ GYM TRACKER ============ */
+        .gym-rest-card { background: var(--panel-2); border-radius: 8px; padding: 16px 10px; text-align: center; font-size: 13px; color: var(--muted); flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .gym-stats-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .gym-stat-pill { background: var(--panel-2); border-radius: 99px; padding: 6px 14px; font-size: 12.5px; font-weight: 600; color: var(--text); }
+        .gym-stat-pill.warn { background: color-mix(in srgb, var(--danger) 16%, var(--panel)); color: var(--danger); }
+        .gym-ex-boxes { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+        .gym-ex-chip { background: var(--panel); border: 1px solid var(--border-strong); border-radius: 7px; padding: 6px 9px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .gym-ex-chip-name { font-size: 11.5px; font-weight: 600; color: var(--text); }
+        .gym-ex-chip-group { font-size: 10px; color: var(--muted); background: var(--panel-2); border-radius: 99px; padding: 1px 7px; white-space: nowrap; }
+        .gym-modal-card { max-width: 560px; max-height: 82vh; overflow-y: auto; }
+        .gym-ex-block { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+        .gym-ex-block h4 { font-size: 14px; margin-bottom: 2px; }
+        .gym-ex-emphasis { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
+        .gym-set-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+        .gym-set-row input { width: 70px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-size: 13px; }
+        .gym-set-row span { font-size: 12px; color: var(--muted); }
+        .gym-set-row span:first-child { width: 44px; }
+        .gym-set-del { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 15px; padding: 2px 6px; }
+        .gym-pr-note { font-size: 11.5px; color: var(--ok); font-weight: 600; margin-bottom: 8px; }
+        .gym-best-note { font-size: 11.5px; color: var(--muted); margin-bottom: 8px; }
+
+        /* ---- gym progress report ---- */
+        .gym-report-group-h { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 18px 0 8px; }
+        .gym-report-group-h:first-child { margin-top: 0; }
+        .gym-report-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+        .gym-report-row:last-child { border-bottom: none; }
+        .gym-report-main { flex: 1; min-width: 0; }
+        .gym-report-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+        .gym-report-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+        .gym-report-best { text-align: right; flex-shrink: 0; }
+        .gym-report-best b { font-family: var(--font-display); font-size: 17px; color: var(--text); display: block; line-height: 1.1; }
+        .gym-report-best span { font-size: 10.5px; color: var(--muted); }
+        .gym-report-trend { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+        .gym-report-trend.up { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); color: var(--ok); }
+        .gym-report-trend.down { background: color-mix(in srgb, var(--danger) 16%, var(--panel)); color: var(--danger); }
+        .gym-report-trend.flat { background: color-mix(in srgb, var(--warn) 16%, var(--panel)); color: var(--warn); }
+        .gym-report-trend.none { background: var(--panel-2); color: var(--muted); }
+        .gym-report-empty { font-size: 13px; color: var(--muted); padding: 6px 4px; }
 
         /* ============ MODAL ============ */
         .modal-overlay { position: fixed; inset: 0; background: var(--overlay); display: none; justify-content: center; align-items: center; z-index: 10000; backdrop-filter: blur(3px); padding: 16px; }
@@ -348,6 +388,7 @@
         #toast-wrap { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 20000; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
         .toast { background: var(--text); color: var(--bg); padding: 11px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,.3); animation: toastIn .3s cubic-bezier(.2,.9,.3,1.2); }
         .toast.danger { background: var(--danger); color: #fff; }
+        .toast.quote { background: var(--panel); color: var(--text); border: 1px solid var(--primary); font-style: italic; }
         .toast.win { background: var(--primary); color: var(--primary-ink); font-family: var(--font-display); font-size: 22px; letter-spacing: .06em; padding: 14px 30px; }
         .toast.out { opacity: 0; transform: translateY(10px); transition: .35s; }
         @keyframes toastIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
@@ -364,13 +405,19 @@
             nav { padding: 10px 14px; }
             .nav-links { overflow-x: auto; flex-wrap: nowrap; max-width: 100%; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
             .nav-btn { white-space: nowrap; padding: 10px 14px; min-height: 40px; }
-            .home-stats-row { grid-template-columns: 1fr; }
             .streak-num { font-size: 100px; }
             .container { padding: 0 12px; }
             /* iOS Safari zooms the page on focus if an input's font-size is under 16px — this stops that */
             .form-group input, .form-group textarea, .form-group select, .aar-form textarea { font-size: 16px; }
             .modal-card { padding: 20px; max-height: 88vh; overflow-y: auto; }
             .btn-exception, .timer-ctrl-btn, .theme-toggle { min-height: 40px; }
+            /* iOS zooms on focus below 16px here too, and sets need bigger tap targets on a phone */
+            .gym-set-row input { font-size: 16px; padding: 8px; min-height: 38px; }
+            .gym-set-row { flex-wrap: wrap; }
+            .gym-set-del { min-width: 34px; min-height: 34px; }
+            .event-action-btn { min-width: 34px; min-height: 34px; }
+            .home-stats-row { grid-template-columns: repeat(2, 1fr); }
+            .gym-report-best b { font-size: 15px; }
         }
         @media (max-width: 700px) {
             /* Timetable: 7 squeezed columns don't work on a phone — turn it into
@@ -420,6 +467,7 @@
             .dash-card { padding: 14px; }
             .detailed-breakdown-card { padding: 16px; }
             .db-header { font-size: 17px; }
+            .home-stats-row { grid-template-columns: 1fr; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -494,6 +542,7 @@
                 <button class="nav-btn" data-tab="home" onclick="switchTab('home')">Home</button>
                 <button class="nav-btn" data-tab="tick" onclick="switchTab('tick')">Daily Grid</button>
                 <button class="nav-btn" data-tab="timetable" onclick="switchTab('timetable')">Time Table</button>
+                <button class="nav-btn" data-tab="gym" onclick="switchTab('gym')">Gym</button>
                 <button class="nav-btn" data-tab="wardrobe" onclick="switchTab('wardrobe')">Wardrobe</button>
                 <button class="nav-btn" data-tab="laundry" onclick="switchTab('laundry')">Laundry<span class="wd-badge" id="wd-badge" style="display:none">0</span></button>
                 <button class="nav-btn" data-tab="soul" onclick="switchTab('soul')">Soul Timer</button>
@@ -629,6 +678,11 @@
                         <span class="home-stat-value" id="home-today-progress">0 / 0</span>
                         <div class="mini-track"><div class="mini-fill" id="home-today-bar"></div></div>
                     </div>
+                    <div class="home-stat-box">
+                        <span class="home-stat-label">Gym this week</span>
+                        <span class="home-stat-value" id="home-gym-progress">0 / 0</span>
+                        <div class="mini-track"><div class="mini-fill" id="home-gym-bar"></div></div>
+                    </div>
                 </div>
             </div>
 
@@ -698,6 +752,28 @@
                 <div class="schedule-grid-container" id="schedule-grid-cols"></div>
             </div>
 
+            <!-- GYM TRACKER -->
+            <div id="tab-gym" class="section">
+                <div class="quote-box quote-goggins" id="gym-quote-box">
+                    <span id="gym-quote-text"></span> — <strong id="gym-quote-author"></strong>
+                    <div style="margin-top:10px;"><button class="btn-exception" style="padding:5px 12px; font-size:11.5px;" onclick="generateGymQuote()">New quote</button></div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-card-title"><span>Gym tracker</span><small id="gym-today-lbl"></small></div>
+                    <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">
+                        Rotation: Shoulders+Legs+Core &rarr; Chest+Triceps &rarr; Back+Biceps &rarr; repeat, one per gym day. Sunday is rest by default — it only becomes a workout day if you opt in with "Go to gym anyway?" on that day. Missing or excusing a day just moves on to the next muscle group, it doesn't repeat.
+                    </p>
+                    <div class="gym-stats-bar" id="gym-stats-bar"></div>
+                </div>
+
+                <div class="month-selector" style="margin-top:20px;">
+                    <button onclick="changeDateScope(-1, 'week')">&larr; Prev week</button>
+                    <h2 id="gym-week-dates"></h2>
+                    <button onclick="changeDateScope(1, 'week')">Next week &rarr;</button>
+                </div>
+                <div class="schedule-grid-container" id="gym-grid-cols"></div>
+            </div>
+
             <!-- 3. SOUL TIMER -->
             <div id="tab-soul" class="section">
                 <div class="quote-box quote-goggins">
@@ -765,6 +841,17 @@
                     </div>
                     <div class="db-gauges" id="db-gauges-timetable"></div>
                 </div>
+
+                <h3 class="report-section-title">Gym progress report</h3>
+                <p class="report-note">Every set you've logged, exercise by exercise, since the gym tracker started.</p>
+                <div class="dash-card">
+                    <div class="gym-stats-bar" id="gym-report-stats"></div>
+                    <p id="gym-report-verdict" style="font-size:13.5px; margin-top:14px; line-height:1.5;"></p>
+                </div>
+                <div class="detailed-breakdown-card">
+                    <div class="db-header"><span>Per-exercise progress</span></div>
+                    <div id="gym-report-table"></div>
+                </div>
             </div>
 
             <!-- 6. HARD TRUTH -->
@@ -824,6 +911,18 @@
         </div>
     </div>
 
+    <!-- GYM LOG MODAL -->
+    <div id="gym-log-modal" class="modal-overlay">
+        <div class="modal-card gym-modal-card">
+            <h3 style="margin-bottom:4px; font-size:20px;" id="gym-modal-title">Log workout</h3>
+            <p style="color:var(--muted); font-size:12.5px; margin-bottom:16px;" id="gym-modal-sub"></p>
+            <div id="gym-modal-body"></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+                <button class="btn-exception muted" onclick="closeGymLogModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SYNC CODE MODAL -->
     <div id="sync-modal" class="modal-overlay">
         <div class="modal-card">
@@ -847,6 +946,7 @@
         const CORRECT_PIN = "976084";
         const DEFAULT_START_ISO = "2026-08-20";   // first day counted in streaks and reports
         const STREAK_MIN_PCT = 70;                // a day counts toward the streak at this % of habits done
+        const SCROLL_MONTHLY_BUDGET = 5;          // Level 1-3 slip-days allowed per month before Hard Truth calls it out
 
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -890,6 +990,68 @@
             "\"Embrace the suck.\" — David Goggins",
             "\"There is nothing lost or wasted in this life.\" — Shri Krishna"
         ];
+
+        // Pulled straight from MASTER_QUOTES above — the subset that's actually about
+        // controlling the mind/senses/lust, used as the popup whenever the Scrolling
+        // Control cell changes. Real quotes only, nothing invented for this.
+        const URGE_QUOTES = [
+            "\"For him who has conquered the mind, the mind is the best of friends; but for one who has failed to do so, his mind will remain the greatest enemy.\" — Shri Krishna (Gita 6.6)",
+            "\"The mind is restless and difficult to restrain, but it is subdued by practice.\" — Shri Krishna (Gita 6.35)",
+            "\"A man's own self is his friend. A man's own self is his foe.\" — Shri Krishna",
+            "\"He who has no attachments can really love others, for his love is pure and divine.\" — Shri Krishna",
+            "\"When a man dwells on the pleasure of sense, attraction for them arises in him.\" — Shri Krishna",
+            "\"Do not let your mind control you. Control your mind.\" — David Goggins",
+            "\"The wise work for the welfare of the world, without thought for themselves.\" — Shri Krishna",
+            "\"You're gonna have to go to the darkest place in your mind to find who you really are.\" — David Goggins",
+            "\"Reshape yourself through the power of your will.\" — Shri Krishna",
+            "\"A mind completely controlled is a friend, otherwise it acts like an enemy.\" — Shri Krishna",
+            "\"Lust, anger, and greed are the three doors to hell.\" — Shri Krishna",
+            "\"Sever the ignorant doubt in your heart with the sword of self-knowledge.\" — Shri Krishna",
+            "\"Pain unlocks a secret doorway in the mind, one that leads to both peak performance and beautiful silence.\" — David Goggins",
+            "\"Don't stop when you're tired. Stop when you are done.\" — David Goggins"
+        ];
+        let lastUrgeQuoteIdx = -1;
+        function pickUrgeQuote() {
+            let idx;
+            do { idx = Math.floor(Math.random() * URGE_QUOTES.length); } while (idx === lastUrgeQuoteIdx && URGE_QUOTES.length > 1);
+            lastUrgeQuoteIdx = idx;
+            return URGE_QUOTES[idx];
+        }
+
+        // Also pulled straight from MASTER_QUOTES — the subset that's actually about physical
+        // suffering, effort, and training, shown in the gym tab instead of the general pool.
+        const GYM_QUOTES = [
+            "\"Don't stop when you're tired. Stop when you are done.\" — David Goggins",
+            "\"The only way to grow is to suffer. You have to callous your mind.\" — David Goggins",
+            "\"There is no magic pill. There is no special hack. You just have to put in the work.\" — David Goggins",
+            "\"Suffering is the true test of life.\" — David Goggins",
+            "\"To grow, you must be willing to suffer.\" — David Goggins",
+            "\"Pain unlocks a secret doorway in the mind, one that leads to both peak performance and beautiful silence.\" — David Goggins",
+            "\"Embrace the suck.\" — David Goggins",
+            "\"Take their souls. Show them what you are capable of.\" — David Goggins",
+            "\"Greatness pulls mediocrity into the mud. Get out there and get after it.\" — David Goggins",
+            "\"Perform your obligatory duty, because action is indeed better than inaction.\" — Shri Krishna",
+            "\"Set thy heart upon thy work, but never on its reward.\" — Shri Krishna",
+            "\"Reshape yourself through the power of your will.\" — Shri Krishna"
+        ];
+        let lastGymQuoteIdx = -1;
+        function generateGymQuote() {
+            let idx;
+            do { idx = Math.floor(Math.random() * GYM_QUOTES.length); } while (idx === lastGymQuoteIdx && GYM_QUOTES.length > 1);
+            lastGymQuoteIdx = idx;
+            const q = GYM_QUOTES[idx];
+            const cut = q.lastIndexOf(' — ');
+            $("gym-quote-text").innerText = cut > -1 ? q.slice(0, cut) : q;
+            $("gym-quote-author").innerText = cut > -1 ? q.slice(cut + 3) : '';
+        }
+
+        // Sentence text per slip level, and once-per-day-per-level flag keys so cycling
+        // the button back and forth doesn't stack duplicate punishments for the same day.
+        const SCROLL_SENTENCES = {
+            1: "Slipped once today. 20 min extra study, phone away for the next hour.",
+            2: "Getting worse today. 45 min extra study + 50 pushups.",
+            3: "Forced 45m study + 100 pushups."
+        };
 
         const HABITS = [
             { id: "sleep", name: "😴 7–9h Sleep", freq: "daily" },
@@ -1116,7 +1278,7 @@
             t.className = 'toast ' + kind;
             t.textContent = msg;
             wrap.appendChild(t);
-            setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, kind === 'win' ? 4200 : 3200);
+            setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, kind === 'win' ? 4200 : kind === 'quote' ? 5200 : 3200);
         }
 
         /* =====================================================
@@ -1183,6 +1345,29 @@
                 else ttMark(b.dataset.act, b.dataset.date, b.dataset.ev);
             });
 
+            // Gym grid buttons + the set-logging modal both use event delegation
+            $("gym-grid-cols").addEventListener("click", (e) => {
+                const b = e.target.closest("[data-act]");
+                if (!b) return;
+                if (b.dataset.act === "log") openGymLogModal(b.dataset.date);
+                else if (b.dataset.act === "extra") { localStorage.setItem(`gym_extra_${b.dataset.date}`, "workout"); renderGymSection(); }
+                else if (b.dataset.act === "rest") { localStorage.removeItem(`gym_extra_${b.dataset.date}`); localStorage.removeItem(`gym_status_${b.dataset.date}`); renderGymSection(); }
+                else gymMark(b.dataset.act, b.dataset.date);
+            });
+            $("gym-modal-body").addEventListener("click", (e) => {
+                const b = e.target.closest("[data-act]");
+                if (!b) return;
+                const exName = b.closest(".gym-ex-block").dataset.ex;
+                if (b.dataset.act === "addset") gymAddSet(exName);
+                else if (b.dataset.act === "delset") gymDelSet(exName, parseInt(b.dataset.idx));
+            });
+            $("gym-modal-body").addEventListener("input", (e) => {
+                const inp = e.target.closest("input[data-field]");
+                if (!inp) return;
+                const exName = inp.closest(".gym-ex-block").dataset.ex;
+                gymUpdateSet(exName, parseInt(inp.dataset.idx), inp.dataset.field, inp.value);
+            });
+
             paintTimer();
             refreshSoulCount();
             checkActivePunishments();
@@ -1206,6 +1391,7 @@
             if (tabId === 'home') renderHomePage();
             if (tabId === 'tick') renderExecutionGrid(true);
             if (tabId === 'timetable') renderTimetableSection();
+            if (tabId === 'gym') { renderGymSection(); generateGymQuote(); }
             if (tabId === 'punishment') renderPunishmentSection();
             if (tabId === 'aar') renderAARSection();
             if (tabId === 'wardrobe') wdOpen();
@@ -1228,6 +1414,7 @@
             saveActiveDate();
             if ($('tab-tick').classList.contains('active')) renderExecutionGrid();
             if ($('tab-timetable').classList.contains('active')) renderTimetableSection();
+            if ($('tab-gym').classList.contains('active')) renderGymSection();
         }
 
         /* =====================================================
@@ -1248,7 +1435,13 @@
                 possible++;
                 const v = localStorage.getItem(`habit_${y}_${m}_${i}_${d}`);
                 if (h.type === "tristate") { if (v === "YES" || v === "MET") done++; }
-                else if (h.type === "scroll_numeric") { if (parseInt(v || "0") <= 1) done++; }
+                else if (h.type === "scroll_numeric") {
+                    // Only a clean 0 counts as done. Any slip (1-3) actively subtracts
+                    // from the day's score instead of just failing to add to it, so a
+                    // bad day here can push the whole day's % into the negative.
+                    const n = parseInt(v || "0");
+                    done += n === 0 ? 1 : -n;
+                }
                 else if (v === "true") done++;
             });
             return { done, possible };
@@ -1348,11 +1541,17 @@
             animateNumber($("home-month-completion"), mp, n => n + '%');
             const ts = dayHabitScore(startOfDay(today));
             $("home-today-progress").innerText = `${ts.done} / ${ts.possible}`;
+
+            const gw = gymWeekStats(today);
+            $("home-gym-progress").innerText = `${gw.done} / ${gw.scheduled}`;
+
             $("home-month-bar").style.width = '0%';
             $("home-today-bar").style.width = '0%';
+            $("home-gym-bar").style.width = '0%';
             requestAnimationFrame(() => requestAnimationFrame(() => {
                 $("home-month-bar").style.width = mp + '%';
                 $("home-today-bar").style.width = pctOf(ts.done, ts.possible) + '%';
+                $("home-gym-bar").style.width = pctOf(gw.done, gw.scheduled) + '%';
             }));
         }
 
@@ -1424,7 +1623,7 @@
                         body += `<td class="${tc}"><span class="class-attendance-btn ${cls} ${pop}" onclick="cycleH('${key}','tri',${d})">${v === "YES" ? "✓" : v === "MET" ? "75%" : "—"}</span></td>`;
                     } else if (h.type === "scroll_numeric") {
                         const v = parseInt(localStorage.getItem(key) || "0");
-                        if (v <= 1 && dt <= todayStart) checked++;
+                        if (v === 0 && dt <= todayStart) checked++;
                         body += `<td class="${tc}"><span class="scroll-level-btn scroll-level-${v} ${pop}" onclick="cycleH('${key}','scr',${d})">${v}</span></td>`;
                     } else {
                         const on = localStorage.getItem(key) === "true";
@@ -1469,13 +1668,17 @@
                 const cur = parseInt(localStorage.getItem(key) || "0");
                 const n = (cur + 1) % 4;
                 localStorage.setItem(key, n);
-                if (n === 3) {
-                    // keys look like habit_YEAR_MONTH_INDEX_DAY: one scroll penalty per calendar day, however often you cycle
-                    const [, ky, km, , kd] = key.split('_');
-                    const made = assignPunishment("Level 3 Media Scrolling", "Forced 45m study + 100 pushups.", `pun_scroll_${ky}_${km}_${kd}`);
-                    if (made) toast("Level 3 scrolling logged. Penalty assigned.", "danger");
-                    else toast("Level 3 logged. Today's scrolling penalty was already issued.");
+                // keys look like habit_YEAR_MONTH_INDEX_DAY
+                const [, ky, km, , kd] = key.split('_');
+                if (n === 0) {
+                    toast("Back to zero. Keep it there.", "info");
+                } else {
+                    // One punishment per level per calendar day — escalating if you slip further the same day,
+                    // but cycling the button back and forth doesn't stack duplicates.
+                    const made = assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${ky}_${km}_${kd}`);
+                    toast(made ? `Level ${n} logged. Penalty assigned: ${SCROLL_SENTENCES[n]}` : `Level ${n} logged. Today's Level ${n} penalty was already issued.`, "danger");
                 }
+                toast(pickUrgeQuote(), "quote");
             }
             syncDate(d);
             renderExecutionGrid();
@@ -1605,6 +1808,387 @@
                     <div class="bunk-msg">${msg}</div></div>`;
             }
             $("bunk-bank-rows").innerHTML = html;
+        }
+
+        /* =====================================================
+           GYM TRACKER
+           Rotation order: Shoulders+Legs+Core -> Chest+Triceps -> Back+Biceps -> repeat.
+           Each slot alternates its A/B variant every time it comes back around.
+           Sunday is rest UNLESS a debt is owed (from a missed session), in which case
+           it becomes a workout day too, absorbing the backlog. A miss freezes the
+           rotation (same session repeats on the next workout day) instead of skipping it.
+        ===================================================== */
+        const GYM_ORDER = [
+            {
+                title: "🍑 Shoulders + Legs + Core",
+                A: [
+                    { name: "Seated DB Press", group: "Shoulders" }, { name: "Lateral Raise", group: "Shoulders" }, { name: "Rear-Delt Fly", group: "Shoulders" },
+                    { name: "Leg Extension", group: "Legs" }, { name: "Seated/Lying Leg Curl", group: "Legs" }, { name: "Squats*", group: "Legs" },
+                    { name: "Leg/Knee Raises", group: "Core" }, { name: "Cable Crunch", group: "Core" }, { name: "Plank", group: "Core" }
+                ],
+                B: [
+                    { name: "Machine/DB Shoulder Press", group: "Shoulders" }, { name: "Cable Lateral Raise", group: "Shoulders" }, { name: "Face Pull", group: "Shoulders" },
+                    { name: "Leg Extension", group: "Legs" }, { name: "Leg Curl", group: "Legs" }, { name: "Split Squat*", group: "Legs" },
+                    { name: "Knee-to-Elbow", group: "Core" }, { name: "Heel Touch", group: "Core" }, { name: "Plank", group: "Core" }
+                ]
+            },
+            {
+                title: "💪 Chest + Triceps",
+                A: [
+                    { name: "Flat Bench Press", group: "Chest" }, { name: "Incline Machine Press", group: "Chest" }, { name: "Cable Fly (high-to-low)", group: "Chest" },
+                    { name: "Overhead Cable Extension", group: "Triceps" }, { name: "Straight-Bar Pushdown", group: "Triceps" }, { name: "Single-Arm Cable Pushdown", group: "Triceps" }
+                ],
+                B: [
+                    { name: "Machine Chest Press", group: "Chest" }, { name: "Incline Machine Press", group: "Chest" }, { name: "Machine Fly", group: "Chest" },
+                    { name: "Overhead Rope Extension", group: "Triceps" }, { name: "Rope Pushdown", group: "Triceps" }, { name: "Single-Arm Reverse-Grip Pushdown", group: "Triceps" }
+                ]
+            },
+            {
+                title: "🏋️ Back + Biceps",
+                A: [
+                    { name: "Lat Pulldown", group: "Back" }, { name: "Seated Cable Row", group: "Back" }, { name: "Chest-Supported T-Bar Row", group: "Back" },
+                    { name: "Incline DB Curl", group: "Biceps" }, { name: "Preacher Curl", group: "Biceps" }, { name: "Cable Hammer Curl", group: "Biceps" }
+                ],
+                B: [
+                    { name: "Neutral/Close-Grip Pulldown", group: "Back" }, { name: "Wide-Grip Seated Row", group: "Back" }, { name: "Chest-Supported Row", group: "Back" },
+                    { name: "Cable Curl", group: "Biceps" }, { name: "Incline DB Curl", group: "Biceps" }, { name: "Rope Hammer Curl", group: "Biceps" }
+                ]
+            }
+        ];
+        // Fixed the day this feature was added. Today = Shoulders+Legs+Core (Friday's missed
+        // session, being made up today) and one makeup session is still owed for that miss.
+        const GYM_EPOCH_ISO = "2026-09-26";
+        const GYM_EPOCH_INDEX = 0;   // today = Shoulders + Legs + Core
+
+        function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""); }
+        function getGymStatus(iso) { return localStorage.getItem(`gym_status_${iso}`) || ""; }
+        function getGymExtra(iso) { return localStorage.getItem(`gym_extra_${iso}`) || ""; }
+        function getGymSets(iso, exName) { return readJSON(`gym_sets_${iso}_${slug(exName)}`, []); }
+        function saveGymSets(iso, exName, sets) { writeJSON(`gym_sets_${iso}_${slug(exName)}`, sets); }
+
+        // Single forward walk from the epoch, returning a plan for every date in [fromIso, toIso].
+        // Sunday defaults to rest — it only becomes a workout day if you opt in for that specific
+        // date (the "go to gym anyway?" button). Marking a day done / missed / exception all move
+        // the rotation on to the next muscle group; a miss or exception does not repeat itself later,
+        // it's simply skipped.
+        function gymPlanRange(fromIso, toIso) {
+            const out = {};
+            if (toIso < GYM_EPOCH_ISO) return out;
+            let cur = parseISO(GYM_EPOCH_ISO);
+            let idx = GYM_EPOCH_INDEX;
+            const counts = [0, 0, 0];
+            let guard = 0;
+            while (true) {
+                const iso = isoDate(cur);
+                const dow = cur.getDay();
+                const isWorkout = dow !== 0 || getGymExtra(iso) === "workout";
+                let dayPlan;
+                if (isWorkout) {
+                    const s = GYM_ORDER[idx];
+                    const variant = counts[idx] % 2 === 0 ? "A" : "B";
+                    dayPlan = { type: "workout", title: s.title, variant, exercises: s[variant] };
+                } else {
+                    dayPlan = { type: "rest" };
+                }
+                if (iso >= fromIso && iso <= toIso) out[iso] = dayPlan;
+                if (iso >= toIso || ++guard > 4000) break;
+                if (isWorkout) { counts[idx]++; idx = (idx + 1) % 3; }
+                cur.setDate(cur.getDate() + 1);
+            }
+            return out;
+        }
+        function gymPlanFor(iso) { return gymPlanRange(iso, iso)[iso] || null; }
+
+        // Mon–Sun window around refDate: how many workout days were scheduled and how
+        // many are marked done. Used by the home page's "Gym this week" stat box.
+        function gymWeekStats(refDate) {
+            const sow = startOfDay(refDate);
+            sow.setDate(sow.getDate() - ((sow.getDay() + 6) % 7));
+            const eow = new Date(sow); eow.setDate(eow.getDate() + 6);
+            const plans = gymPlanRange(isoDate(sow), isoDate(eow));
+            let done = 0, scheduled = 0;
+            Object.entries(plans).forEach(([iso, p]) => {
+                if (p.type !== "workout") return;
+                scheduled++;
+                if (getGymStatus(iso) === "done") done++;
+            });
+            return { done, scheduled };
+        }
+
+        function gymBestWeight(exName, excludeIso) {
+            const prefix = "gym_sets_", suffix = `_${slug(exName)}`;
+            let best = null, bestDate = null;
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k.startsWith(prefix) || !k.endsWith(suffix)) continue;
+                const dateIso = k.slice(prefix.length, k.length - suffix.length);
+                if (dateIso === excludeIso) continue;
+                readJSON(k, []).forEach(s => { if (typeof s.weight === "number" && (best === null || s.weight > best)) { best = s.weight; bestDate = dateIso; } });
+            }
+            return best === null ? null : { weight: best, date: bestDate };
+        }
+
+        function gymMark(state, iso) {
+            const old = getGymStatus(iso);
+            const next = old === state ? "" : state;
+            if (next) localStorage.setItem(`gym_status_${iso}`, next); else localStorage.removeItem(`gym_status_${iso}`);
+            renderGymSection();
+        }
+
+        function renderGymSection() {
+            const sow = startOfDay(activeDate);
+            sow.setDate(sow.getDate() - ((sow.getDay() + 6) % 7));   // Monday
+            const eow = new Date(sow); eow.setDate(eow.getDate() + 6);
+            $("gym-week-dates").innerText = `${sow.getDate()} ${MONTH_NAMES[sow.getMonth()].substring(0, 3)} to ${eow.getDate()} ${MONTH_NAMES[eow.getMonth()].substring(0, 3)} ${eow.getFullYear()}`;
+
+            const todayIso = isoDate(new Date());
+            const plans = gymPlanRange(isoDate(sow), isoDate(eow));
+            const todayPlan = plans[todayIso] || gymPlanFor(todayIso);
+            $("gym-today-lbl").innerText = todayPlan ? (todayPlan.type === "workout" ? `Today: ${todayPlan.title.replace(/^\S+\s/, "")} (${todayPlan.variant})` : "Today: Rest day") : "";
+
+            let done = 0, missed = 0, excepted = 0, scheduled = 0, html = "";
+            for (let i = 0; i < 7; i++) {
+                const dDt = new Date(sow); dDt.setDate(sow.getDate() + i);
+                const iso = isoDate(dDt);
+                const plan = plans[iso];
+                const status = getGymStatus(iso);
+                if (plan && plan.type === "workout") {
+                    scheduled++;
+                    if (status === "done") done++; else if (status === "missed") missed++; else if (status === "exception") excepted++;
+                }
+                const stCls = status === "done" ? "status-completed" : status === "missed" ? "status-missed" : status === "exception" ? "status-excepted" : "";
+                html += `<div class="schedule-day-col ${iso === todayIso ? 'is-today' : ''}">
+                    <div class="schedule-day-head"><div>${DAY_NAMES[dDt.getDay()]}<small>${dDt.getDate()} ${MONTH_NAMES[dDt.getMonth()].substring(0, 3)}</small></div></div>
+                    <div class="schedule-events-list">`;
+                if (!plan) {
+                    html += `<div class="gym-rest-card">No data before this tracker started.</div>`;
+                } else if (plan.type === "rest") {
+                    html += `<div class="gym-rest-card">
+                        <div>😌 Rest day</div>
+                        <button class="btn-exception muted" style="padding:4px 10px; font-size:11.5px;" title="Turns today into a workout day instead of rest" data-act="extra" data-date="${iso}">Go to gym anyway?</button>
+                    </div>`;
+                } else {
+                    const isOptedIn = dDt.getDay() === 0 && getGymExtra(iso) === "workout";
+                    html += `<div class="schedule-event-card ${stCls}">
+                        <div class="event-title">${esc(plan.title)} <span style="font-weight:400; color:var(--muted);">· ${plan.variant}</span></div>
+                        <div class="gym-ex-boxes">${plan.exercises.map(e => `<div class="gym-ex-chip"><span class="gym-ex-chip-name">${esc(e.name)}</span><span class="gym-ex-chip-group">${esc(e.group)}</span></div>`).join("")}</div>
+                        <div class="event-actions">
+                            <button class="event-action-btn btn-green" title="Done" data-act="done" data-date="${iso}">✓</button>
+                            <button class="event-action-btn btn-red" title="Missed" data-act="missed" data-date="${iso}">✗</button>
+                            <button class="event-action-btn btn-grey" title="Exception" data-act="exception" data-date="${iso}">⚖️</button>
+                            <button class="event-action-btn btn-blue" title="Log sets" data-act="log" data-date="${iso}">🧮</button>
+                            ${isOptedIn && !status ? `<button class="event-action-btn" title="Back to rest day" data-act="rest" data-date="${iso}">↩</button>` : ""}
+                        </div>
+                    </div>`;
+                }
+                html += `</div></div>`;
+            }
+            $("gym-grid-cols").innerHTML = html;
+            $("gym-stats-bar").innerHTML = `
+                <div class="gym-stat-pill">✓ ${done} done</div>
+                <div class="gym-stat-pill ${missed ? 'warn' : ''}">✗ ${missed} missed</div>
+                <div class="gym-stat-pill">⚖️ ${excepted} exception</div>
+                <div class="gym-stat-pill ${scheduled >= 6 && done < 5 ? 'warn' : ''}">${scheduled} scheduled this week</div>`;
+            const todayCol = $("gym-grid-cols").querySelector(".is-today");
+            if (todayCol) todayCol.scrollIntoView({ behavior: "instant", inline: "start", block: "nearest" });
+        }
+
+        let gymModalIso = null;
+        function openGymLogModal(iso) {
+            const plan = gymPlanFor(iso);
+            if (!plan || plan.type !== "workout") return;
+            gymModalIso = iso;
+            const dDt = parseISO(iso);
+            $("gym-modal-title").innerText = plan.title;
+            $("gym-modal-sub").innerText = `${DAY_NAMES[dDt.getDay()]}, ${dDt.getDate()} ${MONTH_NAMES[dDt.getMonth()]} · Variant ${plan.variant}`;
+            $("gym-modal-body").innerHTML = plan.exercises.map(ex => gymExerciseBlockHTML(iso, ex)).join("");
+            $("gym-log-modal").classList.add("show");
+        }
+        function closeGymLogModal() { $("gym-log-modal").classList.remove("show"); renderGymSection(); }
+
+        function gymExerciseBlockHTML(iso, ex) {
+            const sets = getGymSets(iso, ex.name);
+            const best = gymBestWeight(ex.name, iso);
+            const todayMax = sets.reduce((m, s) => (typeof s.weight === "number" && s.weight > m) ? s.weight : m, 0);
+            const isPR = best && todayMax > best.weight;
+            const rows = sets.length ? sets.map((s, i) => gymSetRowHTML(i, s)).join("") : `<div style="font-size:12px; color:var(--muted); margin-bottom:6px;">No sets logged yet.</div>`;
+            const noteHTML = !best ? `<div class="gym-best-note">No previous log for this one yet.</div>`
+                : isPR ? `<div class="gym-pr-note">🎉 New PR today — previous best was ${best.weight}kg (${best.date})</div>`
+                    : `<div class="gym-best-note">Best so far: ${best.weight}kg (${best.date})</div>`;
+            return `<div class="gym-ex-block" data-ex="${esc(ex.name)}">
+                <h4>${esc(ex.name)}</h4>
+                <div class="gym-ex-emphasis">${esc(ex.group)}</div>
+                ${noteHTML}
+                <div class="gym-set-rows">${rows}</div>
+                <button class="btn-exception" style="margin-top:2px; padding:5px 12px; font-size:12px;" data-act="addset">+ Add set</button>
+            </div>`;
+        }
+        function gymSetRowHTML(idx, s) {
+            return `<div class="gym-set-row">
+                <span>Set ${idx + 1}</span>
+                <input type="number" step="0.5" min="0" placeholder="kg" value="${s.weight === '' || s.weight == null ? '' : s.weight}" data-field="weight" data-idx="${idx}">
+                <span>kg ×</span>
+                <input type="number" step="1" min="0" placeholder="reps" value="${s.reps === '' || s.reps == null ? '' : s.reps}" data-field="reps" data-idx="${idx}">
+                <button class="gym-set-del" data-act="delset" data-idx="${idx}" title="Remove set">✕</button>
+            </div>`;
+        }
+        function gymAddSet(exName) {
+            const sets = getGymSets(gymModalIso, exName);
+            sets.push({ weight: "", reps: "" });
+            saveGymSets(gymModalIso, exName, sets);
+            gymRefreshExerciseBlock(exName);
+        }
+        function gymDelSet(exName, idx) {
+            const sets = getGymSets(gymModalIso, exName);
+            sets.splice(idx, 1);
+            saveGymSets(gymModalIso, exName, sets);
+            gymRefreshExerciseBlock(exName);
+        }
+        function gymUpdateSet(exName, idx, field, value) {
+            const sets = getGymSets(gymModalIso, exName);
+            if (!sets[idx]) return;
+            sets[idx][field] = value === "" ? "" : parseFloat(value);
+            saveGymSets(gymModalIso, exName, sets);
+        }
+        function gymRefreshExerciseBlock(exName) {
+            const old = document.querySelector(`.gym-ex-block[data-ex="${CSS.escape(exName)}"]`);
+            if (!old) return;
+            const plan = gymPlanFor(gymModalIso);
+            const exObj = plan && plan.exercises.find(e => e.name === exName);
+            if (exObj) old.outerHTML = gymExerciseBlockHTML(gymModalIso, exObj);
+        }
+
+        /* =====================================================
+           GYM PROGRESS REPORT
+           Turns the raw per-day set logs into a real report: consistency since the
+           tracker started, total sets/volume, and per-exercise trend + PRs.
+        ===================================================== */
+        // Every exercise name that has ever appeared in the rotation, mapped to its
+        // muscle group, in rotation order (so the report reads in the same order as
+        // the workout days themselves).
+        function gymExerciseCatalog() {
+            const map = new Map();
+            GYM_ORDER.forEach(slot => {
+                ["A", "B"].forEach(v => (slot[v] || []).forEach(e => { if (!map.has(e.name)) map.set(e.name, e.group); }));
+            });
+            return map;
+        }
+
+        // Full logged history for one exercise, oldest first: [{date, sets:[{weight,reps}]}]
+        function gymExerciseHistory(exName) {
+            const prefix = "gym_sets_", suffix = `_${slug(exName)}`;
+            const out = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!k.startsWith(prefix) || !k.endsWith(suffix)) continue;
+                const dateIso = k.slice(prefix.length, k.length - suffix.length);
+                const sets = readJSON(k, []).filter(s => typeof s.weight === "number" && typeof s.reps === "number" && s.weight >= 0 && s.reps >= 0);
+                if (sets.length) out.push({ date: dateIso, sets });
+            }
+            out.sort((a, b) => a.date.localeCompare(b.date));
+            return out;
+        }
+
+        function computeGymReport() {
+            const todayIso = isoDate(new Date());
+            const plans = gymPlanRange(GYM_EPOCH_ISO, todayIso);
+            let done = 0, missed = 0, excepted = 0, scheduled = 0;
+            Object.entries(plans).forEach(([iso, p]) => {
+                if (p.type !== "workout") return;
+                scheduled++;
+                const st = getGymStatus(iso);
+                if (st === "done") done++; else if (st === "missed") missed++; else if (st === "exception") excepted++;
+            });
+            const denom = scheduled - excepted;
+            const consistency = denom > 0 ? pctOf(done, denom) : null;
+
+            let totalSets = 0, totalVolume = 0, exercisesLogged = 0, prsThisMonth = 0;
+            const monthPrefix = todayIso.slice(0, 7); // "YYYY-MM", used to count recent PR dates
+            const catalog = gymExerciseCatalog();
+            const exercises = [];
+            catalog.forEach((group, name) => {
+                const hist = gymExerciseHistory(name);
+                if (!hist.length) { exercises.push({ name, group, logged: false }); return; }
+                exercisesLogged++;
+                let best = -Infinity, bestDate = null, sessionTops = [];
+                hist.forEach(h => {
+                    let top = -Infinity;
+                    h.sets.forEach(s => { totalSets++; totalVolume += s.weight * s.reps; if (s.weight > top) top = s.weight; });
+                    sessionTops.push({ date: h.date, top });
+                    if (top > best) { best = top; bestDate = h.date; }
+                });
+                if (bestDate && bestDate.slice(0, 7) === monthPrefix) prsThisMonth++;
+                const last = sessionTops[sessionTops.length - 1];
+                const prev = sessionTops.length > 1 ? sessionTops[sessionTops.length - 2] : null;
+                let trend = "none";
+                if (prev) trend = last.top > prev.top ? "up" : last.top < prev.top ? "down" : "flat";
+                exercises.push({ name, group, logged: true, best, bestDate, sessions: hist.length, lastDate: last.date, lastTop: last.top, trend });
+            });
+            return { scheduled, done, missed, excepted, consistency, totalSets, totalVolume, exercisesLogged, exercisesTotal: catalog.size, prsThisMonth, exercises };
+        }
+
+        function gymReportVerdict(r) {
+            if (r.scheduled === 0) return "No gym days have been scheduled since the tracker started — nothing to report yet.";
+            if (r.done === 0 && r.exercisesLogged === 0) return `${r.scheduled} workouts have been scheduled since ${GYM_EPOCH_ISO} and none are logged yet. Open today's session and start logging sets — the report fills in from there.`;
+            let out = "";
+            if (r.consistency === null) out += "Not enough completed days yet to score consistency. ";
+            else if (r.consistency >= 85) out += `${r.consistency}% consistency — that's real discipline, you're actually showing up. `;
+            else if (r.consistency >= 70) out += `${r.consistency}% consistency is decent but not dominant. Every missed session is a missed set of gains. `;
+            else out += `${r.consistency}% consistency is not it. You're scheduled ${r.scheduled} sessions and missed ${r.missed} of them — that's the rotation stalling, not progressing. `;
+            if (r.exercisesLogged > 0) {
+                const up = r.exercises.filter(e => e.trend === "up").length;
+                const down = r.exercises.filter(e => e.trend === "down").length;
+                out += `You're logging ${r.exercisesLogged} of ${r.exercisesTotal} exercises in the rotation, ${r.totalSets} sets and ~${Math.round(r.totalVolume).toLocaleString()}kg of total volume so far. `;
+                if (r.prsThisMonth > 0) out += `${r.prsThisMonth} new PR${r.prsThisMonth === 1 ? "" : "s"} this month. `;
+                if (up > 0) out += `${up} exercise${up === 1 ? " is" : "s are"} trending up session-over-session. `;
+                if (down > 0) out += `${down} exercise${down === 1 ? " is" : "s are"} trending down — check form and recovery before you chase the number again. `;
+                const neverLogged = r.exercisesTotal - r.exercisesLogged;
+                if (neverLogged > 0) out += `${neverLogged} exercise${neverLogged === 1 ? "" : "s"} in the rotation ${neverLogged === 1 ? "has" : "have"} never had a set logged — the numbers mean nothing if you don't record them.`;
+            } else {
+                out += "No sets logged yet for any exercise — mark a workout done and log your sets to start tracking PRs.";
+            }
+            return out.trim();
+        }
+
+        const GYM_TREND_ICON = { up: "↑", down: "↓", flat: "→", none: "–" };
+        function gymReportRowHTML(e) {
+            if (!e.logged) {
+                return `<div class="gym-report-row">
+                    <div class="gym-report-main"><div class="gym-report-name">${esc(e.name)}</div><div class="gym-report-meta">Never logged</div></div>
+                    <div class="gym-report-trend none">${GYM_TREND_ICON.none}</div>
+                </div>`;
+            }
+            return `<div class="gym-report-row">
+                <div class="gym-report-main">
+                    <div class="gym-report-name">${esc(e.name)}</div>
+                    <div class="gym-report-meta">${e.sessions} session${e.sessions === 1 ? "" : "s"} logged · last ${e.lastDate} at ${e.lastTop}kg</div>
+                </div>
+                <div class="gym-report-best"><b>${e.best}kg</b><span>${e.bestDate}</span></div>
+                <div class="gym-report-trend ${e.trend}" title="${e.trend === 'up' ? 'Trending up' : e.trend === 'down' ? 'Trending down' : e.trend === 'flat' ? 'Holding steady' : 'Only one session logged'}">${GYM_TREND_ICON[e.trend]}</div>
+            </div>`;
+        }
+
+        function renderGymReport() {
+            const bar = $("gym-report-stats"), verdict = $("gym-report-verdict"), table = $("gym-report-table");
+            if (!bar || !verdict || !table) return;
+            const r = computeGymReport();
+            bar.innerHTML = `
+                <div class="gym-stat-pill">✓ ${r.done} done</div>
+                <div class="gym-stat-pill ${r.missed ? 'warn' : ''}">✗ ${r.missed} missed</div>
+                <div class="gym-stat-pill">${r.consistency === null ? '—' : r.consistency + '%'} consistency</div>
+                <div class="gym-stat-pill">${r.totalSets} sets logged</div>
+                <div class="gym-stat-pill">${Math.round(r.totalVolume).toLocaleString()}kg total volume</div>
+                <div class="gym-stat-pill">${r.exercisesLogged}/${r.exercisesTotal} exercises tracked</div>`;
+            verdict.innerText = gymReportVerdict(r);
+
+            const order = ["Shoulders", "Legs", "Core", "Chest", "Triceps", "Back", "Biceps"];
+            const byGroup = new Map();
+            r.exercises.forEach(e => { if (!byGroup.has(e.group)) byGroup.set(e.group, []); byGroup.get(e.group).push(e); });
+            let html = "";
+            order.filter(g => byGroup.has(g)).forEach(g => {
+                html += `<div class="gym-report-group-h">${esc(g)}</div>` + byGroup.get(g).map(gymReportRowHTML).join("");
+            });
+            table.innerHTML = html || `<div class="gym-report-empty">No exercises in the rotation yet.</div>`;
         }
 
         /* =====================================================
@@ -1796,6 +2380,8 @@
             $("db-total-timetable").innerText = ts.possible > 0 ? (ts.done / ts.possible * 100).toFixed(2) + '%' : '—';
             $("db-gauges-timetable").innerHTML = breakdownHTML(ts);
 
+            renderGymReport();
+
             runReportAnim($("tab-report"));
         }
 
@@ -1810,13 +2396,25 @@
             const now = new Date();
             const hs = habitMonthStats(now.getFullYear(), now.getMonth());
             const { current, best } = calcStreaks();
+
+            // Urge Control (Scrolling) this month: slip-days at level 1-3, and the worst level hit.
+            const y = now.getFullYear(), m = now.getMonth(), scIdx = HABITS.findIndex(h => h.id === "media_scroll");
+            let scrollSlipDays = 0, scrollWorstLevel = 0;
+            for (let d = 1; d <= now.getDate(); d++) {
+                const v = parseInt(localStorage.getItem(`habit_${y}_${m}_${scIdx}_${d}`) || "0");
+                if (v >= 1) scrollSlipDays++;
+                scrollWorstLevel = Math.max(scrollWorstLevel, v);
+            }
+
             return {
                 activePenalties, lowAttend,
                 hasData: hs.possible > 0,
                 hPct: pctOf(hs.done, hs.possible),
                 streak: current, bestStreak: best,
                 sessions: parseInt(localStorage.getItem('timer_sessions') || '0'),
-                aars: readJSON("aar_logs", []).length
+                aars: readJSON("aar_logs", []).length,
+                scrollSlipDays, scrollWorstLevel,
+                scrollOverBudget: scrollSlipDays > SCROLL_MONTHLY_BUDGET
             };
         }
 
@@ -1826,6 +2424,11 @@
             let txt = "ANALYZING YOUR MINDSET...\n\n";
             if (s.activePenalties > 0) txt += `> DAVID GOGGINS SAYS: "You have ${s.activePenalties} ACTIVE PUNISHMENT${s.activePenalties > 1 ? 'S' : ''}. Stop making excuses. You don't get better by hiding from your failures. Do the work."\n\n`;
             if (s.lowAttend) txt += `> SHRI KRISHNA SAYS: "The restless mind is driving you to avoid your duties. Control your mind through practice. Get back to your classes."\n\n`;
+            if (s.scrollSlipDays > 0) {
+                txt += `> URGE CONTROL: ${pickUrgeQuote()}\n> You slipped ${s.scrollSlipDays} day${s.scrollSlipDays === 1 ? '' : 's'} this month (worst: Level ${s.scrollWorstLevel})${s.scrollOverBudget ? ` — that is OVER your ${SCROLL_MONTHLY_BUDGET}-day monthly limit. No excuses.` : `, budget is ${SCROLL_MONTHLY_BUDGET}/month.`}\n\n`;
+            } else if (s.hasData) {
+                txt += `> URGE CONTROL: Zero slips this month. That is real discipline — keep the mind on a leash.\n\n`;
+            }
             if (!s.hasData) {
                 txt += `> NO DATA YET THIS MONTH. Nothing logged means nothing earned. Open the grid and start.\n\n`;
             } else {
@@ -1857,7 +2460,8 @@
                 { id: "grid", icon: "🔥", title: "Grid Dominator", desc: `85% or more of this month's habits so far. Now: ${s.hPct}%.`, unlocked: s.hasData && s.hPct >= 85 },
                 { id: "soul", icon: "💀", title: "Soul Taker", desc: s.sessions > 0 ? `Finished ${s.sessions} timer session${s.sessions > 1 ? 's' : ''}.` : "Finish a full Soul-Taking Timer session.", unlocked: s.sessions > 0 },
                 { id: "streak7", icon: "⛓️", title: "Seven Day Chain", desc: `Reach a 7 day streak. Best so far: ${s.bestStreak}.`, unlocked: s.bestStreak >= 7 },
-                { id: "aar", icon: "📋", title: "Debriefed", desc: "Archive your first weekly AAR.", unlocked: s.aars > 0 }
+                { id: "aar", icon: "📋", title: "Debriefed", desc: "Archive your first weekly AAR.", unlocked: s.aars > 0 },
+                { id: "sense", icon: "🧘", title: "Sense Control", desc: s.scrollSlipDays > 0 ? `${s.scrollSlipDays} slip day${s.scrollSlipDays > 1 ? 's' : ''} this month so far.` : "Zero urge control slips this month so far.", unlocked: s.hasData && s.scrollSlipDays === 0 }
             ];
             const seen = readJSON("ach_seen", []);
             const html = achs.map(a => {
