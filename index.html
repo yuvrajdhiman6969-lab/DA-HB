@@ -137,6 +137,24 @@
         .home-quote-text { font-size: 25px; line-height: 1.5; font-weight: 500; font-style: italic; max-width: 62ch; transition: opacity .25s, transform .25s; position: relative; }
         .home-quote-author { margin-top: 16px; font-weight: 600; color: var(--primary); transition: opacity .25s; }
         .hero-quote .btn-exception { margin-top: 26px; align-self: flex-start; }
+        .qp { margin-top: 18px; width: 100%; align-self: stretch; background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: 14px; padding: 10px 16px; display: flex; align-items: center; gap: 18px; }
+        .qp-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+        .qp-status { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .qp-eq { display: flex; align-items: flex-end; gap: 3px; height: 26px; width: 34px; flex-shrink: 0; }
+        .qp-eq i { flex: 1; height: 18%; background: var(--primary); border-radius: 2px; transition: height .3s; }
+        .qp.playing .qp-eq i { animation: qpEq .9s ease-in-out infinite; }
+        .qp-eq i:nth-child(2) { animation-delay: -.2s; } .qp-eq i:nth-child(3) { animation-delay: -.45s; } .qp-eq i:nth-child(4) { animation-delay: -.1s; }
+        .qp-eq i:nth-child(5) { animation-delay: -.6s; } .qp-eq i:nth-child(6) { animation-delay: -.3s; } .qp-eq i:nth-child(7) { animation-delay: -.75s; }
+        @keyframes qpEq { 0%,100% { height: 15%; } 50% { height: 100%; } }
+        .qp-seek { height: 8px; background: var(--track); border-radius: 99px; cursor: pointer; overflow: hidden; }
+        .qp-fill { height: 100%; width: 0; background: var(--grad); border-radius: 99px; }
+        .qp-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .qp-btn { border: 1.5px solid var(--border-strong); background: var(--panel); color: var(--text); border-radius: 50%; cursor: pointer; display: grid; place-content: center; transition: transform .12s, background .15s, border-color .15s; }
+        .qp-btn:hover { border-color: var(--primary); transform: translateY(-1px); }
+        .qp-btn:active { transform: scale(.94); }
+        .qp-sm { width: 36px; height: 36px; font-size: 13px; }
+        .qp-main { width: 46px; height: 46px; font-size: 18px; background: var(--primary); border-color: var(--primary); color: var(--primary-ink); }
+        .qp-main:hover { background: var(--primary-2); border-color: var(--primary-2); }
         .hero-quote.swap .home-quote-text { opacity: 0; transform: translateY(8px); }
         .hero-quote.swap .home-quote-author { opacity: 0; }
         .home-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -1320,6 +1338,18 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
                         <div class="home-quote-text" id="home-quote-text"></div>
                         <div class="home-quote-author" id="home-quote-author"></div>
                         <button class="btn-exception" onclick="generateHomeQuote()">New quote</button>
+                        <div class="qp" id="qp">
+                            <div class="qp-controls">
+                                <button class="qp-btn qp-sm" id="qp-stop" onclick="qpStop()" title="Stop" aria-label="Stop">■</button>
+                                <button class="qp-btn qp-main" id="qp-play" onclick="qpToggle()" title="Play / Pause" aria-label="Play or pause">▶</button>
+                                <button class="qp-btn qp-sm" id="qp-next" onclick="qpNext()" title="Next random quote" aria-label="Next">⏭</button>
+                            </div>
+                            <div class="qp-mid">
+                                <span class="qp-status" id="qp-status">Press play for a random quote</span>
+                                <div class="qp-seek" id="qp-seek" title="Seek"><div class="qp-fill" id="qp-fill"></div></div>
+                            </div>
+                            <div class="qp-eq" id="qp-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                        </div>
                     </div>
                 </div>
 
@@ -2531,6 +2561,47 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             }));
             try { renderHomeHud(); } catch (e) { console.warn('home hud', e); }
         }
+
+
+        /* ===== Quote audio player: random quotes/quote1.mp3 .. quote27.mp3 ===== */
+        const QP_COUNT = 27;
+        const qpAudio = new Audio();
+        qpAudio.preload = 'auto';
+        let qpBag = [], qpLast = -1, qpOn = false;
+        function qpPick() {
+            if (!qpBag.length) {
+                qpBag = Array.from({ length: QP_COUNT }, (_, i) => i + 1);
+                for (let i = qpBag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [qpBag[i], qpBag[j]] = [qpBag[j], qpBag[i]]; }
+                if (qpBag[qpBag.length - 1] === qpLast) qpBag.unshift(qpBag.pop());
+            }
+            qpLast = qpBag.pop();
+            return qpLast;
+        }
+        function qpUi(playing, msg) {
+            $("qp").classList.toggle('playing', playing);
+            $("qp-play").textContent = playing ? '❚❚' : '▶';
+            if (msg !== undefined) $("qp-status").textContent = msg;
+        }
+        function qpLoad() {
+            const n = qpPick();
+            qpAudio.src = 'quotes/quote' + n + '.mp3';
+            $("qp-fill").style.width = '0%';
+            qpUi(true, 'Quote ' + n + ' of ' + QP_COUNT);
+            qpAudio.play().catch(e => { console.warn('audio', e); qpUi(false, 'Could not play - tap Next'); });
+        }
+        function qpToggle() {
+            if (!qpOn) { qpOn = true; qpLoad(); return; }
+            if (qpAudio.paused) { qpAudio.play(); qpUi(true); } else { qpAudio.pause(); qpUi(false, 'Paused'); }
+        }
+        function qpNext() { qpOn = true; qpLoad(); }
+        function qpStop() { qpOn = false; qpAudio.pause(); qpAudio.removeAttribute('src'); qpAudio.load(); $("qp-fill").style.width = '0%'; qpUi(false, 'Stopped - press play for a random quote'); }
+        qpAudio.addEventListener('ended', () => { if (qpOn) qpLoad(); });
+        qpAudio.addEventListener('timeupdate', () => { if (qpAudio.duration) $("qp-fill").style.width = (qpAudio.currentTime / qpAudio.duration * 100) + '%'; });
+        qpAudio.addEventListener('error', () => { if (qpOn && qpAudio.getAttribute('src')) qpUi(false, 'File missing - tap Next'); });
+        document.addEventListener('click', e => {
+            const sk = e.target.closest && e.target.closest('#qp-seek');
+            if (sk && qpOn && qpAudio.duration) { const r = sk.getBoundingClientRect(); qpAudio.currentTime = (e.clientX - r.left) / r.width * qpAudio.duration; }
+        });
 
         let lastQuoteIdx = -1;
         function generateHomeQuote(instant) {
