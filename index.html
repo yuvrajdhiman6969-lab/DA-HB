@@ -531,6 +531,61 @@
         .toast.out { opacity: 0; transform: translateY(10px); transition: .35s; }
         @keyframes toastIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
 
+
+        /* ============ DRAWER + EXCEPTIONS ============ */
+        .nav-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .brand-wrap { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+        .brand-tag { font-family: var(--font-display); font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; margin-top: 3px; }
+        .hamburger { display: inline-flex; flex-direction: column; justify-content: center; gap: 5px; width: 44px; height: 44px; padding: 0 11px; border: 1px solid var(--border-strong); background: var(--panel); border-radius: 10px; cursor: pointer; flex: none; transition: border-color .15s, transform .15s; }
+        .hamburger:hover { border-color: var(--primary); transform: translateY(-1px); }
+        .hamburger span { display: block; height: 2px; border-radius: 2px; background: var(--text); transition: transform .25s, opacity .2s; }
+        .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .hamburger.open span:nth-child(2) { opacity: 0; }
+        .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+        #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 1000; }
+        #drawer-overlay.show { opacity: 1; pointer-events: auto; }
+        #drawer { position: fixed; top: 0; left: 0; bottom: 0; width: min(320px, 86vw); background: var(--bg); border-right: 1px solid var(--border-strong); box-shadow: 8px 0 40px rgba(0,0,0,.5); transform: translateX(-104%); transition: transform .28s cubic-bezier(.3,.8,.3,1); z-index: 1001; display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; visibility: hidden; }
+        #drawer.open { transform: none; visibility: visible; }
+        .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 18px 16px 14px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 1; }
+        .drawer-close { background: var(--panel); border: 1px solid var(--border-strong); color: var(--text); width: 38px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 16px; flex: none; }
+        .drawer-links { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 28px; }
+        .drawer-links .nav-btn { text-align: left; width: 100%; font-size: 15px; padding: 12px 14px; min-height: 46px; display: flex; align-items: center; justify-content: space-between; white-space: nowrap; }
+        body.drawer-open { overflow: hidden; }
+        @media (max-width: 480px) { .brand-tag { font-size: 8.5px; letter-spacing: .1em; } nav .brand-logo { font-size: 20px; } }
+
+        /* away / skipped days stay visible, in grey */
+        .cell-away { background: color-mix(in srgb, var(--muted) 16%, var(--panel)); color: var(--muted); font-size: 9px; font-style: italic; letter-spacing: .04em; opacity: .85; }
+        th.col-away { background: color-mix(in srgb, var(--muted) 22%, var(--panel)) !important; color: var(--muted) !important; }
+        .exc-banner { display: none; align-items: center; gap: 12px; width: 100%; text-align: left; margin: 0 0 14px; padding: 12px 16px; border-radius: 12px; border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--muted) 14%, var(--panel)); color: var(--text); cursor: pointer; font-size: 14px; font-family: inherit; }
+        .exc-banner:hover { border-color: var(--primary); }
+        .exc-banner b { color: var(--primary); }
+        .exc-banner .go { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+        .exc-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .exc-head p { color: var(--muted); font-size: 13.5px; margin-top: 4px; max-width: 560px; }
+        .exc-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; }
+        .exc-card.now { border-color: var(--primary); }
+        .exc-card.past { opacity: .65; }
+        .exc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .exc-title { font-family: var(--font-display); font-size: 18px; font-weight: 600; }
+        .exc-badge { font-size: 10.5px; letter-spacing: .1em; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--muted); margin-left: 8px; vertical-align: middle; }
+        .exc-card.now .exc-badge { color: var(--primary-ink); background: var(--primary); border-color: var(--primary); }
+        .exc-meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .exc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .exc-chip { font-size: 12.5px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--text); cursor: default; font-family: inherit; }
+        button.exc-chip { cursor: pointer; }
+        button.exc-chip.on { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); font-weight: 600; }
+        .exc-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .exc-form { background: var(--panel); border: 1px solid var(--primary); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+        .exc-form h4 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin: 18px 0 8px; }
+        .exc-form h4:first-child { margin-top: 0; }
+        .exc-check { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; font-size: 14px; cursor: pointer; }
+        .exc-check input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--primary); flex: none; }
+        .exc-check small { display: block; color: var(--muted); font-size: 12px; }
+        .exc-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+        .exc-form input[type=text], .exc-form input[type=date] { background: var(--panel-2); border: 1px solid var(--border-strong); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 15px; font-family: inherit; min-height: 40px; }
+        .exc-form input[type=text] { flex: 1; min-width: 160px; }
+        .exc-empty { color: var(--muted); text-align: center; padding: 34px 12px; border: 1px dashed var(--border-strong); border-radius: 14px; }
+
         /* ============ RESPONSIVE ============ */
         @media (max-width: 1000px) {
             .dash-top-grid, .dash-top-grid.two { grid-template-columns: 1fr; }
@@ -1191,6 +1246,39 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
 @keyframes ibFrameOut{0%{opacity:1;transform:none}30%{opacity:.5;transform:none}45%{opacity:.9;transform:none}100%{opacity:0;transform:none}}
 #boot.ib.h .ib-hud{animation:ibHudBoot 1s ease-out forwards,ibHudFlk 3.2s 1.8s steps(1) infinite}
 @keyframes ibHudBoot{0%{opacity:0;filter:brightness(2.2)}8%{opacity:.7}14%{opacity:.05}24%{opacity:.9;filter:brightness(1.8)}30%{opacity:.15}42%{opacity:.8}50%{opacity:.3}60%{opacity:1;filter:brightness(1.3)}68%{opacity:.6}78%{opacity:1}100%{opacity:1;filter:none}}
+
+/* ===== BOOT v4: two big black+blue eyes. drop -> glow in the centre -> flicker ===== */
+#boot.ib .ib-stage { background: radial-gradient(ellipse 85% 70% at 50% 42%, #05142e 0, #02060f 55%, #000 100%); }
+#boot.ib .ib-frame, #boot.ib .ib-slab { display: none !important; }
+#boot.ib .ib-eyepos { perspective: 1200px; }
+#boot.ib .ib-eyes { gap: 2.4vw; position: relative; }
+#boot.ib .ib-eyec { display: none; }
+#boot.ib .ib-eyew { animation: none !important; filter: drop-shadow(0 14px 14px rgba(0,0,0,.9)); }
+#boot.ib .ib-eye { width: 47vw; max-width: 980px; }
+#boot.ib .ib-eye::before { display: none; }
+#boot.ib .eg-on { opacity: 0; }
+#boot.ib .ib-stage::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; background: radial-gradient(ellipse 85% 62% at 50% 42%, rgba(25,110,255,.45), rgba(10,60,200,.15) 55%, transparent 80%); }
+#boot.ib.e2 .ib-stage::after { animation: ibLightOn .55s ease-out forwards; }
+#boot.ib.fk .ib-stage::after { opacity: 1; animation: ibEyeFlick .9s linear; }
+#boot.ib.p .ib-stage::after { opacity: 1; }
+#boot.ib.e2 .eg-on { animation: ibLightOn .55s ease-out forwards; }
+#boot.ib.fk .eg-on { opacity: 1; animation: ibEyeFlick .9s linear; }
+#boot.ib.p .eg-on { opacity: 1; animation: none; }
+@keyframes ibLightOn { 0% { opacity: 0; } 25% { opacity: .5; } 42% { opacity: .2; } 72% { opacity: .95; } 100% { opacity: 1; } }
+#boot.ib.e1 .ib-eyes { animation: ibRigDrop .95s linear forwards; transform: translateY(-140vh) rotateX(55deg); }
+#boot.ib.eland .ib-eyes, #boot.ib.e2 .ib-eyes, #boot.ib.fk .ib-eyes { animation: none; transform: none; }
+@keyframes ibRigDrop {
+  0%   { transform: translateY(-140vh) rotateX(55deg) scale(.95); filter: blur(7px); animation-timing-function: cubic-bezier(.5,0,.85,.5); }
+  60%  { transform: translateY(2vh) rotateX(-7deg) scale(1.02,.97); filter: blur(0); animation-timing-function: cubic-bezier(.2,.7,.3,1); }
+  78%  { transform: translateY(-1.2vh) rotateX(2.5deg) scale(1); animation-timing-function: ease-in-out; }
+  100% { transform: none; filter: none; }
+}
+
+/* ===== BOOT v5: helmet-interior eye scene (canvas) ===== */
+.hm-cv{position:absolute;inset:0;width:100%;height:100%;z-index:6;pointer-events:none;display:block}
+#boot.ib.hm-on .ib-stage{background:#000}
+#boot.ib.hm-on .ib-eyepos,#boot.ib.hm-on .ib-fkov{display:none!important}
+#boot.ib.hm-on .ib-stage::after{display:none!important}
 </style>
 </head>
 <body>
@@ -1211,11 +1299,28 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
 
     <div id="app-content">
         <nav>
-            <div class="brand-logo">Discipline OS</div>
+            <div class="nav-left">
+                <button class="hamburger" id="menu-btn" onclick="toggleDrawer()" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
+                <div class="brand-wrap"><div class="brand-logo">Discipline OS</div><div class="brand-tag">Act like the person you want to become</div></div>
+            </div>
             <div class="nav-links">
+                <button class="theme-toggle" id="sync-btn" onclick="syncPromptCode()" aria-label="Set up sync" title="Sync across devices">🔗 Sync</button>
+                <button class="theme-toggle" onclick="lockApp()" aria-label="Lock app" title="Lock (asks for PIN again)">🔒</button>
+                <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"></button>
+                <button class="theme-toggle" id="fx-toggle" onclick="toggleFx()" aria-label="Toggle Lite effects" title="Lite mode: turns off decorative animation and blur (for older phones)">⚡ Lite: off</button>
+            </div>
+        </nav>
+        <div id="drawer-overlay" onclick="closeDrawer()"></div>
+        <aside id="drawer" aria-hidden="true" aria-label="Main menu">
+            <div class="drawer-head">
+                <div class="brand-wrap"><div class="brand-logo">Discipline OS</div><div class="brand-tag">Act like the person you want to become</div></div>
+                <button class="drawer-close" onclick="closeDrawer()" aria-label="Close menu">✕</button>
+            </div>
+            <div class="drawer-links">
                 <button class="nav-btn" data-tab="home" onclick="switchTab('home')">Home</button>
                 <button class="nav-btn" data-tab="tick" onclick="switchTab('tick')">Daily Grid</button>
                 <button class="nav-btn" data-tab="timetable" onclick="switchTab('timetable')">Time Table</button>
+                <button class="nav-btn" data-tab="exceptions" onclick="switchTab('exceptions')">Exceptions</button>
                 <button class="nav-btn" data-tab="gym" onclick="switchTab('gym')">Gym</button>
                 <button class="nav-btn" data-tab="wardrobe" onclick="switchTab('wardrobe')">Wardrobe</button>
                 <button class="nav-btn" data-tab="laundry" onclick="switchTab('laundry')">Laundry<span class="wd-badge" id="wd-badge" style="display:none">0</span></button>
@@ -1226,12 +1331,8 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
                 <button class="nav-btn" data-tab="hard-truth" onclick="switchTab('hard-truth')">Hard Truth</button>
                 <button class="nav-btn" data-tab="achievements" onclick="switchTab('achievements')">Achievements</button>
                 <button class="nav-btn" data-tab="aar" onclick="switchTab('aar')">Weekly AAR</button>
-                <button class="theme-toggle" id="sync-btn" onclick="syncPromptCode()" aria-label="Set up sync" title="Sync across devices">🔗 Sync</button>
-                <button class="theme-toggle" onclick="lockApp()" aria-label="Lock app" title="Lock (asks for PIN again)">🔒</button>
-                <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"></button>
-                <button class="theme-toggle" id="fx-toggle" onclick="toggleFx()" aria-label="Toggle Lite effects" title="Lite mode: turns off decorative animation and blur (for older phones)">⚡ Lite: off</button>
             </div>
-        </nav>
+        </aside>
 
         <div class="container">
 
@@ -1326,6 +1427,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
                     <button class="link-btn" onclick="editStartDate()">Change start date</button>
                 </div>
 
+                <button class="exc-banner" id="home-exc" onclick="switchTab('exceptions')"></button>
                 <div id="home-sysstrip" class="sys-strip"></div>
                 <div class="hero">
                     <div class="hero-streak">
@@ -1409,6 +1511,9 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             </div>
 
             <!-- 2. TIMETABLE -->
+            <!-- EXCEPTIONS -->
+            <div id="tab-exceptions" class="section"><div id="exc-root"></div></div>
+
             <div id="tab-timetable" class="section">
                 <div id="tt-punish-alert" class="punish-banner-tt">
                     <div><strong>Discipline breach:</strong> you have an unserved punishment.</div>
@@ -2365,10 +2470,199 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
 
         function saveActiveDate() { localStorage.setItem('last_active_date', activeDate.toISOString()); }
 
+
+        /* =====================================================
+           EXCEPTIONS ("Away & Skips") — one rule, read everywhere
+           excInfo(iso) is the single place that says what is switched off on a day.
+        ===================================================== */
+        const EXC_KEY = 'exceptions_list';
+        let _excRaw = null, _excList = [], _excMemo = {};
+        function excAll() {
+            const r = localStorage.getItem(EXC_KEY) || '[]';
+            if (r !== _excRaw) { _excRaw = r; _excMemo = {}; try { const v = JSON.parse(r); _excList = Array.isArray(v) ? v : []; } catch (e) { _excList = []; } }
+            return _excList;
+        }
+        function excMatch(e, iso) {
+            const w = e.when || {};
+            if (w.type === 'single') return iso === w.date;
+            if (w.type === 'range') return !!(w.from && w.to && iso >= w.from && iso <= w.to);
+            if (w.type === 'repeat') {
+                if (w.from && iso < w.from) return false;
+                if (w.to && iso > w.to) return false;
+                return (w.dows || []).indexOf(parseISO(iso).getDay()) > -1;
+            }
+            return false;
+        }
+        function excInfo(iso) {
+            const list = excAll();
+            if (iso in _excMemo) return _excMemo[iso];
+            let info = null;
+            list.forEach(e => {
+                if (!excMatch(e, iso)) return;
+                info = info || { list: [], streak: false, tt: false, reports: false, skipped: new Set(), minimum: false };
+                info.list.push(e);
+                const sk = e.skip || {};
+                if (sk.streak) info.streak = true;
+                if (sk.tt) info.tt = true;
+                if (sk.reports) info.reports = true;
+                if (sk.gym) info.skipped.add('gym');
+                if (e.mode === 'minimum') {
+                    info.minimum = true;
+                    const keep = new Set(e.minList || []);
+                    HABITS.forEach(h => { if (!keep.has(h.id)) info.skipped.add(h.id); });
+                } else if (sk.habits) (e.habitIds || []).forEach(id => info.skipped.add(id));
+            });
+            return (_excMemo[iso] = info);
+        }
+        function excHabitSkipped(dt, h) { const i = excInfo(isoDate(dt)); return !!(i && i.skipped.has(h.id)); }
+        function excGymAway(iso) { const i = excInfo(iso); return !!(i && i.skipped.has('gym')); }
+        function excNoPun(iso, hid) { const i = excInfo(iso); return !!(i && (i.tt || (hid && i.skipped.has(hid)))); }
+        function excLabelFor(iso) { const i = excInfo(iso); return i ? i.list.map(e => e.label || 'Away').join(' + ') : ''; }
+
+        const EXC_DOWS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const hShort = h => h.name.replace(/^\S+\s/, '');
+        const excFmt = iso => { const d = parseISO(iso); return `${d.getDate()} ${MONTH_NAMES[d.getMonth()].slice(0, 3)}`; };
+        function excList(arr) { return arr.length <= 1 ? arr.join('') : arr.slice(0, -1).join(', ') + ' & ' + arr[arr.length - 1]; }
+        function excWhat(e) {
+            const sk = e.skip || [], out = [];
+            if (sk.streak) out.push('streak');
+            if (sk.gym) out.push('gym');
+            if (sk.habits && e.mode !== 'minimum') (e.habitIds || []).forEach(id => { const h = HABITS.find(x => x.id === id); if (h && !(sk.gym && id === 'gym')) out.push(hShort(h)); });
+            if (sk.tt) out.push('timetable & punishments');
+            if (sk.reports) out.push('reports & insights');
+            return out;
+        }
+        function excWhen(e) {
+            const w = e.when || {};
+            if (w.type === 'single') return excFmt(w.date);
+            if (w.type === 'range') return `${excFmt(w.from)} → ${excFmt(w.to)}`;
+            const days = (w.dows || []).slice().sort((a, b) => a - b).map(n => EXC_DOWS[n]).join(', ');
+            return `Every ${days}` + (w.from || w.to ? ` (${w.from ? 'from ' + excFmt(w.from) : ''}${w.from && w.to ? ' ' : ''}${w.to ? 'until ' + excFmt(w.to) : ''})` : '');
+        }
+        function excMinNames(e) { return (e.minList || []).map(id => { const h = HABITS.find(x => x.id === id); return h ? hShort(h) : ''; }).filter(Boolean); }
+
+        function renderHomeExc() {
+            const el = $('home-exc'); if (!el) return;
+            const today = isoDate(new Date()), info = excInfo(today);
+            if (info) {
+                el.innerHTML = info.list.map(e => {
+                    const w = e.when || {}, lab = esc(e.label || 'Away');
+                    const when = w.type === 'range' ? `${lab} until <b>${excFmt(w.to)}</b>` : w.type === 'single' ? `${lab} today` : `${lab} · <b>${esc(excWhen(e))}</b>`;
+                    const what = e.mode === 'minimum' ? `minimum day: ${esc(excList(excMinNames(e)))}` : (excList(excWhat(e)) ? esc(excList(excWhat(e))) + ' paused' : '');
+                    return `<span>🌙 ${when}${what ? ' · ' + what : ''}</span>`;
+                }).join('<br>') + '<span class="go">Manage ›</span>';
+                el.style.display = 'flex'; return;
+            }
+            const soon = isoDate(new Date(Date.now() + 30 * 86400000));
+            const up = excAll().filter(e => { const w = e.when || {}; const st = w.type === 'range' ? w.from : w.type === 'single' ? w.date : null; return st && st > today && st <= soon; })
+                .sort((a, b) => ((a.when.from || a.when.date) < (b.when.from || b.when.date) ? -1 : 1))[0];
+            if (up) { el.innerHTML = `<span>🗓️ Upcoming: <b>${esc(up.label || 'Away')}</b> · ${esc(excWhen(up))}</span><span class="go">Manage ›</span>`; el.style.display = 'flex'; }
+            else el.style.display = 'none';
+        }
+
+        /* ---- Exceptions tab ---- */
+        let excDraft = null;
+        const excBlank = () => ({ id: 'exc_' + Date.now(), label: '', reason: '', skip: { streak: false, gym: false, habits: false, tt: false, reports: false }, habitIds: [], when: { type: 'single', date: isoDate(new Date()), from: '', to: '', dows: [] }, mode: 'skip', minList: [] });
+        function excNew() { excDraft = excBlank(); renderExceptions(); }
+        function excEdit(id) { const e = excAll().find(x => x.id === id); if (!e) return; excDraft = JSON.parse(JSON.stringify(e)); excDraft.when = Object.assign({ date: '', from: '', to: '', dows: [] }, excDraft.when); renderExceptions(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function excCancel() { excDraft = null; renderExceptions(); }
+        function excIn(k, v) { excDraft[k] = v; }
+        function excInW(k, v) { excDraft.when[k] = v; }
+        function excSkip(k) { excDraft.skip[k] = !excDraft.skip[k]; renderExceptions(); }
+        function excPick(listKey, id) { const a = excDraft[listKey], i = a.indexOf(id); if (i > -1) a.splice(i, 1); else a.push(id); renderExceptions(); }
+        function excType(t) { excDraft.when.type = t; renderExceptions(); }
+        function excDow(n) { const a = excDraft.when.dows, i = a.indexOf(n); if (i > -1) a.splice(i, 1); else a.push(n); renderExceptions(); }
+        function excMode(m) { excDraft.mode = m; renderExceptions(); }
+        function excSave() {
+            const d = excDraft, w = d.when, sk = d.skip;
+            if (!sk.streak && !sk.gym && !sk.habits && !sk.tt && !sk.reports && d.mode !== 'minimum') return toast('Tick at least one thing to skip.', 'danger');
+            if (sk.habits && d.mode !== 'minimum' && !d.habitIds.length) return toast('Pick which habits to skip.', 'danger');
+            if (d.mode === 'minimum' && !d.minList.length) return toast('Pick the habits that make up your minimum day.', 'danger');
+            if (w.type === 'single' && !w.date) return toast('Pick a date.', 'danger');
+            if (w.type === 'range' && (!w.from || !w.to || w.from > w.to)) return toast('Pick a valid from → to range.', 'danger');
+            if (w.type === 'repeat' && !w.dows.length) return toast('Pick the weekdays that repeat.', 'danger');
+            if (w.type === 'repeat' && w.from && w.to && w.from > w.to) return toast('"From" must be before "until".', 'danger');
+            d.label = (d.label || '').trim() || 'Away';
+            const list = excAll().slice(), i = list.findIndex(x => x.id === d.id);
+            if (i > -1) list[i] = d; else list.push(d);
+            writeJSON(EXC_KEY, list);
+            excDraft = null; toast('Exception saved. Applied everywhere.', 'info');
+            renderExceptions();
+        }
+        function excDelete(id) {
+            if (!confirm('Delete this exception? Those days go back to normal scoring.')) return;
+            writeJSON(EXC_KEY, excAll().filter(e => e.id !== id));
+            if (excDraft && excDraft.id === id) excDraft = null;
+            toast('Exception deleted.', 'info'); renderExceptions();
+        }
+        function excStatus(e, today) {
+            const w = e.when || {};
+            if (excMatch(e, today)) return { k: 'now', t: 'ACTIVE NOW', o: 0 };
+            if (w.type === 'repeat') return { k: '', t: 'REPEATING', o: 2 };
+            const end = w.type === 'range' ? w.to : w.date, st = w.type === 'range' ? w.from : w.date;
+            return end < today ? { k: 'past', t: 'PAST', o: 3 } : { k: '', t: 'UPCOMING', o: 1, st };
+        }
+        function renderExceptions() {
+            const root = $('exc-root'); if (!root) return;
+            const today = isoDate(new Date());
+            const chips = (listKey, sel) => `<div class="exc-chips">${HABITS.map(h => `<button type="button" class="exc-chip ${excDraft[listKey].indexOf(h.id) > -1 ? 'on' : ''}" onclick="excPick('${listKey}','${h.id}')">${esc(h.name)}</button>`).join('')}</div>`;
+            let form = '';
+            if (excDraft) {
+                const d = excDraft, w = d.when, sk = d.skip;
+                const chk = (k, t, sub) => `<label class="exc-check"><input type="checkbox" ${sk[k] ? 'checked' : ''} onchange="excSkip('${k}')"><span>${t}<small>${sub}</small></span></label>`;
+                const rad = (name, val, cur, fn, t) => `<label class="exc-check"><input type="radio" name="${name}" ${cur === val ? 'checked' : ''} onchange="${fn}('${val}')"><span>${t}</span></label>`;
+                form = `<div class="exc-form">
+                    <h4>1 · What to skip</h4>
+                    ${chk('streak', 'Daily streak', "days in the range don't count for or against it")}
+                    ${chk('gym', 'Gym', "no unmarked days, no punishments, the chain isn't broken")}
+                    ${chk('habits', 'Individual habits', 'e.g. only Study, or only Water')}
+                    ${sk.habits && d.mode !== 'minimum' ? chips('habitIds') : ''}
+                    ${chk('tt', 'Timetable blocks and punishments', 'blocks are excused and no penalties are issued')}
+                    ${chk('reports', 'Reports and Insights', 'the days are left out of percentages')}
+                    <h4>2 · When</h4>
+                    ${rad('exc-wt', 'single', w.type, 'excType', 'A single date')}
+                    ${rad('exc-wt', 'range', w.type, 'excType', 'A range, from this date to that date')}
+                    ${rad('exc-wt', 'repeat', w.type, 'excType', 'Repeating, such as every Sunday')}
+                    <div class="exc-row">
+                    ${w.type === 'single' ? `<input type="date" value="${esc(w.date)}" onchange="excInW('date',this.value)">` : ''}
+                    ${w.type === 'range' ? `<input type="date" value="${esc(w.from)}" onchange="excInW('from',this.value)"><span>→</span><input type="date" value="${esc(w.to)}" onchange="excInW('to',this.value)">` : ''}
+                    </div>
+                    ${w.type === 'repeat' ? `<div class="exc-chips">${EXC_DOWS.map((n, i) => `<button type="button" class="exc-chip ${w.dows.indexOf(i) > -1 ? 'on' : ''}" onclick="excDow(${i})">${n}</button>`).join('')}</div>
+                    <div class="exc-row"><span style="color:var(--muted);font-size:13px">Optional limits:</span><input type="date" value="${esc(w.from)}" onchange="excInW('from',this.value)" title="from"><span>→</span><input type="date" value="${esc(w.to)}" onchange="excInW('to',this.value)" title="until"></div>` : ''}
+                    <div style="color:var(--muted);font-size:12px;margin-top:6px">Past dates are fine — handy for marking old weeks properly.</div>
+                    <h4>3 · Label & reason</h4>
+                    <div class="exc-row"><input type="text" placeholder="Label — Trip, Exam week, Sick…" value="${esc(d.label)}" oninput="excIn('label',this.value)" maxlength="40"><input type="text" placeholder="Reason (optional)" value="${esc(d.reason)}" oninput="excIn('reason',this.value)" maxlength="120"></div>
+                    <h4>4 · How strict</h4>
+                    ${rad('exc-md', 'skip', d.mode, 'excMode', 'Skip entirely')}
+                    ${rad('exc-md', 'minimum', d.mode, 'excMode', 'Keep a minimum day — only finish a short list to count the day as done')}
+                    ${d.mode === 'minimum' ? chips('minList') : ''}
+                    <div class="exc-actions"><button class="btn-exception" onclick="excSave()">Save exception</button><button class="btn-exception muted" onclick="excCancel()">Cancel</button></div>
+                </div>`;
+            }
+            const cards = excAll().map(e => ({ e, st: excStatus(e, today) })).sort((a, b) => a.st.o - b.st.o || ((a.e.when.from || a.e.when.date || '') < (b.e.when.from || b.e.when.date || '') ? (a.st.o === 3 ? 1 : -1) : (a.st.o === 3 ? -1 : 1)));
+            const list = cards.length ? cards.map(({ e, st }) => {
+                const what = excWhat(e), min = e.mode === 'minimum';
+                return `<div class="exc-card ${st.k}">
+                    <div class="exc-top"><div><span class="exc-title">${esc(e.label || 'Away')}</span><span class="exc-badge">${st.t}</span>
+                    <div class="exc-meta">${esc(excWhen(e))}${e.reason ? ' · ' + esc(e.reason) : ''}</div></div></div>
+                    <div class="exc-chips">${what.map(t => `<span class="exc-chip">⏸ ${esc(t)}</span>`).join('')}${min ? `<span class="exc-chip">✅ Minimum day: ${esc(excList(excMinNames(e)))}</span>` : ''}</div>
+                    <div class="exc-actions"><button class="btn-exception" onclick="excEdit('${e.id}')">Edit</button><button class="btn-exception danger" onclick="excDelete('${e.id}')">Delete</button></div>
+                </div>`;
+            }).join('') : `<div class="exc-empty">No exceptions yet. Going on a trip, sick, or in exam week? Add one and the days turn grey instead of hurting your streak.</div>`;
+            root.innerHTML = `<div class="exc-head"><div><h2 style="font-size:26px">Away &amp; Skips</h2><p>Exceptions change what counts on a day. Streaks, Home, Reports, Insights, the Gym and punishments all follow the same rule, and skipped days show grey in the grids.</p></div>${excDraft ? '' : '<button class="btn-exception" onclick="excNew()">＋ New exception</button>'}</div>${form}${list}`;
+        }
+
+        /* ---- Drawer ---- */
+        function openDrawer() { $('drawer').classList.add('open'); $('drawer').setAttribute('aria-hidden', 'false'); $('drawer-overlay').classList.add('show'); $('menu-btn').classList.add('open'); $('menu-btn').setAttribute('aria-expanded', 'true'); document.body.classList.add('drawer-open'); }
+        function closeDrawer() { const d = $('drawer'); if (!d) return; d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); $('drawer-overlay').classList.remove('show'); $('menu-btn').classList.remove('open'); $('menu-btn').setAttribute('aria-expanded', 'false'); document.body.classList.remove('drawer-open'); }
+        function toggleDrawer() { $('drawer').classList.contains('open') ? closeDrawer() : openDrawer(); }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
         function renderTabContent(tabId, soft) {
             if (tabId === 'home') { window.__homeSoft = !!soft; try { renderHomePage(); } finally { window.__homeSoft = false; } }
             if (tabId === 'tick') renderExecutionGrid(true);
             if (tabId === 'timetable') renderTimetableSection();
+            if (tabId === 'exceptions') renderExceptions();
             if (tabId === 'gym') {
                 if (!soft) {
                     const q = pickGymQuote(), cut = q.lastIndexOf(' — ');
@@ -2387,6 +2681,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
         }
 
         function switchTab(tabId) {
+            closeDrawer();
             document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
             document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
             const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
@@ -2426,8 +2721,10 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
         function dayHabitScore(dt) {
             const y = dt.getFullYear(), m = dt.getMonth(), d = dt.getDate(), dow = dt.getDay();
             let done = 0, possible = 0;
+            const exI = excInfo(isoDate(dt));
             HABITS.forEach((h, i) => {
                 if (isExempt(h, dow)) return;
+                if (exI && exI.skipped.has(h.id)) return;   // away / skipped by an exception
                 if (h.id === "gym") {
                     const gs = gymHabitState(dt, `habit_${y}_${m}_${i}_${d}`);
                     if (gs) {
@@ -2464,7 +2761,9 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
                 const g = getGymStatus(iso);
                 if (g) return g === "done" ? "completed" : g === "exception" ? "excepted" : "missed";
             }
-            return localStorage.getItem(`tt_state_${iso}_${id}`) || "pending";
+            const _s = localStorage.getItem(`tt_state_${iso}_${id}`) || "pending";
+            if (_s === "pending") { const _x = excInfo(iso); if (_x && _x.tt) return "excepted"; }
+            return _s;
         }
         function eventEnd(dt, ev) {
             const [s, e] = ev.time.split('-');
@@ -2495,7 +2794,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             for (let d = 1; d <= dim; d++) {
                 const dt = new Date(y, m, d);
                 const wk = weeks[weeks.length - 1];
-                if (dt >= start && dt <= today) {
+                if (dt >= start && dt <= today && !(excInfo(isoDate(dt)) || {}).reports) {
                     const s = scoreFn(dt);
                     done += s.done; possible += s.possible; wk.done += s.done; wk.possible += s.possible;
                 }
@@ -2514,7 +2813,10 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             const today = startOfDay(new Date()), start = startOfDay(parseISO(getStartISO()));
             let run = 0, best = 0;
             for (let t = new Date(start); t <= today; t.setDate(t.getDate() + 1)) {
+                const exI = excInfo(isoDate(t));
+                if (exI && exI.streak) continue;                 // streak paused: neither counts nor breaks
                 const { done, possible } = dayHabitScore(t);
+                if (exI && possible === 0) continue;             // everything skipped that day
                 const ok = possible > 0 && (done / possible) * 100 >= STREAK_MIN_PCT;
                 if (ok) { run++; best = Math.max(best, run); }
                 else if (t.getTime() !== today.getTime()) run = 0;
@@ -2526,6 +2828,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
            HOME
         ===================================================== */
         function renderHomePage() {
+            try { renderHomeExc(); } catch (e) { }
             const today = new Date();
             $("home-today-date").innerText = `${DAY_NAMES[today.getDay()]}, ${MONTH_NAMES[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
 
@@ -2647,7 +2950,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             for (let d = 1; d <= dim; d++) {
                 dCnt++;
                 const dt = new Date(y, m, d);
-                h2 += `<th class="${d === todayNum ? 'col-today' : ''}">${d}<br><span style="font-size:10px; color:var(--muted); font-weight:500;">${DAY_ABBR[dt.getDay()]}</span></th>`;
+                h2 += `<th class="${d === todayNum ? 'col-today' : ''}${excInfo(isoDate(dt)) ? ' col-away' : ''}" title="${esc(excLabelFor(isoDate(dt)))}">${d}<br><span style="font-size:10px; color:var(--muted); font-weight:500;">${DAY_ABBR[dt.getDay()]}</span></th>`;
                 if (dt.getDay() === 0 || d === dim) { h1 += `<th class="week-group-header" colspan="${dCnt}">Week ${wGrp++}</th>`; dCnt = 0; }
             }
             $("table-week-header-row").innerHTML = `<th class="habit-title-col" rowspan="2">Habits</th>` + h1;
@@ -2660,6 +2963,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
                     const dt = new Date(y, m, d);
                     const key = `habit_${y}_${m}_${hIdx}_${d}`;
                     const tc = d === todayNum ? 'col-today' : '';
+                    if (excHabitSkipped(dt, h)) { body += `<td class="cell-away ${tc}" title="${esc(excLabelFor(isoDate(dt)))}">AWAY</td>`; continue; }
                     if (h.id === "gym") {
                         const gs = gymHabitState(dt, key);
                         if (gs) {
@@ -2722,14 +3026,14 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             const plan = gymPlanFor(iso);
             if (!plan) return null;
             if (plan.type !== "workout") return { kind: "rest", plan };
-            let st = getGymStatus(iso);
+            let st = getGymStatusRaw(iso);
             if (!st && localStorage.getItem(key) === "true") st = "done";
             return { kind: st || "pending", plan };
         }
         function gymCycleCell(iso, key, d) {
             popKey = key;
             const order = ["", "done", "missed", "exception"];
-            let cur = getGymStatus(iso);
+            let cur = getGymStatusRaw(iso);
             if (!cur && localStorage.getItem(key) === "true") cur = "done";
             const next = order[(order.indexOf(cur) + 1) % order.length];
             if (next) { localStorage.setItem(`gym_status_${iso}`, next); gymFreeze(iso); } else { localStorage.removeItem(`gym_status_${iso}`); gymMaybeUnfreeze(iso); }
@@ -2765,8 +3069,9 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
                 } else {
                     // One punishment per level per calendar day — escalating if you slip further the same day,
                     // but cycling the button back and forth doesn't stack duplicates.
-                    const made = assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${ky}_${km}_${kd}`);
-                    toast(made ? `Level ${n} logged. Penalty assigned: ${SCROLL_SENTENCES[n]}` : `Level ${n} logged. Today's Level ${n} penalty was already issued.`, "danger");
+                    const _noPun = excNoPun(isoDate(new Date(+ky, +km, +kd)), 'media_scroll');
+                    const made = _noPun ? false : assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${ky}_${km}_${kd}`);
+                    if (_noPun) toast(`Level ${n} logged. Away day: no penalty.`, "info"); else toast(made ? `Level ${n} logged. Penalty assigned: ${SCROLL_SENTENCES[n]}` : `Level ${n} logged. Today's Level ${n} penalty was already issued.`, "danger");
                 }
                 toast(pickUrgeQuote(), "quote");
             }
@@ -2876,7 +3181,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
 
             // attendance counters are now derived from the saved timetable states (see bunkData), so nothing to update here
             linkTTToHabit(ev, parseISO(dtStr), next, old);
-            if (next === "missed" && (ev.type === "gym" || ev.type === "class")) {
+            if (next === "missed" && (ev.type === "gym" || ev.type === "class") && !excNoPun(dtStr)) {
                 const made = assignPunishment(`Missed schedule: ${ev.title}`, "Unexcused absence. Sentence: 50 Burpees or Extra Study Block.", `pun_miss_${key}`);
                 if (made) toast("Missed block logged. Penalty assigned.", "danger");
             }
@@ -2952,7 +3257,8 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
         const GYM_EPOCH_INDEX = 2;
 
         function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, ""); }
-        function getGymStatus(iso) { return localStorage.getItem(`gym_status_${iso}`) || ""; }
+        function getGymStatusRaw(iso) { return localStorage.getItem(`gym_status_${iso}`) || ""; }
+        function getGymStatus(iso) { return getGymStatusRaw(iso) || (excGymAway(iso) ? "exception" : ""); }
         function getGymExtra(iso) { return localStorage.getItem(`gym_extra_${iso}`) || ""; }
         function getGymSets(iso, exName) { return readJSON(`gym_sets_${iso}_${slug(exName)}`, []); }
         function saveGymSets(iso, exName, sets) { writeJSON(`gym_sets_${iso}_${slug(exName)}`, sets); gymFreeze(iso); }
@@ -3061,7 +3367,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
         const GYM_MISS_LINES = ["No excuses. Get back after it next time.", "Logged as missed. Don't let it become a pattern.", "One skipped session. Don't make it two."];
         const GYM_EXC_LINES = ["Excused — fine, just don't lean on it.", "Logged. This isn't a habit, it's an exception."];
         function gymMark(state, iso) {
-            const old = getGymStatus(iso);
+            const old = getGymStatusRaw(iso);
             const next = old === state ? "" : state;
             if (next) { localStorage.setItem(`gym_status_${iso}`, next); gymFreeze(iso); } else { localStorage.removeItem(`gym_status_${iso}`); gymMaybeUnfreeze(iso); }
             if (next === "done") toast(GYM_DONE_LINES[Math.floor(Math.random() * GYM_DONE_LINES.length)]);
@@ -3376,7 +3682,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             const sow = startOfDay(activeDate); sow.setDate(sow.getDate() - ((sow.getDay() + 6) % 7));
             const plans = gymPlanRange(isoDate(sow), gymAddDays(isoDate(sow), 6));
             let wDone = 0, wSched = 0;
-            Object.keys(plans).forEach(iso => { if (plans[iso].type === "workout") { wSched++; if (getGymStatus(iso) === "done") wDone++; } });
+            Object.keys(plans).forEach(iso => { if (plans[iso].type === "workout" && !(excGymAway(iso) && !getGymStatusRaw(iso))) { wSched++; if (getGymStatus(iso) === "done") wDone++; } });
             const cons = st.scheduled ? st.done / st.scheduled : 0;
             const volByWeek = {}; let totVol = 0, totReps = 0, totSets = 0; const days = new Set();
             logs.forEach(l => { const k = gymMondayIso(l.iso); volByWeek[k] = (volByWeek[k] || 0) + l.vol; totVol += l.vol; totReps += l.reps; totSets += l.sets; days.add(l.iso); });
@@ -3588,6 +3894,7 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
             let done = 0, missed = 0, exception = 0, scheduled = 0;
             Object.keys(plans).forEach(iso => {
                 if (plans[iso].type !== "workout") return;
+                if (excGymAway(iso) && !getGymStatusRaw(iso)) return;
                 scheduled++;
                 const st = getGymStatus(iso);
                 if (st === "done") done++; else if (st === "missed") missed++; else if (st === "exception") exception++;
@@ -4518,7 +4825,7 @@ function gymFreeze(iso) {
     } catch (e) { }
 }
 function gymMaybeUnfreeze(iso) {
-    if (getGymStatus(iso)) return;
+    if (getGymStatusRaw(iso)) return;
     for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('gym_sets_' + iso + '_') === 0) return; }
     if (localStorage.getItem('gym_snap_' + iso) !== null) localStorage.removeItem('gym_snap_' + iso);
 }
@@ -4667,6 +4974,7 @@ function renderHomeHud() {
     let rows = '', done = 0, total = 0;
     HABITS.forEach((h, i) => {
         if (isExempt(h, dow)) return;
+        if (excHabitSkipped(dt, h)) { rows += `<div class="th-row rest"><span class="th-dot"></span><span class="th-name">${esc(h.name)}</span><span class="th-st">AWAY</span></div>`; return; }
         const key = habitKeyFor(dt, h.id), v = localStorage.getItem(key);
         let cls = '', st = 'OPEN', click = `todayAct('${h.id}')`, name = esc(h.name);
         if (h.id === 'gym') {
@@ -4707,7 +5015,7 @@ function todayAct(hid) {
     const dt = startOfDay(new Date()), iso = isoDate(dt), i = habitIdx(hid), h = HABITS[i], key = habitKeyFor(dt, hid);
     if (hid === 'gym') {
         const order = ['', 'done', 'missed', 'exception'];
-        let cur = getGymStatus(iso);
+        let cur = getGymStatusRaw(iso);
         if (!cur && localStorage.getItem(key) === 'true') cur = 'done';
         const next = order[(order.indexOf(cur) + 1) % order.length];
         if (next) { localStorage.setItem(`gym_status_${iso}`, next); gymFreeze(iso); } else { localStorage.removeItem(`gym_status_${iso}`); gymMaybeUnfreeze(iso); }
@@ -4723,8 +5031,9 @@ function todayAct(hid) {
         localStorage.setItem(key, n);
         if (n === 0) toast('Back to zero. Keep it there.', 'info');
         else {
-            const made = assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${dt.getFullYear()}_${dt.getMonth()}_${dt.getDate()}`);
-            toast(made ? `Level ${n} logged. Penalty assigned: ${SCROLL_SENTENCES[n]}` : `Level ${n} logged. Today's Level ${n} penalty was already issued.`, 'danger');
+            const _noPun = excNoPun(isoDate(dt), 'media_scroll');
+            const made = _noPun ? false : assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${dt.getFullYear()}_${dt.getMonth()}_${dt.getDate()}`);
+            if (_noPun) toast(`Level ${n} logged. Away day: no penalty.`, 'info'); else toast(made ? `Level ${n} logged. Penalty assigned: ${SCROLL_SENTENCES[n]}` : `Level ${n} logged. Today's Level ${n} penalty was already issued.`, 'danger');
         }
         toast(pickUrgeQuote(), 'quote');
     } else {
@@ -4742,6 +5051,7 @@ let insTab = 'overview', insHmWeeks = 8, insWeakScope = 'month', insDriver = 'sl
 function insHabitVal(dt, hi) {      // null = not applicable that day, 1 = done, 0 = missed
     const h = HABITS[hi];
     if (isExempt(h, dt.getDay())) return null;
+    if (excHabitSkipped(dt, h)) return null;
     const key = `habit_${dt.getFullYear()}_${dt.getMonth()}_${hi}_${dt.getDate()}`;
     if (h.id === 'gym') {
         const gs = gymHabitState(dt, key);
@@ -4757,8 +5067,10 @@ function insBuild() {
     const scrollI = HABITS.findIndex(h => h.type === 'scroll_numeric');
     for (let t = new Date(start); t <= today; t.setDate(t.getDate() + 1)) {
         const dt = new Date(t), sc = dayHabitScore(dt), iso = isoDate(dt);
+        const exR = excInfo(iso);
+        if (exR && exR.reports) { days.push({ dt, iso, done: 0, possible: 0, pct: null, vals: HABITS.map(() => null), touched: false, away: true }); continue; }
         const vals = HABITS.map((h, i) => insHabitVal(dt, i));
-        const touched = HABITS.some((h, i) => localStorage.getItem(`habit_${dt.getFullYear()}_${dt.getMonth()}_${i}_${dt.getDate()}`) !== null) || !!getGymStatus(iso);
+        const touched = HABITS.some((h, i) => localStorage.getItem(`habit_${dt.getFullYear()}_${dt.getMonth()}_${i}_${dt.getDate()}`) !== null) || !!getGymStatusRaw(iso);
         if (!touched && scrollI >= 0) vals[scrollI] = null;          // an untouched day is not a "clean" scrolling day
         days.push({ dt, iso, done: sc.done, possible: sc.possible, pct: sc.possible > 0 ? Math.max(0, Math.round(sc.done / sc.possible * 100)) : null, vals, touched });
     }
@@ -5161,6 +5473,536 @@ function bootStartLegacy() {
 function bootStart() { if (m7() && !fxCalm()) return ironBoot(); return bootStartLegacy(); }
 
 /* ---------- IRON MAN cinematic boot (Mark VII): black + blue, inside the helmet ---------- */
+/* ============ HELMET INTERIOR (eyes boot scene) ============
+   Procedural, layered, lit canvas render: depth-parallax layers, dynamic light mask,
+   additive emissive pass + multi-stage bloom, holo panels, arc reactor, hex-mesh eyes. */
+function helmetScene(el) {
+    const stage = el.querySelector('.ib-stage'); if (!stage) return null;
+    const DW = 1000, DH = 1034, PAD = 60;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.6);
+    const cv = document.createElement('canvas'); cv.className = 'hm-cv';
+    const ctx = cv.getContext('2d'); if (!ctx) return null;
+    const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(2, w | 0); c.height = Math.max(2, h | 0); return c; };
+    const cl = (x, a = 0, b = 1) => x < a ? a : x > b ? b : x;
+    const ease = x => { x = cl(x); return x * x * (3 - 2 * x); };
+    const rng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const R = rng(20240); const rr = (a, b) => a + (b - a) * R();
+    let vw = 0, vh = 0, S = 1, P = 1, emis, dk, b1, b2, b3, tmp = null;
+    let layers = null, eyeSpr = null, meshSpr = null;
+
+    function layout() {
+        vw = innerWidth; vh = innerHeight;
+        S = vw < vh ? Math.min(vw / (DW * .9), vh * .9 / DH) : Math.min(vw / DW, vh * .88 / DH);
+        cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
+        emis = mk(cv.width, cv.height);
+        dk = mk(cv.width / 4, cv.height / 4);
+        b1 = mk(cv.width / 4, cv.height / 4); b2 = mk(cv.width / 8, cv.height / 8); b3 = mk(cv.width / 16, cv.height / 16);
+        tmp = null;
+    }
+
+    /* ---------- drawing helpers ---------- */
+    const rrect = (g, x, y, w, h, r) => { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
+    const poly = (g, pts) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); };
+    const mirror = pts => pts.map(p => [DW - p[0], p[1]]);
+    const CH = (g, x0, y0, x1, y1) => { const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, '#03060b'); gr.addColorStop(.16, '#243042'); gr.addColorStop(.4, '#aab9cc'); gr.addColorStop(.48, '#f4f9ff'); gr.addColorStop(.58, '#667790'); gr.addColorStop(.82, '#18212e'); gr.addColorStop(1, '#02040a'); return gr; };
+    const GOLD = (g, x0, y0, x1, y1) => { const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, '#3d2503'); gr.addColorStop(.25, '#a97a1c'); gr.addColorStop(.5, '#fff1b5'); gr.addColorStop(.7, '#c0912a'); gr.addColorStop(1, '#4a2e05'); return gr; };
+    const RED = (g, y0, y1) => { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, '#2a0306'); gr.addColorStop(.4, '#8c0c14'); gr.addColorStop(.75, '#c8161e'); gr.addColorStop(1, '#ff3a30'); return gr; };
+    const shadow = (g, b, oy) => { g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowBlur = b * P; g.shadowOffsetY = (oy || 0) * P; };
+    const noShadow = g => { g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; };
+
+    function bolt(g, x, y, r) {
+        const gr = g.createRadialGradient(x - r * .35, y - r * .35, r * .1, x, y, r);
+        gr.addColorStop(0, '#eef5ff'); gr.addColorStop(.45, '#6b7a90'); gr.addColorStop(1, '#10161f');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = Math.max(.4, r * .18); g.stroke();
+        const a = R() * 3; g.lineWidth = Math.max(.4, r * .2);
+        g.beginPath(); g.moveTo(x - Math.cos(a) * r * .6, y - Math.sin(a) * r * .6); g.lineTo(x + Math.cos(a) * r * .6, y + Math.sin(a) * r * .6); g.stroke();
+    }
+    function ball(g, x, y, r) {
+        g.save(); shadow(g, 6, 2);
+        const gr = g.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+        gr.addColorStop(0, '#f2f8ff'); gr.addColorStop(.35, '#8fa0b8'); gr.addColorStop(.8, '#1c2533'); gr.addColorStop(1, '#05080d');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore();
+        g.fillStyle = 'rgba(70,150,255,.3)'; g.beginPath(); g.arc(x + r * .25, y + r * .3, r * .55, 0, 7); g.fill();
+        bolt(g, x, y, r * .32);
+    }
+    function plate(g, x, y, w, h, o) {
+        o = o || {};
+        g.save(); shadow(g, 10, 3);
+        const gr = g.createLinearGradient(0, y, 0, y + h);
+        gr.addColorStop(0, o.a || '#74849b'); gr.addColorStop(.18, o.b || '#3d495d'); gr.addColorStop(1, o.c || '#0d131c');
+        g.fillStyle = gr; rrect(g, x, y, w, h, o.r == null ? 2 : o.r); g.fill(); g.restore();
+        g.strokeStyle = 'rgba(220,236,255,.6)'; g.lineWidth = .8; g.beginPath(); g.moveTo(x + 2, y + .5); g.lineTo(x + w - 2, y + .5); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.85)'; g.beginPath(); g.moveTo(x + 2, y + h - .5); g.lineTo(x + w - 2, y + h - .5); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.4)'; g.strokeRect(x + 3, y + 3, w - 6, h - 6);
+        if (o.bolts !== false && w > 14 && h > 10) { bolt(g, x + 4.5, y + 4.5, 1.7); bolt(g, x + w - 4.5, y + 4.5, 1.7); bolt(g, x + 4.5, y + h - 4.5, 1.7); bolt(g, x + w - 4.5, y + h - 4.5, 1.7); }
+        if (o.vents) { g.fillStyle = 'rgba(0,0,0,.75)'; for (let i = 0; i < o.vents; i++) g.fillRect(x + 7, y + h * .3 + i * (h * .42 / o.vents), w - 14, 1.3); }
+    }
+    function piston(g, x, y, len, ang, w) {
+        g.save(); g.translate(x, y); g.rotate(ang); shadow(g, 9, 3);
+        g.fillStyle = CH(g, 0, -w / 2, 0, w / 2); g.fillRect(0, -w / 2, len * .58, w); noShadow(g);
+        g.fillStyle = 'rgba(6,10,18,.9)'; for (const f of [.08, .5]) g.fillRect(len * f, -w / 2 - 1.4, 3.2, w + 2.8);
+        g.fillStyle = 'rgba(70,150,255,.3)'; g.fillRect(2, -w * .42, len * .58 - 3, w * .09);
+        g.fillStyle = CH(g, 0, -w * .3, 0, w * .3); g.fillRect(len * .58, -w * .3, len * .42, w * .6);
+        g.fillStyle = 'rgba(0,0,0,.35)'; for (let i = 0; i < 5; i++) g.fillRect(len * (.62 + i * .07), -w * .3, .8, w * .6);
+        g.restore();
+        ball(g, x, y, w * .55); ball(g, x + Math.cos(ang) * len, y + Math.sin(ang) * len, w * .5);
+    }
+    const CAB = { red: ['#240206', '#8e0f1b', '#ff6b78'], blk: ['#020305', '#161c26', '#5b6a80'], blu: ['#03102a', '#1553c4', '#8fc8ff'], gld: ['#241601', '#946512', '#ffd98a'] };
+    function cable(g, p, w, k) {
+        const c = CAB[k]; const path = () => { g.beginPath(); g.moveTo(p[0], p[1]); for (let i = 2; i + 5 < p.length; i += 6) g.bezierCurveTo(p[i], p[i + 1], p[i + 2], p[i + 3], p[i + 4], p[i + 5]); };
+        g.save(); g.lineCap = 'round'; shadow(g, 6, 2);
+        path(); g.strokeStyle = c[0]; g.lineWidth = w + 2; g.stroke(); noShadow(g);
+        path(); g.strokeStyle = c[1]; g.lineWidth = w; g.stroke();
+        g.setLineDash([w * .45, w * .55]); path(); g.strokeStyle = c[2]; g.globalAlpha = .3; g.lineWidth = w * .9; g.stroke(); g.setLineDash([]);
+        g.globalAlpha = .6; g.translate(-w * .18, -w * .18); path(); g.strokeStyle = c[2]; g.lineWidth = Math.max(.6, w * .16); g.stroke(); g.restore();
+    }
+    function rcable(g, x, y, dx, dy, w, k) { const c = [x, y, x + dx * rr(.1, .5) + rr(-40, 40), y + dy * rr(.1, .5) + rr(-40, 40), x + dx * rr(.5, .9) + rr(-40, 40), y + dy * rr(.5, .9) + rr(-40, 40), x + dx, y + dy]; cable(g, c, w, k); }
+    function drum(g, x, y, r, gold) {
+        g.save(); shadow(g, 14, 4);
+        let gr = g.createRadialGradient(x - r * .3, y - r * .3, r * .1, x, y, r); gr.addColorStop(0, '#2f3a4b'); gr.addColorStop(.7, '#0a0e15'); gr.addColorStop(1, '#020307');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore();
+        for (let i = 1; i <= 4; i++) { g.strokeStyle = 'rgba(' + (120 + i * 20) + ',' + (150 + i * 15) + ',210,' + (.26 - i * .04) + ')'; g.lineWidth = .8; g.beginPath(); g.arc(x, y, r * (1 - i * .16), 0, 7); g.stroke(); }
+        if (gold) { g.strokeStyle = GOLD(g, x - r, y - r, x + r, y + r); g.lineWidth = r * .09; g.beginPath(); g.arc(x, y, r * .98, 0, 7); g.stroke(); }
+        g.strokeStyle = 'rgba(160,190,230,.25)'; g.lineWidth = .8; for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283; g.beginPath(); g.moveTo(x + Math.cos(a) * r * .7, y + Math.sin(a) * r * .7); g.lineTo(x + Math.cos(a) * r * .8, y + Math.sin(a) * r * .8); g.stroke(); }
+        ball(g, x, y, r * .24);
+    }
+    function sensor(g, x, y, r) {
+        g.save(); shadow(g, 6, 2); g.fillStyle = CH(g, x - r, y - r, x + r, y + r); g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore();
+        g.fillStyle = '#04060a'; g.beginPath(); g.arc(x, y, r * .6, 0, 7); g.fill();
+        g.strokeStyle = 'rgba(80,160,255,.5)'; g.lineWidth = .8; g.beginPath(); g.arc(x, y, r * .45, .3, 2.6); g.stroke();
+        for (let i = 0; i < 6; i++) { const a = i * 1.047; bolt(g, x + Math.cos(a) * r * .82, y + Math.sin(a) * r * .82, r * .1); }
+    }
+    function hexMesh(g, x0, y0, x1, y1, s, style, lw, cellFn) {
+        const h = Math.sqrt(3) * s; g.strokeStyle = style; g.lineWidth = lw; g.beginPath();
+        for (let col = 0, x = x0; x < x1 + s; col++, x = x0 + col * 1.5 * s) for (let y = y0 + (col % 2 ? h / 2 : 0); y < y1 + h; y += h) {
+            for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; const px = x + Math.cos(a) * s, py = y + Math.sin(a) * s; k ? g.lineTo(px, py) : g.moveTo(px, py); } g.closePath();
+        }
+        g.stroke();
+        if (cellFn) for (let col = 0, x = x0; x < x1 + s; col++, x = x0 + col * 1.5 * s) for (let y = y0 + (col % 2 ? h / 2 : 0); y < y1 + h; y += h) cellFn(x, y, s);
+    }
+
+    /* ---------- geometry (design units 1000 x 1034, from the reference) ---------- */
+    const EYE = [[160, 352], [205, 322], [395, 356], [436, 396], [432, 425], [385, 427], [215, 406], [165, 376]];
+    const RX = 500, RY = 270;
+    const PANELS = { L: { x: 164, y: 124, w: 160, h: 146, sh: .085 }, R: { x: 676, y: 124, w: 160, h: 146, sh: -.085 }, BL: { x: 274, y: 676, w: 66, h: 148 }, BR: { x: 662, y: 676, w: 60, h: 150 } };
+    const RAWM = [[572,482],[469,482],[417,425],[332,30],[172,100],[124,150],[122,410],[130,425],[151,610],[55,765],[58,858],[105,928],[128,935],[278,1100],[313,1285],[375,1337],[402,1293],[572,1293]];
+    const OUT = RAWM.map(p => [30 + (p[0] - 53) * .906, 10 + (p[1] - 28) * .78]);
+    const CS = .8, DYC = 128;   // interior content scale/offset so everything sits inside the mask
+    const shellPath = (g, pts, inner, keep) => { const L = pts.map((p, i) => { if (!inner) return p; if (i < 4) { const d = [[0, 34], [0, 34], [-38, 14], [-40, 46]][i]; return [p[0] + d[0], p[1] + d[1]]; } return [500 + (p[0] - 500) * .9, 517 + (p[1] - 517) * .965]; }); if (!keep) g.beginPath(); L.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); for (let i = L.length - 1; i >= 0; i--) g.lineTo(DW - L[i][0], L[i][1]); g.closePath(); return L; };
+
+    function mkLayer() { const c = mk((DW + PAD * 2) * P, (DH + PAD * 2) * P); const g = c.getContext('2d'); g.setTransform(P, 0, 0, P, PAD * P, PAD * P); return [c, g]; }
+    function halfMirror(g, fn) {   // draw left half via fn, mirror to right
+        const c = mk((DW + PAD * 2) * P, (DH + PAD * 2) * P), h = c.getContext('2d'); h.setTransform(P, 0, 0, P, PAD * P, PAD * P);
+        fn(h); g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(c, 0, 0); g.translate(PAD * P + DW * P, 0); g.scale(-1, 1); g.translate(-PAD * P, 0); g.drawImage(c, 0, 0); g.restore();
+    }
+
+    /* ---------- BACK layer: deep cavity, pistons, hoses, plates ---------- */
+    function buildBG(g) {
+        const bg = g.createRadialGradient(500, 300, 20, 500, 420, 640); bg.addColorStop(0, '#0d1d3a'); bg.addColorStop(.45, '#050c1a'); bg.addColorStop(1, '#010204');
+        g.fillStyle = bg; g.fillRect(-PAD, -PAD, DW + PAD * 2, DH + PAD * 2);
+        halfMirror(g, h => {
+            // big dark structural ribs
+            for (const p of [[[40, 80], [300, 20], [340, 120], [120, 250]], [[30, 330], [140, 300], [170, 560], [50, 600]], [[100, 600], [330, 540], [380, 800], [170, 880]], [[300, 30], [470, 10], [470, 150], [350, 200]]]) {
+                poly(h, p); const gr = h.createLinearGradient(p[0][0], p[0][1], p[2][0], p[2][1]); gr.addColorStop(0, '#16233a'); gr.addColorStop(1, '#050a14'); h.fillStyle = gr; h.fill(); h.strokeStyle = 'rgba(120,170,240,.28)'; h.lineWidth = 1.2; h.stroke();
+            }
+            // hoses / cables behind
+            for (let i = 0; i < 14; i++) rcable(h, rr(40, 420), rr(20, 240), rr(-60, 120), rr(60, 280), rr(5, 11), i % 3 ? 'blk' : 'blu');
+            // pistons
+            for (let i = 0; i < 22; i++) { const top = i < 9, x = top ? rr(90, 470) : rr(50, 420), y = top ? rr(10, 200) : rr(240, 880); piston(h, x, y, rr(70, 170), top ? rr(1.0, 2.1) : rr(-.9, 2.4), rr(9, 21)); }
+            // plates
+            for (let i = 0; i < 34; i++) plate(h, rr(40, 440), rr(20, 900), rr(16, 54), rr(9, 24), { vents: R() < .35 ? 3 : 0 });
+            for (let i = 0; i < 90; i++) bolt(h, rr(30, 480), rr(10, 960), rr(1.2, 2.4));
+            for (let i = 0; i < 9; i++) sensor(h, rr(70, 460), rr(30, 900), rr(6, 11));
+            for (let i = 0; i < 10; i++) rcable(h, rr(40, 400), rr(300, 760), rr(-20, 140), rr(40, 200), rr(4, 8), i % 2 ? 'red' : 'blk');
+        });
+    }
+
+    /* ---------- MID layer: reactor housing, eye bezels, centre stack, drums, gold ---------- */
+    function buildMID(g) {
+        halfMirror(g, h => {
+            // reactor support arms
+            piston(h, 438, 236, 150, -2.25, 22); piston(h, 436, 296, 128, -2.7, 18); piston(h, 420, 190, 100, -1.75, 16); piston(h, 380, 330, 90, 3.0, 14);
+            // servo drums
+            drum(h, 105, 430, 48, true); drum(h, 150, 628, 42, true); drum(h, 126, 508, 24, false); drum(h, 236, 760, 26, false);
+            // gold plates (beside the lower eye)
+            for (const p of [[[181, 505], [215, 498], [243, 522], [240, 612], [214, 657], [190, 640]], [[150, 690], [190, 680], [210, 740], [175, 770]]]) {
+                poly(h, p); shadow(h, 10, 3); h.fillStyle = GOLD(h, p[0][0], p[0][1], p[2][0], p[3][1]); h.fill(); noShadow(h);
+                h.strokeStyle = 'rgba(255,245,200,.8)'; h.lineWidth = 1; h.stroke(); h.strokeStyle = 'rgba(40,20,0,.6)'; h.lineWidth = .8; h.beginPath(); h.moveTo(p[1][0], p[1][1] + 6); h.lineTo(p[3][0], p[3][1] - 6); h.stroke();
+                bolt(h, (p[0][0] + p[1][0]) / 2 + 4, p[0][1] + 10, 2.4); bolt(h, p[3][0] - 8, p[3][1] - 10, 2.4);
+            }
+            // reactor flanking sensors / bolts
+            sensor(h, 430, 332, 14); sensor(h, 398, 292, 8);
+            // screen housings
+            for (const k of ['L', 'BL']) { const p = PANELS[k], m = 9; plate(h, p.x - m, p.y - m, p.w + m * 2, p.h + m * 2, { a: '#1a2434', b: '#0d1522', c: '#04070d', r: 6 }); }
+            // eye bezels
+            const bb = EYE;
+            h.save(); h.lineJoin = 'round'; poly(h, bb); shadow(h, 16, 5); h.strokeStyle = CH(h, 0, 300, 0, 440); h.lineWidth = 30; h.stroke(); noShadow(h);
+            h.strokeStyle = 'rgba(0,0,0,.55)'; h.lineWidth = 20; h.stroke();
+            h.strokeStyle = CH(h, 0, 305, 0, 435); h.lineWidth = 13; h.stroke(); h.restore();
+            // chrome end caps / angular frame pieces
+            for (const p of [[[150, 332], [182, 298], [214, 316], [172, 356]], [[148, 380], [176, 372], [222, 420], [190, 432]], [[396, 336], [442, 366], [452, 408], [420, 412]], [[300, 424], [436, 442], [430, 460], [296, 444]]]) {
+                poly(h, p); shadow(h, 8, 2); h.fillStyle = CH(h, p[0][0], p[0][1], p[2][0], p[2][1]); h.fill(); noShadow(h); h.strokeStyle = 'rgba(0,0,0,.7)'; h.lineWidth = 1; h.stroke();
+                bolt(h, (p[0][0] + p[2][0]) / 2, (p[0][1] + p[2][1]) / 2, 3);
+            }
+            // eye glass (powered off): dark mesh
+            poly(h, EYE); const eg = h.createLinearGradient(0, 322, 0, 427); eg.addColorStop(0, '#0b1d44'); eg.addColorStop(1, '#030a1c'); h.fillStyle = eg; h.fill();
+            h.save(); poly(h, EYE); h.clip(); hexMesh(h, 150, 315, 445, 435, 5, 'rgba(60,120,255,.28)', .6); h.restore();
+            h.strokeStyle = 'rgba(0,0,0,.9)'; h.lineWidth = 2; poly(h, EYE); h.stroke();
+            // lower cheek machinery
+            for (let i = 0; i < 6; i++) plate(h, 250 + (i % 3) * 52, 470 + Math.floor(i / 3) * 40, 44, 28, { vents: 3 });
+            piston(h, 300, 560, 100, .9, 16); piston(h, 360, 620, 90, 2.3, 14); sensor(h, 330, 530, 18); sensor(h, 392, 560, 12);
+            rcable(h, 220, 840, 120, 40, 8, 'red'); rcable(h, 180, 780, 160, 100, 7, 'red'); rcable(h, 200, 800, 140, 60, 6, 'blk'); rcable(h, 150, 700, 40, 160, 7, 'red'); rcable(h, 120, 740, 80, 140, 6, 'blk');
+        });
+        // reactor housing (center)
+        let r = g.createRadialGradient(RX, RY - 8, 10, RX, RY, 104); r.addColorStop(0, '#05070c'); r.addColorStop(.8, '#0c1220'); r.addColorStop(1, '#1d2838');
+        g.save(); shadow(g, 20, 6); g.fillStyle = r; g.beginPath(); g.arc(RX, RY, 104, 0, 7); g.fill(); g.restore();
+        for (let i = 0; i < 28; i++) { const a = i / 28 * 6.283; g.save(); g.translate(RX, RY); g.rotate(a); g.fillStyle = CH(g, 0, 0, 0, 1); g.fillStyle = '#26323f'; g.fillRect(-4, -103, 8, 9); g.fillStyle = 'rgba(190,215,250,.5)'; g.fillRect(-4, -103, 8, 1.2); g.restore(); }
+        g.strokeStyle = CH(g, RX - 90, RY - 90, RX + 90, RY + 90); g.lineWidth = 9; g.beginPath(); g.arc(RX, RY, 90, 0, 7); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 2; g.beginPath(); g.arc(RX, RY, 84, 0, 7); g.stroke(); g.beginPath(); g.arc(RX, RY, 95, 0, 7); g.stroke();
+        for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283 + .26; bolt(g, RX + Math.cos(a) * 77, RY + Math.sin(a) * 77, 3.4); }
+        g.fillStyle = '#04060b'; g.beginPath(); g.arc(RX, RY, 66, 0, 7); g.fill();
+        g.strokeStyle = CH(g, RX - 66, RY - 66, RX + 66, RY + 66); g.lineWidth = 3; g.beginPath(); g.arc(RX, RY, 66, 0, 7); g.stroke();
+        for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, a0 = a - .2, a1 = a + .2; g.beginPath(); g.arc(RX, RY, 61, a0, a1); g.arc(RX, RY, 46, a1, a0, true); g.closePath(); g.fillStyle = '#0a1a3a'; g.fill(); g.strokeStyle = 'rgba(120,180,255,.4)'; g.lineWidth = .7; g.stroke(); }
+        g.fillStyle = '#02040a'; g.beginPath(); g.arc(RX, RY, 42, 0, 7); g.fill();
+        // centre: bridge, camera, nose stack
+        plate(g, 462, 336, 76, 30, { vents: 3 }); plate(g, 478, 370, 44, 26);
+        plate(g, 450, 402, 100, 90, { a: '#2e3a4e', b: '#18212f', c: '#06090f', r: 4 });
+        const LX = 500, LY = 447;
+        g.fillStyle = CH(g, LX - 36, LY - 36, LX + 36, LY + 36); g.beginPath(); g.arc(LX, LY, 35, 0, 7); g.fill();
+        g.fillStyle = '#05070c'; g.beginPath(); g.arc(LX, LY, 30, 0, 7); g.fill();
+        g.strokeStyle = CH(g, LX - 24, LY - 24, LX + 24, LY + 24); g.lineWidth = 4; g.beginPath(); g.arc(LX, LY, 25, 0, 7); g.stroke();
+        let lg = g.createRadialGradient(LX - 6, LY - 7, 1, LX, LY, 20); lg.addColorStop(0, '#6b7bff'); lg.addColorStop(.3, '#1b2a8a'); lg.addColorStop(.7, '#070c24'); lg.addColorStop(1, '#010206');
+        g.fillStyle = lg; g.beginPath(); g.arc(LX, LY, 20, 0, 7); g.fill();
+        g.strokeStyle = 'rgba(190,120,255,.55)'; g.lineWidth = 1.4; g.beginPath(); g.arc(LX, LY, 14, 3.4, 4.6); g.stroke(); g.strokeStyle = 'rgba(80,200,255,.5)'; g.beginPath(); g.arc(LX, LY, 10, .2, 1.2); g.stroke();
+        g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(LX - 7, LY - 8, 2.2, 0, 7); g.fill();
+        sensor(g, 470, 478, 5); sensor(g, 530, 478, 5);
+        for (let i = 0; i < 3; i++) plate(g, 466 + i * 0, 500 + i * 22, 68, 18, { vents: 2 });
+        plate(g, 430, 568, 54, 90, { a: '#9fb0c8', b: '#586984', c: '#151d2a' }); plate(g, 516, 568, 54, 90, { a: '#9fb0c8', b: '#586984', c: '#151d2a' });
+        plate(g, 486, 582, 28, 66, { a: '#161e2c', b: '#0a0f18', c: '#03050a', vents: 5 });
+        g.fillStyle = CH(g, 0, 662, 0, 688); g.fillRect(440, 662, 120, 22); for (let i = 0; i < 24; i++) { g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(442 + i * 5, 662, 1, 22); }
+        plate(g, 421, 688, 162, 76, { a: '#a3b3c9', b: '#5d6e89', c: '#1a2331', r: 5 });
+        g.fillStyle = '#05080e'; rrect(g, 432, 700, 138, 40, 4); g.fill(); g.strokeStyle = 'rgba(0,0,0,.9)'; g.lineWidth = 2; g.stroke();
+        g.fillStyle = '#070b13'; g.fillRect(410, 717, 12, 24); g.fillRect(578, 717, 12, 24);
+        plate(g, 468, 704, 64, 34, { a: '#242f42', b: '#121a28', c: '#04060b', vents: 3 });
+        // copper coil unit
+        plate(g, 446, 764, 108, 16, { a: '#b8c6da', b: '#667794', c: '#1c2635' });
+        for (const cx of [450, 524]) { const cg = g.createLinearGradient(cx, 0, cx + 26, 0); cg.addColorStop(0, '#3b1a07'); cg.addColorStop(.3, '#d98a50'); cg.addColorStop(.5, '#ffd0a0'); cg.addColorStop(.75, '#9a4f1f'); cg.addColorStop(1, '#2d1305'); g.fillStyle = cg; g.fillRect(cx, 782, 26, 64); g.fillStyle = 'rgba(30,10,0,.55)'; for (let y = 784; y < 846; y += 3.2) g.fillRect(cx, y, 26, 1); }
+        plate(g, 478, 782, 44, 66, { a: '#101722', b: '#080c14', c: '#020307', vents: 4 });
+        plate(g, 452, 852, 96, 14, { a: '#9fb0c8', b: '#52637e', c: '#141c29' });
+        for (let x = 458; x < 546; x += 3.6) { g.fillStyle = 'rgba(190,100,40,.9)'; g.fillRect(x, 868, 2, 8); }
+        // chin
+        poly(g, [[372, 962], [628, 962], [606, 904], [394, 904]]); shadow(g, 12, 3); g.fillStyle = CH(g, 0, 904, 0, 962); g.fill(); noShadow(g); g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 1.2; g.stroke();
+        g.fillStyle = '#02050b'; rrect(g, 448, 908, 104, 30, 4); g.fill();
+        for (const bx of [412, 586]) bolt(g, bx, 940, 5);
+        // central dark mesh slot (powered-off)
+        g.save(); rrect(g, 450, 910, 100, 26, 3); g.clip(); hexMesh(g, 446, 906, 556, 940, 4, 'rgba(60,120,255,.3)', .6); g.restore();
+    }
+
+    /* ---------- FRONT layer: red/gold shell, foam pads ---------- */
+    function buildFG(g, pat) {
+        // black outside
+        g.fillStyle = '#000'; g.beginPath(); g.rect(-PAD, -PAD, DW + PAD * 2, DH + PAD * 2); shellPath(g, OUT, false, true); g.fill('evenodd');
+        // band
+        shadow(g, 24, 0); shellPath(g, OUT, false); const IN = shellPath(g, OUT, true, true); g.fillStyle = RED(g, 0, DH); g.fill('evenodd'); noShadow(g);
+        g.save(); shellPath(g, OUT, false); shellPath(g, OUT, true, true); g.clip('evenodd');
+        g.globalAlpha = .35; g.fillStyle = pat; g.fillRect(-PAD, -PAD, DW + PAD * 2, DH + PAD * 2); g.globalAlpha = 1;
+        // plate seams + per-plate shading
+        for (let i = 0; i < OUT.length - 1; i++) for (const side of [0, 1]) {
+            const ax = side ? DW - OUT[i][0] : OUT[i][0], bx = side ? DW - OUT[i + 1][0] : OUT[i + 1][0];
+            const cx = side ? DW - IN[i][0] : IN[i][0], dx = side ? DW - IN[i + 1][0] : IN[i + 1][0];
+            g.beginPath(); g.moveTo(ax, OUT[i][1]); g.lineTo(bx, OUT[i + 1][1]); g.lineTo(dx, IN[i + 1][1]); g.lineTo(cx, IN[i][1]); g.closePath();
+            g.fillStyle = 'rgba(' + (i % 2 ? '255,70,60' : '0,0,0') + ',' + (i % 2 ? .1 : .22) + ')'; g.fill();
+            g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(cx, IN[i][1]); g.lineTo(ax, OUT[i][1]); g.stroke();
+            g.strokeStyle = 'rgba(255,150,140,.4)'; g.lineWidth = .9; g.beginPath(); g.moveTo(cx + (side ? -2 : 2), IN[i][1]); g.lineTo(ax + (side ? -2 : 2), OUT[i][1]); g.stroke();
+        }
+        g.restore();
+        // inner lip shadow + highlight
+        g.save(); shellPath(g, OUT, true); g.lineJoin = 'round'; g.strokeStyle = 'rgba(0,0,0,.9)'; g.lineWidth = 6; g.stroke(); g.strokeStyle = 'rgba(255,120,110,.5)'; g.lineWidth = 1.2; g.stroke(); g.restore();
+        g.save(); shellPath(g, OUT, false); g.strokeStyle = 'rgba(255,180,170,.5)'; g.lineWidth = 2; g.stroke(); g.restore();
+        // gold trim
+        for (const [i0, i1] of [[3, 5], [8, 9], [12, 13]]) for (const side of [0, 1]) {
+            g.beginPath(); for (let i = i0; i <= i1; i++) { const x = side ? DW - OUT[i][0] : OUT[i][0], y = OUT[i][1], ix = side ? DW - IN[i][0] : IN[i][0]; const px = x + (ix - x) * .22, py = y; i === i0 ? g.moveTo(px, py) : g.lineTo(px, py); }
+            g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 10; g.stroke(); g.strokeStyle = GOLD(g, 0, 0, 80, 0); g.lineWidth = 7; g.stroke(); g.strokeStyle = 'rgba(255,250,220,.9)'; g.lineWidth = 1.3; g.translate(-1.5, -1); g.stroke(); g.translate(1.5, 1);
+        }
+        // chin plate
+        poly(g, [[354, 997], [372, 972], [628, 972], [646, 997]]); shadow(g, 14, -3); g.fillStyle = RED(g, 960, 1040); g.fill(); noShadow(g);
+        g.strokeStyle = GOLD(g, 340, 0, 420, 0); g.lineWidth = 8; g.beginPath(); g.moveTo(340, 997); g.lineTo(372, 972); g.stroke(); g.beginPath(); g.moveTo(660, 997); g.lineTo(628, 972); g.stroke();
+        g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(500 - 1, 972, 2, 80);
+        // foam pads
+        const pad = (pts, seed) => {
+            const rg = rng(seed); g.save(); shellPath(g, OUT, true); g.clip(); poly(g, pts); shadow(g, 14, 3); g.fillStyle = '#050608'; g.fill(); noShadow(g); g.clip();
+            g.globalAlpha = .75; g.fillStyle = pat; g.fillRect(-PAD, -PAD, DW + PAD * 2, DH + PAD * 2); g.globalAlpha = 1;
+            const lg = g.createLinearGradient(pts[0][0], pts[0][1], pts[4][0], pts[4][1]); lg.addColorStop(0, 'rgba(110,135,185,.22)'); lg.addColorStop(.5, 'rgba(0,0,0,0)'); lg.addColorStop(1, 'rgba(0,0,0,.4)'); g.fillStyle = lg; g.fillRect(0, 0, DW, DH);
+            for (let i = 0; i < 520; i++) { const x = rg() * DW, y = rg() * DH; g.fillStyle = rg() < .5 ? 'rgba(160,185,230,.10)' : 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(x, y, rg() * 2.2 + .4, 0, 7); g.fill(); }
+            g.restore(); g.save(); poly(g, pts); g.strokeStyle = 'rgba(150,175,225,.3)'; g.lineWidth = 1.4; g.stroke(); g.restore();
+        };
+        const padL = [[53, 625], [89, 608], [162, 649], [199, 730], [268, 892], [243, 917], [146, 892], [89, 811], [57, 714]];
+        pad(padL, 5); pad(mirror(padL), 6);
+        const padU = [[40, 190], [92, 200], [104, 330], [62, 350], [34, 300]];
+        pad(padU, 7); pad(mirror(padU), 8);
+    }
+
+    /* ---------- emissive sprites ---------- */
+    function buildEye() {
+        const ex = 138, ey = 296, ew = 322, eh = 150; const c = mk(ew * P, eh * P), g = c.getContext('2d'); g.setTransform(P, 0, 0, P, -ex * P, -ey * P);
+        const rg = rng(99);
+        // outer light-lines on the bezel
+        g.lineJoin = 'round';
+        poly(g, EYE); g.strokeStyle = '#0b36c9'; g.lineWidth = 7; g.stroke();
+        g.strokeStyle = '#6fbfff'; g.lineWidth = 3.6; g.stroke();
+        // glass
+        poly(g, EYE); const f = g.createRadialGradient(432, 412, 8, 380, 390, 300); f.addColorStop(0, '#79b4ff'); f.addColorStop(.35, '#2f6cf0'); f.addColorStop(1, '#0f2f9a'); g.fillStyle = f; g.fill();
+        g.save(); poly(g, EYE); g.clip();
+        const tg = g.createLinearGradient(0, 322, 0, 372); tg.addColorStop(0, 'rgba(200,235,255,.75)'); tg.addColorStop(1, 'rgba(200,235,255,0)'); g.fillStyle = tg; g.fillRect(140, 318, 310, 60);
+        hexMesh(g, 150, 315, 445, 435, 4.6, 'rgba(205,232,255,.5)', .7, (x, y, s) => { const v = rg(); if (v < .55) return; g.fillStyle = 'rgba(' + (180 + v * 70 | 0) + ',225,255,' + (v * .22) + ')'; g.beginPath(); for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; g.lineTo(x + Math.cos(a) * s * .85, y + Math.sin(a) * s * .85); } g.fill(); });
+        const sg = g.createLinearGradient(150, 340, 450, 410); sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(.5, 'rgba(210,240,255,.28)'); sg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = sg; g.fillRect(140, 300, 320, 140);
+        g.restore();
+        // hot edges: top + inner + outer ends
+        g.lineCap = 'round'; g.strokeStyle = '#eaf8ff'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(EYE[1][0], EYE[1][1]); g.lineTo(EYE[2][0], EYE[2][1]); g.lineTo(EYE[3][0], EYE[3][1]); g.lineTo(EYE[4][0], EYE[4][1]); g.stroke();
+        g.strokeStyle = '#bfe6ff'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(EYE[4][0], EYE[4][1]); g.lineTo(EYE[5][0], EYE[5][1]); g.lineTo(EYE[6][0], EYE[6][1]); g.lineTo(EYE[7][0], EYE[7][1]); g.lineTo(EYE[0][0], EYE[0][1]); g.lineTo(EYE[1][0], EYE[1][1]); g.stroke();
+        g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 3; g.beginPath(); g.moveTo(EYE[0][0] + 2, EYE[0][1] + 2); g.lineTo(EYE[1][0] + 1, EYE[1][1] + 1); g.stroke();
+        // inner corner flare
+        const fl = g.createRadialGradient(434, 404, 0, 434, 404, 22); fl.addColorStop(0, 'rgba(255,255,255,.95)'); fl.addColorStop(1, 'rgba(120,190,255,0)'); g.fillStyle = fl; g.fillRect(410, 380, 50, 50);
+        return { c, ex, ey, ew, eh };
+    }
+    function buildMesh() {
+        const w = 104, h = 30, c = mk(w * P, h * P), g = c.getContext('2d'); g.setTransform(P, 0, 0, P, -448 * P, -910 * P);
+        const gr = g.createLinearGradient(0, 910, 0, 936); gr.addColorStop(0, '#6fb4ff'); gr.addColorStop(1, '#1f55e0'); g.fillStyle = gr; rrect(g, 450, 910, 100, 26, 3); g.fill();
+        g.save(); rrect(g, 450, 910, 100, 26, 3); g.clip(); hexMesh(g, 446, 906, 556, 940, 3.6, 'rgba(6,20,80,.55)', .8); g.restore();
+        return { c, x: 448, y: 910, w, h };
+    }
+    const STRIPS = (() => { const L = [[264, 548, 3, 36], [301, 583, 3, 24], [355, 668, 3, 18], [248, 737, 12, 3], [230, 792, 20, 3], [226, 812, 3, 28], [402, 531, 6, 6], [380, 745, 3, 20], [342, 712, 16, 2.5], [316, 612, 2.5, 26]]; const C = [[480, 744, 40, 4], [414, 722, 4, 20], [582, 722, 4, 20], [494, 540, 12, 2], [496, 720, 8, 2]]; const o = [...C]; L.forEach(s => { o.push(s); o.push([DW - s[0] - s[2], s[1], s[2], s[3]]); }); return o; })();
+    const LEDS = (() => { const a = []; const rg = rng(555); let n = 0; while (a.length < 34 && n++ < 400) { const x = 70 + rg() * 860, y = 40 + rg() * 940; if (x > 130 && x < 470 && y > 290 && y < 450) continue; if (x > 530 && x < 870 && y > 290 && y < 450) continue; if (Math.hypot(x - RX, y - RY) < 112) continue; if (x > 150 && x < 350 && y > 110 && y < 285) continue; if (x > 650 && x < 850 && y > 110 && y < 285) continue; a.push({ x, y, r: 1.4 + rg() * 1.4, ph: rg() * 6.28, sp: 1.5 + rg() * 3, i: a.length, c: rg() < .12 ? '255,190,110' : '130,200,255' }); } return a; })();
+    const MOTES = (() => { const rg = rng(31); return Array.from({ length: 70 }, () => ({ x: rg() * DW, y: rg() * DH, z: .3 + rg() * .9, vx: (rg() - .5) * 6, vy: -3 - rg() * 8, ph: rg() * 6.28 })); })();
+
+    /* ---------- holo screens (live) ---------- */
+    const FONT_D = '600 12px Oswald, "Arial Narrow", sans-serif', FONT_M = '500 8.5px ui-monospace, Menlo, Consolas, monospace';
+    function panelBase(g, w, h, a) {
+        g.fillStyle = 'rgba(8,52,140,' + .34 * a + ')'; g.fillRect(0, 0, w, h);
+        g.fillStyle = 'rgba(120,200,255,' + .05 * a + ')'; for (let y = 0; y < h; y += 3) g.fillRect(0, y, w, 1);
+        g.strokeStyle = 'rgba(130,205,255,' + .85 * a + ')'; g.lineWidth = 1; g.strokeRect(.5, .5, w - 1, h - 1);
+        g.fillStyle = 'rgba(200,238,255,' + a + ')'; g.fillRect(0, 0, 12, 2); g.fillRect(0, 0, 2, 12); g.fillRect(w - 12, h - 2, 12, 2); g.fillRect(w - 2, h - 12, 2, 12);
+    }
+    const reveal = (p, i, d) => cl((p - .1 - i * (d || .09)) / .18);
+    function panelL(g, w, h, p, t) {
+        panelBase(g, w, h, cl(p * 3));
+        g.font = FONT_D; g.fillStyle = 'rgba(225,243,255,' + reveal(p, 0) + ')'; g.fillText('MARK VII', w * .43, 17);
+        const cx = w * .21, cy = h * .42, r = w * .15, a1 = reveal(p, 1);
+        g.save(); g.globalAlpha = a1; g.translate(cx, cy);
+        g.strokeStyle = '#8fd4ff'; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke();
+        g.setLineDash([6, 4]); g.lineDashOffset = -t * 18; g.beginPath(); g.arc(0, 0, r * .8, 0, 7); g.stroke();
+        g.setLineDash([2, 5]); g.lineDashOffset = t * 14; g.lineWidth = 3; g.strokeStyle = 'rgba(120,200,255,.8)'; g.beginPath(); g.arc(0, 0, r * .6, 0, 7); g.stroke(); g.setLineDash([]);
+        g.lineWidth = 1; g.strokeStyle = 'rgba(210,240,255,.9)'; for (let i = 0; i < 36; i++) { const a = i / 36 * 6.283 + t * .3; g.beginPath(); g.moveTo(Math.cos(a) * r, Math.sin(a) * r); g.lineTo(Math.cos(a) * (r + (i % 3 ? 2 : 4)), Math.sin(a) * (r + (i % 3 ? 2 : 4))); g.stroke(); }
+        g.beginPath(); g.moveTo(-r * 1.2, 0); g.lineTo(r * 1.2, 0); g.moveTo(0, -r * 1.2); g.lineTo(0, r * 1.2); g.stroke();
+        g.save(); g.rotate(-t * .8); g.beginPath(); for (let k = 0; k < 6; k++) { const a = k * 1.047; k ? g.lineTo(Math.cos(a) * r * .38, Math.sin(a) * r * .38) : g.moveTo(r * .38, 0); } g.closePath(); g.stroke(); g.restore();
+        g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, 2.2, 0, 7); g.fill(); g.restore();
+        const items = ['HUD', 'SYSTEMS', 'LIFE SUPPORT', 'PROPULSION', 'COMMS', 'ARMOR']; g.font = FONT_M;
+        items.forEach((s, i) => {
+            const a = reveal(p, i + 2); if (a <= 0) return; const y = h * .31 + i * h * .115;
+            if (((t * 1.6) | 0) % 6 === i) { g.fillStyle = 'rgba(90,180,255,' + .3 * a + ')'; g.fillRect(w * .44, y - 9, w * .53, 13); }
+            g.fillStyle = 'rgba(200,236,255,' + a + ')'; g.beginPath(); g.moveTo(w * .46, y - 6); g.lineTo(w * .46 + 4, y - 3); g.lineTo(w * .46, y); g.fill(); g.fillText(s, w * .54, y);
+            g.fillStyle = 'rgba(90,170,255,' + .55 * a + ')'; g.fillRect(w * .44, y + 5, w * .53 * a, .8);
+        });
+        const ia = reveal(p, 8); g.strokeStyle = 'rgba(160,220,255,' + ia + ')'; g.lineWidth = 1;
+        for (let i = 0; i < 4; i++) { const x = w * (.1 + i * .1), y = h * .88; g.strokeRect(x, y - 7, 11, 11); g.beginPath(); g.arc(x + 5.5, y - 1.5, 2.6 + (i % 2), 0, 7); g.stroke(); }
+        g.fillStyle = 'rgba(140,210,255,' + ia * .7 + ')'; for (let i = 0; i < 9; i++) g.fillRect(w * .56 + i * 7, h * .9, 4, 3 + ((t * 5 + i * 2) % 5));
+    }
+    function panelR(g, w, h, p, t) {
+        panelBase(g, w, h, cl(p * 3));
+        const cx = w * .31, cy = h * .5, a = reveal(p, 1);
+        g.save(); g.globalAlpha = a; g.strokeStyle = '#8fd4ff'; g.lineWidth = 1.2;
+        g.beginPath(); g.moveTo(cx, cy - h * .4); g.bezierCurveTo(cx + w * .2, cy - h * .4, cx + w * .17, cy - h * .1, cx + w * .15, cy + h * .05); g.bezierCurveTo(cx + w * .14, cy + h * .2, cx + w * .08, cy + h * .3, cx, cy + h * .4);
+        g.bezierCurveTo(cx - w * .08, cy + h * .3, cx - w * .14, cy + h * .2, cx - w * .15, cy + h * .05); g.bezierCurveTo(cx - w * .17, cy - h * .1, cx - w * .2, cy - h * .4, cx, cy - h * .4); g.stroke();
+        g.lineWidth = .8; g.strokeStyle = 'rgba(130,210,255,.55)';
+        for (let k = -2; k <= 2; k++) { g.beginPath(); g.ellipse(cx, cy, w * .165 * Math.abs(Math.cos(t * .7 + k * .55)), h * .39, 0, 0, 7); g.stroke(); }
+        for (let j = -4; j <= 4; j++) { const yy = cy + j * h * .085, f = Math.sqrt(Math.max(0, 1 - Math.pow((yy - cy) / (h * .4), 2))); g.beginPath(); g.moveTo(cx - w * .165 * f, yy); g.lineTo(cx + w * .165 * f, yy); g.stroke(); }
+        g.fillStyle = '#e9f8ff'; g.fillRect(cx - w * .1, cy - h * .09, w * .07, 2.4); g.fillRect(cx + w * .03, cy - h * .09, w * .07, 2.4);
+        g.strokeStyle = 'rgba(200,240,255,.9)'; g.lineWidth = 1; const sy = cy - h * .4 + ((t * .5) % 1) * h * .8; g.beginPath(); g.moveTo(cx - w * .2, sy); g.lineTo(cx + w * .2, sy); g.stroke();
+        g.restore();
+        for (let i = 0; i < 9; i++) { const ra = reveal(p, i + 2, .06); g.fillStyle = 'rgba(170,225,255,' + .6 * ra + ')'; g.fillRect(w * .62, h * .12 + i * 8.6, 6 + ((i * 37) % 28) * ra, 2); g.fillStyle = 'rgba(100,190,255,' + .5 * ra + ')'; g.fillRect(w * .62 + 30 + ((i * 11) % 6), h * .12 + i * 8.6, 4, 2); }
+        const ba = reveal(p, 9); for (let i = 0; i < 12; i++) { const bh = (.2 + .8 * Math.abs(Math.sin(t * 1.7 + i * 1.3))) * h * .2 * ba; g.fillStyle = 'rgba(140,215,255,.85)'; g.fillRect(w * .62 + i * 5.6, h * .93 - bh, 3.4, bh); }
+    }
+    function panelBL(g, w, h, p, t) {
+        panelBase(g, w, h, cl(p * 3)); const a = reveal(p, 1), cx = w * .5; g.save(); g.globalAlpha = a; g.strokeStyle = '#9ad8ff'; g.lineWidth = 1;
+        g.beginPath(); g.arc(cx, h * .14, 5, 0, 7); g.moveTo(cx, h * .14 + 5); g.lineTo(cx, h * .42); g.moveTo(cx - 13, h * .22); g.lineTo(cx + 13, h * .22); g.moveTo(cx - 13, h * .22); g.lineTo(cx - 17, h * .36); g.moveTo(cx + 13, h * .22); g.lineTo(cx + 17, h * .36);
+        g.moveTo(cx, h * .42); g.lineTo(cx - 8, h * .62); g.lineTo(cx - 9, h * .78); g.moveTo(cx, h * .42); g.lineTo(cx + 8, h * .62); g.lineTo(cx + 9, h * .78); g.stroke();
+        const sy = ((t * .45) % 1) * h * .8 + h * .08; const gr = g.createLinearGradient(0, sy - 10, 0, sy + 2); gr.addColorStop(0, 'rgba(120,210,255,0)'); gr.addColorStop(1, 'rgba(160,230,255,.6)'); g.fillStyle = gr; g.fillRect(4, sy - 10, w - 8, 12); g.restore();
+        for (let i = 0; i < 7; i++) { g.fillStyle = 'rgba(150,215,255,' + .55 * reveal(p, i + 2, .05) + ')'; g.fillRect(6, h * .83 + i * 3, 10 + (i * 13) % 30, 1.4); }
+    }
+    function panelBR(g, w, h, p, t) {
+        panelBase(g, w, h, cl(p * 3)); g.save(); g.beginPath(); g.rect(2, 2, w - 4, h - 4); g.clip();
+        const off = (t * 14) % 10; for (let i = -1; i < 18; i++) { const y = 6 + i * 8.2 - off * .82, ra = reveal(p, 1 + (i > 0 ? i * .12 : 0), .1); const hot = ((t * 2) | 0) % 18 === i; g.fillStyle = hot ? 'rgba(255,255,255,' + ra + ')' : 'rgba(150,215,255,' + .62 * ra + ')'; g.fillRect(6, y, 8 + ((i + 20) * 29) % 34, 2); g.fillStyle = 'rgba(100,190,255,' + .55 * ra + ')'; g.fillRect(w - 14, y, 6, 2); }
+        g.restore();
+    }
+    function panel(g, k, p, t) {
+        const d = PANELS[k]; g.save(); g.translate(d.x, d.y); if (d.sh) g.transform(1, d.sh, 0, 1, 0, 0);
+        const fl = p < 1 ? (Math.sin(t * 90 + k.length * 3) > -.2 ? 1 : .2) : 1; g.globalAlpha = fl;
+        ({ L: panelL, R: panelR, BL: panelBL, BR: panelBR })[k](g, d.w, d.h, p, t); g.restore();
+    }
+
+    /* ---------- reactor (live) ---------- */
+    function reactor(g, I, lit, spin, t) {
+        if (I <= .001) return;
+        g.save(); g.translate(RX, RY);
+        // lit segments
+        for (let i = 0; i < 12; i++) {
+            const on = cl(lit - i); if (on <= 0) continue; const a = i / 12 * 6.283, a0 = a - .2, a1 = a + .2;
+            g.beginPath(); g.arc(0, 0, 61, a0, a1); g.arc(0, 0, 46, a1, a0, true); g.closePath();
+            const gr = g.createRadialGradient(0, 0, 44, 0, 0, 62); gr.addColorStop(0, 'rgba(255,255,255,' + on + ')'); gr.addColorStop(.5, 'rgba(140,210,255,' + on + ')'); gr.addColorStop(1, 'rgba(40,120,255,' + on * .9 + ')'); g.fillStyle = gr; g.fill();
+        }
+        g.globalAlpha = I;
+        // rotating ring + ticks
+        g.rotate(spin); g.strokeStyle = 'rgba(160,220,255,.9)'; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, 41, 0, 7); g.stroke();
+        for (let i = 0; i < 48; i++) { const a = i / 48 * 6.283, l = i % 4 ? 2.4 : 5; g.beginPath(); g.moveTo(Math.cos(a) * 41, Math.sin(a) * 41); g.lineTo(Math.cos(a) * (41 - l), Math.sin(a) * (41 - l)); g.stroke(); }
+        g.rotate(-spin * 2.4); g.setLineDash([9, 6]); g.lineWidth = 2; g.strokeStyle = 'rgba(110,190,255,.85)'; g.beginPath(); g.arc(0, 0, 31, 0, 7); g.stroke(); g.setLineDash([]);
+        g.rotate(spin * 1.4); g.strokeStyle = 'rgba(230,248,255,.95)'; g.lineWidth = 1.3; for (let k = 0; k < 3; k++) { g.rotate(2.094); g.beginPath(); g.moveTo(0, -23); g.lineTo(20, 11.5); g.stroke(); } g.beginPath(); g.moveTo(0, -23); g.lineTo(-20, 11.5); g.lineTo(20, 11.5); g.closePath(); g.stroke();
+        g.restore();
+        // core
+        const pr = 1 + .05 * Math.sin(t * 9); const cg = ctx0(g).createRadialGradient(RX, RY, 0, RX, RY, 40 * pr);
+        cg.addColorStop(0, 'rgba(255,255,255,' + I + ')'); cg.addColorStop(.18, 'rgba(235,250,255,' + I + ')'); cg.addColorStop(.45, 'rgba(110,190,255,' + I * .85 + ')'); cg.addColorStop(1, 'rgba(20,90,255,0)');
+        g.fillStyle = cg; g.beginPath(); g.arc(RX, RY, 42 * pr, 0, 7); g.fill();
+    }
+    const ctx0 = g => g;
+
+    /* ---------- build all static art ---------- */
+    function build() {
+        P = Math.min(Math.max(S * dpr * 1.1, .55), 1.5);
+        const nz = mk(160, 160), ng = nz.getContext('2d'), id = ng.createImageData(160, 160), rg = rng(77);
+        for (let i = 0; i < 160 * 160; i++) { const v = rg() * 255; id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = v; id.data[i * 4 + 3] = rg() < .5 ? 0 : rg() * 110 | 0; }
+        ng.putImageData(id, 0, 0);
+        const L = [mkLayer(), mkLayer(), mkLayer()];
+        const pat = L[2][1].createPattern(nz, 'repeat');
+        buildBG(L[0][1]); buildMID(L[1][1]); buildFG(L[2][1], pat);
+        layers = L.map(x => x[0]); eyeSpr = buildEye(); meshSpr = buildMesh();
+    }
+
+    /* ---------- runtime ---------- */
+    layout();
+    try { build(); } catch (e) { console.warn('helmet build failed', e); return null; }
+    stage.appendChild(cv); el.classList.add('hm-on');
+
+    const T = {}; let raf = 0, last = 0, spin = 0, px = 0, py = 0, tpx = 0, tpy = 0, dead = false;
+    const onMove = e => { tpx = (e.clientX / vw - .5) * 2; tpy = (e.clientY / vh - .5) * 2; };
+    el.addEventListener('pointermove', onMove);
+    const onResize = () => { layout(); };
+    addEventListener('resize', onResize);
+    const FLK = [[0, 0], [.05, .95], [.1, .05], [.17, 1], [.24, .15], [.31, .75], [.38, 0], [.47, 1], [.56, .3], [.62, 1], [.73, .12], [.8, .9], [.88, .5], [.95, 1]];
+    const flick = t => { let v = 0; for (const k of FLK) if (t >= k[0]) v = k[1]; return v; };
+    const dk2 = dk => dk.getContext('2d');
+
+    function frame(now) {
+        if (dead) return; raf = requestAnimationFrame(frame);
+        const dt = last ? Math.min(.05, (now - last) / 1000) : .016; last = now;
+        for (const k of ['e1', 'e2', 'fk', 'p', 'h']) if (T[k] == null && el.classList.contains(k)) T[k] = now;
+        const ts = k => T[k] == null ? -1 : (now - T[k]) / 1000, t = now / 1000;
+        const eIn = ts('e1'), e2 = ts('e2'), fk = ts('fk'), pp = ts('p');
+        if (eIn < 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); return; }
+        if (pp > .8) { cv.style.opacity = 0; return; }
+
+        // ---- envelopes ----
+        const scan = cl(eIn / 1.3);
+        const rp = ease(e2 / 1.0); const stut = e2 < 0 ? 1 : (e2 < .8 ? (.65 + .35 * (Math.sin(e2 * 64) > -.1 ? 1 : .1)) : 1);
+        let rI = e2 < 0 ? .05 * (eIn > .5 ? .6 + .4 * Math.sin(t * 5) : 0) : cl(.05 + rp * stut);
+        const lit = e2 < 0 ? 0 : rp * 12.5, spd = e2 < 0 ? .2 : .5 + 6 * rp * rp * (1 - ease((e2 - 1.2) / 1.2) * .75);
+        spin += spd * dt;
+        const sI = e2 < .35 ? 0 : cl((e2 - .35) / .5) * (e2 < .9 ? (Math.sin(e2 * 55) > 0 ? 1 : .25) : 1);
+        const scp = fk < 0 ? 0 : cl(fk / 1.0);
+        let eI = fk < 0 ? 0 : (fk < 1 ? flick(fk) : 1);
+        const sweep = fk < 0 ? 0 : cl(fk / .5);
+        if (pp >= 0) eI = 1 + 1.1 * ease(pp / .35);
+        else if (fk >= 1) eI = 1 + .04 * Math.sin(t * 6);
+        const amb = .02 + .09 * ease(eIn / 1.3) + .3 * ease(e2 / 1) + .14 * ease(fk / .8) + (pp >= 0 ? .3 * ease(pp / .4) : 0);
+
+        // ---- camera ----
+        px += (tpx - px) * Math.min(1, dt * 3); py += (tpy - py) * Math.min(1, dt * 3);
+        const sx = Math.sin(t * .7) * .35, sy = Math.cos(t * .5) * .3;
+        let cam = .5 + .62 * (1 - Math.pow(1 - cl(eIn / 3.6), 3)), fx = 500, fy = 517; const z = pp >= 0 ? ease(pp / .6) : 0;
+        if (pp >= 0) { cam *= 1 + 2.7 * z * z; fy = 517 + 18 * z; }
+        const k = dpr * S * cam, cx0 = vw * .5 * dpr, cy0 = vh * .47 * dpr;
+        const ob = [(px + sx) * 10, (py + sy) * 8], om = [(px + sx) * 19, (py + sy) * 14], of = [(px + sx) * 36, (py + sy) * 26];
+        const kc = k * CS; const setT = o => ctx.setTransform(k, 0, 0, k, cx0 + (o[0] - fx) * k, cy0 + (o[1] - fy) * k);
+        const setC = (o, s, dy) => ctx.setTransform(k * s, 0, 0, k * s, cx0 + (500 - fx + o[0]) * k - 500 * k * s, cy0 + (517 + dy - fy + o[1]) * k - 517 * k * s);
+        const w2s = (x, y) => [cx0 + (500 - fx + om[0]) * k + (x - 500) * kc, cy0 + (517 + DYC - fy + om[1]) * k + (y - 517) * kc];
+
+        // ---- scene layers ----
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+        setC(ob, 1, 0); ctx.drawImage(layers[0], -PAD, -PAD, DW + PAD * 2, DH + PAD * 2);
+        setC(om, CS, DYC); ctx.drawImage(layers[1], -PAD, -PAD, DW + PAD * 2, DH + PAD * 2);
+        setT(of); ctx.drawImage(layers[2], -PAD, -PAD, DW + PAD * 2, DH + PAD * 2);
+
+        // ---- light mask ----
+        const d = dk.getContext('2d'); d.setTransform(1, 0, 0, 1, 0, 0); d.globalCompositeOperation = 'source-over'; d.clearRect(0, 0, dk.width, dk.height);
+        d.fillStyle = 'rgba(0,0,0,' + (1 - amb) + ')'; d.fillRect(0, 0, dk.width, dk.height); d.globalCompositeOperation = 'destination-out';
+        const hole = (x, y, rad, I) => { if (I <= .004) return; const [a, b] = w2s(x, y), q = .25, r = rad * kc * q; const g = d.createRadialGradient(a * q, b * q, 0, a * q, b * q, r); g.addColorStop(0, 'rgba(0,0,0,' + cl(I) + ')'); g.addColorStop(.4, 'rgba(0,0,0,' + cl(I * .5) + ')'); g.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g; d.fillRect(0, 0, dk.width, dk.height); };
+        hole(RX, RY, 560, rI * .95); hole(300, 380, 400, Math.min(1, eI) * .85); hole(700, 380, 400, Math.min(1, eI) * .85); hole(500, 745, 280, sI * .6); hole(245, 197, 250, scp * .6); hole(772, 200, 250, scp * .6); hole(305, 750, 160, scp * .4); hole(692, 750, 160, scp * .4);
+        if (scan > 0 && scan < 1) { const sy2 = -50 + scan * (DH + 100), [, b] = w2s(500, sy2), q = .25, th = 130 * k * q; const g = d.createLinearGradient(0, b * q - th, 0, b * q + th); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.5, 'rgba(0,0,0,.75)'); g.addColorStop(1, 'rgba(0,0,0,0)'); d.fillStyle = g; d.fillRect(0, b * q - th, dk.width, th * 2); }
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(dk, 0, 0, cv.width, cv.height);
+
+        // ---- emissive pass ----
+        const g = emis.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, emis.width, emis.height);
+        g.setTransform(kc, 0, 0, kc, cx0 + (500 - fx + om[0]) * k - 500 * kc, cy0 + (517 + DYC - fy + om[1]) * k - 517 * kc);
+        // scan line
+        if (scan > 0 && scan < 1) { const sy2 = -50 + scan * (DH + 100); const sg = g.createLinearGradient(0, sy2 - 26, 0, sy2 + 2); sg.addColorStop(0, 'rgba(60,140,255,0)'); sg.addColorStop(1, 'rgba(130,200,255,.45)'); g.fillStyle = sg; g.fillRect(70, sy2 - 26, 860, 28); g.fillStyle = 'rgba(220,245,255,.9)'; g.fillRect(70, sy2, 860, 1.4); }
+        // strips
+        if (sI > 0) { g.globalAlpha = sI; for (const s of STRIPS) { g.fillStyle = '#8fd0ff'; g.fillRect(s[0] - 1, s[1] - 1, s[2] + 2, s[3] + 2); g.fillStyle = '#fff'; g.fillRect(s[0], s[1], s[2], s[3]); } g.drawImage(meshSpr.c, meshSpr.x, meshSpr.y, meshSpr.w, meshSpr.h); g.globalAlpha = 1; }
+        // LEDs (cascade on)
+        for (const l of LEDS) { const on = cl((eIn - .25 - l.i * .035) / .1); if (on <= 0) continue; const bl = (Math.sin(t * l.sp + l.ph) > .1 ? 1 : .22) * (rI > .5 ? 1 : .6); g.fillStyle = 'rgba(' + l.c + ',' + on * bl + ')'; g.beginPath(); g.arc(l.x, l.y, l.r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,' + on * bl * .9 + ')'; g.beginPath(); g.arc(l.x, l.y, l.r * .45, 0, 7); g.fill(); }
+        // reactor
+        reactor(g, rI, lit, spin, t);
+        // eyes
+        if (eI > .01) {
+            const E = eyeSpr; g.globalAlpha = cl(eI);
+            const sw = pp >= 0 ? 1 : (fk >= 0 ? ease(sweep) : 0); if (sw > 0) {
+                const wpx = E.c.width * sw;
+                g.drawImage(E.c, 0, 0, wpx, E.c.height, E.ex, E.ey, E.ew * sw, E.eh);
+                g.save(); g.translate(DW, 0); g.scale(-1, 1); g.drawImage(E.c, 0, 0, wpx, E.c.height, E.ex, E.ey, E.ew * sw, E.eh); g.restore();
+            }
+            if (eI > 1) { g.globalAlpha = cl(eI - 1) * .9; g.globalCompositeOperation = 'lighter'; poly(g, EYE); g.fillStyle = '#cfeaff'; g.fill(); poly(g, mirror(EYE)); g.fill(); g.globalCompositeOperation = 'source-over'; }
+            g.globalAlpha = 1;
+        }
+        // panels
+        if (scp > 0) for (const key of ['L', 'R', 'BL', 'BR']) panel(g, key, scp, t - T.fk / 1000);
+        // dust motes
+        for (const m of MOTES) {
+            m.x += m.vx * dt; m.y += m.vy * dt; if (m.y < -20) m.y = DH + 20; if (m.x < -20) m.x = DW + 20; if (m.x > DW + 20) m.x = -20;
+            const dd = Math.min(Math.hypot(m.x - RX, m.y - RY), Math.hypot(Math.abs(m.x - 500) - 200, m.y - 380)); const a = cl(1 - dd / 520) * (.35 + .65 * Math.abs(Math.sin(t * .8 + m.ph))) * Math.max(rI, eI * .6);
+            if (a < .02) continue; g.fillStyle = 'rgba(170,220,255,' + a * .8 + ')'; g.beginPath(); g.arc(m.x + (px * 14) * (m.z - .6), m.y + (py * 10) * (m.z - .6), m.z * 1.1, 0, 7); g.fill();
+        }
+        // composite emissive + bloom
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 1; ctx.drawImage(emis, 0, 0);
+        b1.getContext('2d').clearRect(0, 0, b1.width, b1.height); b1.getContext('2d').drawImage(emis, 0, 0, b1.width, b1.height);
+        b2.getContext('2d').clearRect(0, 0, b2.width, b2.height); b2.getContext('2d').drawImage(b1, 0, 0, b2.width, b2.height);
+        b3.getContext('2d').clearRect(0, 0, b3.width, b3.height); b3.getContext('2d').drawImage(b2, 0, 0, b3.width, b3.height);
+        ctx.globalAlpha = .85; ctx.drawImage(b1, 0, 0, cv.width, cv.height); ctx.globalAlpha = .9; ctx.drawImage(b2, 0, 0, cv.width, cv.height); ctx.globalAlpha = .8; ctx.drawImage(b3, 0, 0, cv.width, cv.height);
+        // anamorphic streaks + reactor star
+        const streak = (x, y, len, thick, I, col) => { if (I <= .01) return; const [a, b] = w2s(x, y); ctx.save(); ctx.translate(a, b); ctx.scale(1, thick / len); const gg = ctx.createRadialGradient(0, 0, 0, 0, 0, len * k); gg.addColorStop(0, 'rgba(' + col + ',' + cl(I) * .55 + ')'); gg.addColorStop(.25, 'rgba(' + col + ',' + cl(I) * .18 + ')'); gg.addColorStop(1, 'rgba(' + col + ',0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, 0, len * k, 0, 7); ctx.fill(); ctx.restore(); };
+        streak(300, 384, 520, 26, eI, '120,190,255'); streak(700, 384, 520, 26, eI, '120,190,255'); streak(RX, RY, 640, 18, rI, '170,215,255'); streak(RX, RY, 220, 220, rI * .5, '90,160,255');
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+        // vignette + grade
+        const vg = ctx.createRadialGradient(cx0, cy0, Math.min(cv.width, cv.height) * .28, cx0, cy0, Math.max(cv.width, cv.height) * .72); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,6,.93)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.globalCompositeOperation = 'screen'; const gr = ctx.createLinearGradient(0, 0, 0, cv.height); gr.addColorStop(0, 'rgba(0,10,40,.10)'); gr.addColorStop(1, 'rgba(0,30,90,.12)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, cv.width, cv.height); ctx.globalCompositeOperation = 'source-over';
+
+        // ---- push-through: zoom blur + whiteout ----
+        if (pp >= 0) {
+            if (!tmp) tmp = mk(cv.width, cv.height); const tc = tmp.getContext('2d'); tc.setTransform(1, 0, 0, 1, 0, 0); tc.clearRect(0, 0, tmp.width, tmp.height); tc.drawImage(cv, 0, 0);
+            const [ex, ey] = [cx0, cy0 + (535 - fy) * k]; ctx.globalCompositeOperation = 'lighter';
+            for (let i = 1; i <= 7; i++) { const s = 1 + i * .045 * z; ctx.globalAlpha = .16 * z; ctx.setTransform(s, 0, 0, s, ex - ex * s, ey - ey * s); ctx.drawImage(tmp, 0, 0); }
+            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+            const fa = ease((pp - .12) / .32), rad = Math.max(cv.width, cv.height) * (.15 + pp * 1.4);
+            const fg = ctx.createRadialGradient(ex, ey, 0, ex, ey, rad); fg.addColorStop(0, 'rgba(255,255,255,' + fa + ')'); fg.addColorStop(.5, 'rgba(150,210,255,' + fa * .85 + ')'); fg.addColorStop(1, 'rgba(30,110,255,' + fa * .4 + ')'); ctx.fillStyle = fg; ctx.fillRect(0, 0, cv.width, cv.height);
+            if (pp > .42) { ctx.fillStyle = 'rgba(190,225,255,' + cl((pp - .42) / .1) + ')'; ctx.fillRect(0, 0, cv.width, cv.height); }
+            ctx.globalCompositeOperation = 'source-over';
+            cv.style.opacity = pp > .5 ? Math.max(0, 1 - (pp - .5) / .3) : 1;
+        }
+    }
+    raf = requestAnimationFrame(frame);
+    return {
+        destroy() { dead = true; cancelAnimationFrame(raf); el.removeEventListener('pointermove', onMove); removeEventListener('resize', onResize); cv.remove(); layers = null; }
+    };
+}
+
 function ironBoot() {
     try { if (sessionStorage.getItem('boot_done') === '1') return; sessionStorage.setItem('boot_done', '1'); } catch (e) { }
     const el = document.createElement('div');
@@ -5193,30 +6035,41 @@ function ironBoot() {
         '<path d="' + W + '" fill="none" stroke="url(#ibRed)" stroke-width="12" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
         '<path class="ib-rim" d="' + W + '" fill="none" stroke="#4fc3f7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
     const ret = n => '<div class="ib-ret sl-p" id="ib-ret' + n + '" style="--d:' + (n * .25) + 's"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#4fc3f7" stroke-width="1"/><g class="rr"><circle cx="50" cy="50" r="38" fill="none" stroke="#e6f6ff" stroke-width="2" stroke-dasharray="14 6 3 6"/></g><path d="M50 2v12M50 86v12M2 50h12M86 50h12" stroke="#4fc3f7" stroke-width="1.5"/><circle cx="50" cy="50" r="2" fill="#fff"/></svg></div>';
-    // helmet eye-light assembly (drawn from the real helmet photo): faceted glass slab + hot core, lit housing edge, camera lens + status LEDs
+    // big tapered eye: pointed outer tip, wide inner end, black housing, glowing blue glass
     const eyeSvg = r => {
-        const P = '8,2 296,12 296,47 2,38', k = r ? 'R' : 'L';
-        return '<svg viewBox="0 0 300 56"><defs>' +
-          '<linearGradient id="egG' + k + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#e6f6ff"/><stop offset=".68" stop-color="#8fd0ff"/><stop offset="1" stop-color="#2f8fff"/></linearGradient>' +
-          '<linearGradient id="egH' + k + '" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".7"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
-          '<clipPath id="egC' + k + '"><polygon points="' + P + '"/></clipPath>' +
-          '<pattern id="egP' + k + '" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="skewX(-16)"><path d="M0 0V11" stroke="rgba(20,100,225,.55)" stroke-width="1"/><path d="M0 5.5H11" stroke="rgba(20,100,225,.2)" stroke-width="1"/></pattern></defs>' +
-          '<g' + (r ? ' transform="translate(300 0) scale(-1 1)"' : '') + '>' +
-            '<polygon points="' + P + '" fill="#050b16" stroke="rgba(120,180,255,.55)" stroke-width="6" stroke-linejoin="round"/>' +
-            '<polygon points="' + P + '" fill="url(#egG' + k + ')"/>' +
-            '<g clip-path="url(#egC' + k + ')"><rect width="300" height="56" fill="url(#egP' + k + ')"/>' +
-              '<rect y="2" width="300" height="15" fill="url(#egH' + k + ')"/>' +
-              '<path d="M26 56L84 0M118 56L176 0M210 56L268 0" stroke="rgba(255,255,255,.38)" stroke-width="7"/>' +
-              '<rect y="36" width="300" height="20" fill="rgba(30,110,255,.5)"/></g>' +
-            '<polygon points="' + P + '" fill="none" stroke="#fff" stroke-width="1.4" opacity=".95"/>' +
-            '<circle cx="15" cy="21" r="2.3" fill="#cfeaff"/><circle cx="287" cy="30" r="2.3" fill="#cfeaff"/>' +
-            '<path d="M40 52v7M70 53v7M100 54v7" stroke="#4fc3f7" stroke-width="2" opacity=".7"/>' +
-          '</g></svg>';
+        const k = r ? 'R' : 'L';
+        const O = '-12,24 402,46 402,138 330,140 -12,92', P = '-2,30 398,52 398,130 328,132 -2,86', G = '8,36 392,57 392,122 322,124 8,80';
+        return `<svg viewBox="0 0 400 150" aria-hidden="true"><defs>
+          <linearGradient id="hs${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17306a"/><stop offset=".4" stop-color="#060d20"/><stop offset="1" stop-color="#010207"/></linearGradient>
+          <linearGradient id="gl${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfeaff"/><stop offset=".22" stop-color="#6fc6ff"/><stop offset=".6" stop-color="#1f86ff"/><stop offset="1" stop-color="#0a43ff"/></linearGradient>
+          <linearGradient id="dk${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1f45"/><stop offset="1" stop-color="#02060f"/></linearGradient>
+          <linearGradient id="ed${k}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0630c8" stop-opacity=".9"/><stop offset=".16" stop-color="#0630c8" stop-opacity="0"/><stop offset=".84" stop-color="#0630c8" stop-opacity="0"/><stop offset="1" stop-color="#0630c8" stop-opacity=".9"/></linearGradient>
+          <clipPath id="cg${k}"><polygon points="${G}"/></clipPath>
+          <pattern id="rb${k}" width="16" height="5" patternUnits="userSpaceOnUse" patternTransform="skewX(-14)"><path d="M0 0V5" stroke="rgba(8,70,230,.45)" stroke-width="1"/></pattern>
+          <filter id="b1${k}" x="-20%" y="-90%" width="140%" height="280%"><feGaussianBlur stdDeviation="12"/></filter>
+          <filter id="b2${k}" x="-30%" y="-160%" width="160%" height="420%"><feGaussianBlur stdDeviation="28"/></filter>
+          <filter id="b4${k}" x="-50%" y="-250%" width="200%" height="600%"><feGaussianBlur stdDeviation="64"/></filter>
+          <filter id="b3${k}" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="3"/></filter>
+        </defs>
+        <g${r ? ' transform="translate(400 0) scale(-1 1)"' : ''}>
+          <polygon points="${O}" fill="url(#hs${k})" stroke="#2f8bff" stroke-width="2" stroke-linejoin="round" stroke-opacity=".85"/>
+          <path d="M-10 30L402 48" stroke="rgba(150,210,255,.75)" stroke-width="1.5"/>
+          <polygon points="${P}" fill="#010308" stroke="rgba(47,139,255,.6)" stroke-width="1.2"/>
+          <polygon points="${G}" fill="url(#dk${k})"/>
+          <g class="eg-on">
+            <polygon points="${G}" fill="#1e7bff" stroke="#1e7bff" stroke-width="14" stroke-linejoin="round" filter="url(#b2${k})" opacity=".95"/>
+            <polygon points="${G}" fill="#5cb8ff" filter="url(#b1${k})" opacity=".95"/>
+            <polygon points="${O}" fill="none" stroke="#4fa8ff" stroke-width="3" filter="url(#b3${k})" opacity=".9"/>
+            <polygon points="${G}" fill="url(#gl${k})"/>
+            <g clip-path="url(#cg${k})">
+              <rect width="400" height="150" fill="url(#rb${k})"/>
+              <rect x="0" y="66" width="400" height="18" fill="#dff3ff" opacity=".9" filter="url(#b3${k})"/>
+              <rect width="400" height="150" fill="url(#ed${k})"/>
+            </g>
+            <polygon points="${G}" fill="none" stroke="#c9ecff" stroke-width="1.8"/>
+          </g>
+        </g></svg>`;
     };
-    const camSvg = '<svg viewBox="0 0 190 56"><rect x="62" y="1" width="66" height="42" fill="none" stroke="rgba(79,195,247,.35)" stroke-width="1"/>' +
-        '<circle cx="95" cy="21" r="12.5" fill="#02060f" stroke="#4fc3f7" stroke-width="2"/><circle cx="95" cy="21" r="6.5" fill="none" stroke="#1e90ff" stroke-width="1.5"/><circle class="ib-led" cx="95" cy="21" r="2.6" fill="#fff"/>' +
-        '<circle class="ib-led" cx="70" cy="9" r="1.7" fill="#6fd0ff"/><circle class="ib-led" cx="120" cy="9" r="1.7" fill="#6fd0ff" style="animation-delay:.5s"/><circle class="ib-led" cx="70" cy="34" r="1.7" fill="#6fd0ff" style="animation-delay:.9s"/><circle class="ib-led" cx="120" cy="34" r="1.7" fill="#6fd0ff" style="animation-delay:.3s"/>' +
-        '<path d="M80 50h30" stroke="#4fc3f7" stroke-width="3" opacity=".85"/></svg>';
     el.innerHTML =
         '<div class="ib-stage">' +
           '<div class="ib-grid"></div><div class="ib-streaks"></div>' +
@@ -5248,32 +6101,33 @@ function ironBoot() {
           '</div>' +
           '<div class="ib-beam"></div>' +
           
-          '<div class="ib-eyepos"><div class="ib-eyes"><div class="ib-eyew"><div class="ib-eye">' + eyeSvg(0) + '</div></div><div class="ib-eyec">' + camSvg + '</div><div class="ib-eyew"><div class="ib-eye">' + eyeSvg(1) + '</div></div></div></div>' +
+          '<div class="ib-eyepos"><div class="ib-eyes"><div class="ib-eyew"><div class="ib-eye">' + eyeSvg(0) + '</div></div><div class="ib-eyew"><div class="ib-eye">' + eyeSvg(1) + '</div></div></div></div>' +
           '<div class="ib-fkov"></div>' +
         '</div>' +
         '<div class="ib-visor"></div><div class="ib-flame"></div><div class="ib-impact"></div><div class="ib-flash"></div>';
     document.body.appendChild(el);
 
     ib2Build(el);
+    let hm = null; try { hm = helmetScene(el); } catch (e) { console.warn(e); }
     const T = []; let ended = false, raf = 0;
     const at = (ms, fn) => T.push(setTimeout(() => { if (!ended) fn(); }, ms));
     const finish = fast => {
         if (ended) return; ended = true;
-        T.forEach(clearTimeout); cancelAnimationFrame(raf);
+        T.forEach(clearTimeout); cancelAnimationFrame(raf); try { hm && hm.destroy(); } catch (e) { }
         if (fast) { el.classList.add('out'); setTimeout(() => { el.remove(); reactorDraw(); }, 230); }
         else { el.remove(); reactorDraw(); }
     };
     el.addEventListener('pointerdown', () => finish(true));      // tap skips
-    at(11500, () => finish(true));                                // safety net
+    at(12600, () => finish(true));                                // safety net
 
     // black -> frame lands -> eyes land on the frame -> eyes power on -> pull into visor -> HUD slides in -> jets off
     requestAnimationFrame(() => el.classList.add('f1'));
     at(500, () => el.classList.add('e1'));          // black beat, then the eyes fall in from above the screen
     at(1060, () => el.classList.add('eland'));
-    at(1100, () => el.classList.add('e2'));
-    at(1700, () => { el.classList.remove('e2'); el.classList.add('fk'); try { haptic([12, 40, 12, 60, 18]); } catch (e) { } });   // flicker after the eyes
-    at(2650, () => { el.classList.remove('fk'); el.classList.add('p'); });
-    at(3400, () => { el.classList.add('h'); runHud(); });
+    at(1700, () => { el.classList.add('e2'); try { haptic([10, 30, 14]); } catch (e) { } });   // arc reactor spins up, helmet interior wakes
+    at(2500, () => { el.classList.add('fk'); try { haptic([12, 40, 12, 60, 18]); } catch (e) { } });   // eyes + screens flicker on
+    at(3550, () => { el.classList.remove('fk'); el.classList.add('p'); });                            // push through the eyes
+    at(4300, () => { el.classList.add('h'); runHud(); });
 
     function runHud() {
         const num = $('ib-num'), arc = $('ib-arc'), fill = $('ib-fill'), log = $('ib-log'), tel = $('ib-tel'), tel2 = $('ib-tel2'), lab = $('ib-label'), hdr = $('ib-hdr');
