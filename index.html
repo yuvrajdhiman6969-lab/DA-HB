@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="mark7">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Discipline OS</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0F7B4A">
+    <meta name="theme-color" content="#050B18">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,37 +15,12 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
     <script>
         // Apply saved theme before first paint so there is no flash
-        try { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); } catch (e) {}
+        try { var _t = localStorage.getItem('theme'); document.documentElement.setAttribute('data-theme', _t === 'goggins' ? 'goggins' : 'mark7'); } catch (e) {}
     </script>
     <style>
         @property --pct { syntax: '<number>'; inherits: false; initial-value: 0; }
 
         /* ============ THEMES ============ */
-        html[data-theme="light"] {
-            --bg: #F3F5F4;
-            --glow-1: rgba(15, 123, 74, 0.09);
-            --glow-2: rgba(240, 180, 40, 0.08);
-            --panel: #FFFFFF;
-            --panel-2: #F1F4F2;
-            --border: #E1E6E3;
-            --border-strong: #C6CEC9;
-            --primary: #0F7B4A;
-            --primary-2: #2BB673;
-            --primary-ink: #FFFFFF;
-            --primary-soft: rgba(15, 123, 74, 0.09);
-            --text: #121816;
-            --muted: #62706A;
-            --danger: #D2352E;
-            --ok: #0F7B4A;
-            --warn: #B98008;
-            --orange: #D35F0B;
-            --shadow: 0 1px 2px rgba(18, 24, 22, 0.05), 0 12px 32px -14px rgba(18, 24, 22, 0.16);
-            --nav-bg: rgba(255, 255, 255, 0.8);
-            --track: #E4E9E6;
-            --overlay: rgba(12, 18, 15, 0.5);
-            --grad: linear-gradient(120deg, #0F7B4A, #2BB673);
-            --truth-bg: #14181A;
-        }
         html[data-theme="goggins"] {
             --bg: #0A0A0A;
             --glow-1: rgba(226, 42, 36, 0.18);
@@ -70,6 +45,10 @@
             --overlay: rgba(0, 0, 0, 0.78);
             --grad: linear-gradient(120deg, #B81216, #FF5A3D);
             --truth-bg: #050505;
+            --brk-c: rgba(227, 43, 37, .9);
+            --hero-bg: radial-gradient(120% 90% at 50% 38%, #2A0A0A 0%, #140606 55%, #0A0A0A 100%);
+            --fx-rgb: 255, 90, 61;
+            --fx-rgb2: 227, 43, 37;
         }
 
         :root {
@@ -308,7 +287,7 @@
         .gym-exc-ex-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; padding: 5px 0; color: var(--text); }
         .gym-exc-ex-row input { width: 15px; height: 15px; }
         @media (max-width: 760px) { .gym-top-grid { grid-template-columns: 1fr; } }
-        /* ============ GYM HUD (follows the app theme: green in light, red/black in stay-hard) ============ */
+        /* ============ GYM HUD (follows the app theme: Mark VII gold/cyan, or Stay Hard red/black) ============ */
         .stark-hud { position: relative; background: radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--primary) 11%, var(--panel)) 0%, var(--panel) 62%); border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border)); border-radius: 14px; padding: 16px; color: var(--text); overflow: hidden; box-shadow: var(--shadow); min-width: 0; }
         .stark-hud::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(color-mix(in srgb, var(--primary) 7%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--primary) 7%, transparent) 1px, transparent 1px); background-size: 22px 22px; pointer-events: none; }
         .stark-hud::after { content: ""; position: absolute; left: 0; right: 0; top: -70px; height: 70px; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--primary) 9%, transparent), transparent); animation: gymScan 7s linear infinite; pointer-events: none; }
@@ -656,14 +635,557 @@
         .wd-two { display: grid; grid-template-columns: 1fr 140px; gap: 12px; }
         .wd-load { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
         @media (max-width: 760px) { .wd-grid3 { grid-template-columns: 1fr; } .wd-list { grid-template-columns: 1fr; } .wd-two { grid-template-columns: 1fr; } }
+    
+        /* =====================================================
+           STARK UPGRADE — home console, insights HUD, system strip
+           (all colours come from the existing theme variables)
+        ===================================================== */
+        .sys-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; border: 1px solid color-mix(in srgb, var(--primary) 38%, var(--border)); background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 13%, var(--panel)), var(--panel) 70%); border-radius: 10px; padding: 9px 14px; margin-bottom: 14px; font: 11px ui-monospace, Menlo, monospace; letter-spacing: .1em; color: var(--muted); }
+        .sys-strip b { color: var(--primary); }
+        .sys-strip .sysdot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 9px var(--ok); animation: gymBlink 1.6s infinite; }
+        .sys-strip .sp { flex: 1; }
+        .hud-brief { display: grid; gap: 4px; margin: 2px 4px 14px; font: 12px ui-monospace, Menlo, monospace; color: var(--muted); letter-spacing: .02em; }
+        .hud-brief div::before { content: "› "; color: var(--primary); }
+        .hud-brief b { color: var(--text); font-weight: 600; }
+        .hud-brief button { background: none; border: 0; color: var(--primary); font: inherit; text-decoration: underline; cursor: pointer; padding: 0; }
+        .th-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+        .th-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: color-mix(in srgb, var(--primary) 5%, transparent); border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent); border-radius: 9px; padding: 10px 12px; color: var(--text); cursor: pointer; font-size: 13px; transition: .15s; min-height: 46px; font-family: inherit; }
+        .th-row:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 12%, transparent); }
+        .th-row .th-dot { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--primary); flex: none; }
+        .th-row .th-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .th-row .th-st { font: 700 10px ui-monospace, Menlo, monospace; letter-spacing: .12em; color: var(--muted); flex: none; }
+        .th-row.on { border-color: color-mix(in srgb, var(--ok) 70%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+        .th-row.on .th-dot { background: var(--ok); border-color: var(--ok); box-shadow: 0 0 8px var(--ok); }
+        .th-row.on .th-st { color: var(--ok); }
+        .th-row.bad { border-color: color-mix(in srgb, var(--danger) 70%, transparent); background: color-mix(in srgb, var(--danger) 9%, transparent); }
+        .th-row.bad .th-dot { background: var(--danger); border-color: var(--danger); }
+        .th-row.bad .th-st { color: var(--danger); }
+        .th-row.warn { border-color: color-mix(in srgb, var(--warn) 70%, transparent); }
+        .th-row.warn .th-dot { background: var(--warn); border-color: var(--warn); }
+        .th-row.warn .th-st { color: var(--warn); }
+        .th-row.rest { opacity: .55; cursor: default; }
+        .th-row:focus-visible, .ins-tab:focus-visible, .ins-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+        .ins-tab, .ins-chip { background: transparent; border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent); color: var(--muted); border-radius: 6px; padding: 5px 11px; font: 600 10.5px ui-monospace, Menlo, monospace; letter-spacing: .12em; cursor: pointer; transition: .15s; }
+        .ins-tab:hover, .ins-chip:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--text); }
+        .ins-tab.active, .ins-chip.active { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+        .ins-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 10px; align-items: center; }
+        .ins-hm-wrap { overflow-x: auto; padding-bottom: 4px; }
+        .ins-hm-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; min-width: 330px; }
+        .ins-hm-label { width: 96px; flex: none; font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ins-hm-cells { flex: 1; display: grid; grid-template-columns: repeat(var(--cols), minmax(5px, 1fr)); gap: 2px; }
+        .ins-hm-cells i { display: block; height: 14px; border-radius: 2px; background: color-mix(in srgb, var(--primary) 6%, transparent); border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent); }
+        .ins-hm-cells i.c1 { background: var(--ok); border-color: var(--ok); box-shadow: 0 0 4px color-mix(in srgb, var(--ok) 60%, transparent); }
+        .ins-hm-cells i.c0 { background: color-mix(in srgb, var(--danger) 55%, transparent); border-color: var(--danger); }
+        .ins-hm-cells i.cf { background: none; border-style: dashed; }
+        .ins-hm-cells i.ct { outline: 1.5px solid var(--text); outline-offset: 0; }
+        .ins-hm-cells i.wk { margin-left: 2px; }
+        .ins-hm-pct { width: 38px; flex: none; text-align: right; font: 700 11px ui-monospace, Menlo, monospace; color: var(--primary); }
+        .ins-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .ins-bar .nm { width: 130px; flex: none; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ins-bar .tr { flex: 1; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--primary) 14%, transparent); overflow: hidden; }
+        .ins-bar .tr i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--primary), var(--primary-2)); }
+        .ins-bar .tr i.lo { background: linear-gradient(90deg, var(--danger), var(--orange)); }
+        .ins-bar .tr i.mid { background: linear-gradient(90deg, var(--warn), var(--orange)); }
+        .ins-bar .pc { width: 40px; flex: none; text-align: right; font: 700 11px ui-monospace, Menlo, monospace; color: var(--text); }
+        .ins-weak { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-bottom: 14px; }
+        .ins-card { border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent); background: color-mix(in srgb, var(--primary) 5%, transparent); border-radius: 10px; padding: 12px 14px; }
+        .ins-card.danger { border-color: color-mix(in srgb, var(--danger) 65%, transparent); background: color-mix(in srgb, var(--danger) 7%, transparent); }
+        .ins-card .k { font: 700 9.5px ui-monospace, Menlo, monospace; letter-spacing: .15em; color: var(--muted); }
+        .ins-card .v { font-family: var(--font-display); font-size: 28px; color: var(--text); margin: 2px 0; }
+        .ins-card .s { font-size: 12px; color: var(--muted); line-height: 1.45; }
+        .ins-card .s b { color: var(--text); }
+        .ins-tag { display: inline-block; font: 700 9px ui-monospace, Menlo, monospace; letter-spacing: .14em; border-radius: 4px; padding: 2px 6px; color: #111; background: var(--muted); margin-left: 6px; vertical-align: middle; }
+        .ins-tag.s3 { background: var(--ok); } .ins-tag.s2 { background: var(--warn); } .ins-tag.s1 { background: var(--orange); }
+        .ins-twin { display: grid; gap: 8px; margin: 10px 0; }
+        .ins-twin .row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+        .ins-twin .row .lb { width: 150px; flex: none; color: var(--muted); }
+        .ins-twin .row .tr { flex: 1; height: 16px; border-radius: 4px; background: color-mix(in srgb, var(--primary) 12%, transparent); overflow: hidden; }
+        .ins-twin .row .tr i { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-2)); box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 60%, transparent); }
+        .ins-twin .row.no .tr i { background: linear-gradient(90deg, var(--danger), var(--orange)); box-shadow: none; }
+        .ins-twin .row .pc { width: 118px; flex: none; text-align: right; font: 700 11px ui-monospace, Menlo, monospace; color: var(--text); }
+        .ins-wk { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 120px; margin: 8px 0 4px; }
+        .ins-wk div { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; font: 10px ui-monospace, Menlo, monospace; color: var(--muted); }
+        .ins-wk i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--primary-2), var(--primary)); margin: 3px 0; min-height: 2px; }
+        .ins-wk .lo i { background: linear-gradient(180deg, var(--orange), var(--danger)); }
+        .ins-wk .hi i { background: linear-gradient(180deg, var(--ok), var(--primary)); }
+        .ins-select-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 6px 0 4px; }
+        .ins-select-row select { flex: 1; min-width: 140px; }
+        #tab-insights .stark-hud-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); }
+        .ins-tab { text-align: center; }
+        @media (max-width: 700px) { .th-grid { grid-template-columns: 1fr; } .ins-bar .nm { width: 96px; } .ins-twin .row .lb { width: 100px; } .ins-twin .row .pc { width: 92px; } }
+        @media (prefers-reduced-motion: reduce) { .sys-strip .sysdot, .stark-hud::after, .gym-ring-spin { animation: none !important; } }
     </style>
+    <style id="m7-style">
+/* =====================================================
+   TWO THEMES: MARK VII (default) and STAY HARD (black + red).
+   Only transform/opacity animate. All decorative motion is capped
+   and switched off in Lite mode, reduced-motion, and hidden tabs.
+===================================================== */
+html[data-theme="mark7"] {
+    --bg: #050B18; --glow-1: rgba(55, 227, 247, .13); --glow-2: rgba(242, 182, 50, .10);
+    --panel: #0A1428; --panel-2: #0F1B36; --border: rgba(242, 182, 50, .24); --border-strong: rgba(242, 182, 50, .45);
+    --primary: #F2B632; --primary-2: #37E3F7; --primary-ink: #06101F; --primary-soft: rgba(242, 182, 50, .12);
+    --text: #E8EEF8; --muted: #8A9BBA; --danger: #FF5468; --ok: #3DEBC0; --warn: #F2B632; --orange: #FF9A3D;
+    --shadow: 0 1px 0 rgba(242, 182, 50, .07) inset, 0 16px 36px -18px rgba(0, 0, 0, .85);
+    --nav-bg: rgba(5, 11, 24, .88); --track: #14223F; --overlay: rgba(2, 6, 14, .82);
+    --grad: linear-gradient(120deg, #C48A10, #F2B632 48%, #37E3F7); --truth-bg: #030710;
+    --brk-c: rgba(242, 182, 50, .85);
+    --hero-bg: radial-gradient(120% 90% at 50% 38%, #10294F 0%, #07122A 55%, #050B18 100%);
+    --fx-rgb: 55, 227, 247; --fx-rgb2: 242, 182, 50;
+}
+html[data-theme] {
+    --brk:
+        linear-gradient(var(--brk-c), var(--brk-c)) left 5px top 5px / 12px 1.5px no-repeat,
+        linear-gradient(var(--brk-c), var(--brk-c)) left 5px top 5px / 1.5px 12px no-repeat,
+        linear-gradient(var(--brk-c), var(--brk-c)) right 5px top 5px / 12px 1.5px no-repeat,
+        linear-gradient(var(--brk-c), var(--brk-c)) right 5px top 5px / 1.5px 12px no-repeat,
+        linear-gradient(var(--brk-c), var(--brk-c)) left 5px bottom 5px / 12px 1.5px no-repeat,
+        linear-gradient(var(--brk-c), var(--brk-c)) left 5px bottom 5px / 1.5px 12px no-repeat,
+        linear-gradient(var(--brk-c), var(--brk-c)) right 5px bottom 5px / 12px 1.5px no-repeat,
+        linear-gradient(var(--brk-c), var(--brk-c)) right 5px bottom 5px / 1.5px 12px no-repeat;
+    --spot: radial-gradient(260px circle at var(--mx, -999px) var(--my, -999px), rgba(var(--fx-rgb), .11), transparent 70%);
+}
+html[data-theme] body { background-attachment: scroll; }
+
+/* ---------- ambient background: static pattern + slow drifting aurora ---------- */
+html[data-theme="mark7"] body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'><path d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23F2B632' stroke-opacity='.075'/><path d='M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34' fill='none' stroke='%23F2B632' stroke-opacity='.075'/></svg>");
+}
+html[data-theme="goggins"] body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'><path d='M-4 4L4 -4M0 34L34 0M30 38L38 30' stroke='%23E32B25' stroke-opacity='.07' stroke-width='1.2'/></svg>");
+}
+html[data-theme]::before {
+    content: ""; position: fixed; inset: -25%; z-index: -1; pointer-events: none;
+    background:
+        radial-gradient(38% 34% at 22% 28%, rgba(var(--fx-rgb), .10), transparent 70%),
+        radial-gradient(34% 30% at 78% 66%, rgba(var(--fx-rgb2), .09), transparent 70%);
+    animation: fxAurora 38s ease-in-out infinite alternate;
+}
+@keyframes fxAurora { from { transform: translate3d(-3%, -2%, 0) rotate(0deg); } to { transform: translate3d(4%, 3%, 0) rotate(8deg); } }
+html[data-theme="goggins"]::after {
+    content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 34vh; z-index: -1; pointer-events: none;
+    background: linear-gradient(to top, rgba(227, 43, 37, .20), rgba(227, 43, 37, .05) 55%, transparent);
+    animation: fxHeat 3.6s ease-in-out infinite;
+}
+@keyframes fxHeat { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+#fx-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+
+/* ---------- nav ---------- */
+html[data-theme] nav { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom-color: var(--border-strong); }
+html[data-theme] nav::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(var(--fx-rgb), .95) 30%, rgba(var(--fx-rgb2), .95) 70%, transparent);
+    transform-origin: center; animation: fxNavBreath 5s ease-in-out infinite;
+}
+@keyframes fxNavBreath { 0%, 100% { opacity: .25; transform: scaleX(.35); } 50% { opacity: 1; transform: scaleX(1); } }
+html[data-theme] .brand-logo { filter: drop-shadow(0 0 9px rgba(var(--fx-rgb2), .38)); }
+html[data-theme="goggins"] .brand-logo { animation: fxGlitch 7s steps(1) infinite; }
+@keyframes fxGlitch { 0%, 93%, 100% { transform: none; } 94% { transform: translateX(-2px) skewX(-6deg); } 95% { transform: translateX(3px); } 96% { transform: translateX(-1px) skewX(4deg); } 97% { transform: none; } }
+html[data-theme] .nav-btn.active { box-shadow: 0 0 0 1px rgba(var(--fx-rgb2), .5), 0 4px 18px -4px rgba(var(--fx-rgb2), .55); }
+html[data-theme] .nav-btn { position: relative; }
+html[data-theme] .nav-btn:not(.active):hover { box-shadow: inset 0 -2px 0 rgba(var(--fx-rgb), .8); }
+html[data-theme] .theme-toggle:hover { box-shadow: 0 0 16px -2px rgba(var(--fx-rgb2), .55); }
+html[data-theme] .btn-exception:hover { box-shadow: 0 6px 18px -6px rgba(var(--fx-rgb2), .6); }
+
+/* ---------- panels: corner brackets, cursor spotlight, hover lift ---------- */
+html[data-theme] :is(.dash-card, .home-stat-box, .wd-card, .bunk-bank-card, .punish-card, .aar-card, .timer-card, .detailed-breakdown-card, .month-selector, .table-wrapper) {
+    background: var(--spot), var(--brk), var(--panel);
+    transition: background-color .35s, border-color .25s, box-shadow .25s, transform .25s;
+}
+@media (hover: hover) {
+    html[data-theme] :is(.dash-card, .home-stat-box, .bunk-bank-card, .punish-card, .aar-card):hover {
+        border-color: var(--border-strong); transform: translateY(-2px);
+        box-shadow: var(--shadow), 0 14px 34px -16px rgba(var(--fx-rgb2), .45);
+    }
+}
+html[data-theme] .table-wrapper { position: relative; }
+html[data-theme] .home-stat-value { text-shadow: 0 0 18px rgba(var(--fx-rgb2), .28); }
+html[data-theme] .dash-card-title { border-image: linear-gradient(90deg, var(--border-strong), transparent) 1; }
+html[data-theme] .hero { border-color: var(--border-strong); box-shadow: var(--shadow), 0 0 40px -18px rgba(var(--fx-rgb2), .5); }
+html[data-theme] .hero-streak { background: var(--brk), var(--hero-bg); color: var(--text); align-items: center; }
+html[data-theme] .hero-streak::after {
+    content: ""; display: block; position: absolute; inset: -60%; width: auto; height: auto; right: auto; bottom: auto; z-index: 0; pointer-events: none; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0 82%, rgba(var(--fx-rgb), .14) 96%, rgba(var(--fx-rgb), .30) 100%);
+    animation: rxSpin 9s linear infinite;
+}
+html[data-theme] .streak-note { color: var(--muted); opacity: 1; text-align: center; margin-left: auto; margin-right: auto; }
+html[data-theme] .hero-quote { background: var(--brk); }
+html[data-theme] .hero-quote::before { color: var(--primary-2); }
+html[data-theme] .pin-container { border-color: var(--border-strong); background: var(--brk), var(--panel); box-shadow: var(--shadow), 0 0 60px -20px rgba(var(--fx-rgb2), .55); }
+html[data-theme] #login-screen { background: radial-gradient(70% 60% at 50% 40%, rgba(var(--fx-rgb2), .10), transparent 70%), var(--bg); }
+
+/* ---------- reactor ring ---------- */
+.reactor { display: grid; place-items: center; position: relative; z-index: 1; width: min(290px, 100%); aspect-ratio: 1; margin: 0 auto; }
+.reactor svg { display: block; position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.reactor-core { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; text-align: center; }
+.reactor-core .flame { font-size: 24px; margin: 0 auto; }
+.reactor-core .streak-num { font-size: 76px; margin-top: 0; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 14px rgba(var(--fx-rgb2), .45)); }
+html[data-theme="goggins"] .reactor-core .streak-num { animation: fxEmber 2.4s ease-in-out infinite; }
+@keyframes fxEmber { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+.reactor-core .streak-label { font-size: 16px; letter-spacing: .14em; text-transform: uppercase; color: var(--primary-2); }
+.rx-gold { fill: none; stroke: var(--primary); }
+.rx-cyan { fill: none; stroke: var(--primary-2); }
+.rx-spin-a, .rx-spin-b, .rx-spin-c, .rx-orbit { transform-box: fill-box; transform-origin: center; }
+.rx-spin-a { animation: rxSpin 48s linear infinite; }
+.rx-spin-b { animation: rxSpin 30s linear infinite reverse; }
+.rx-spin-c { animation: rxSpin 120s linear infinite; }
+.rx-orbit { animation: rxSpin 7s linear infinite; }
+.rx-tick { stroke: var(--primary); stroke-width: 1; opacity: .35; }
+.rx-tick.big { stroke-width: 1.6; opacity: .7; }
+.rx-breathe { transform-box: fill-box; transform-origin: center; animation: rxBreathe 4.2s ease-in-out infinite; }
+@keyframes rxBreathe { 0%, 100% { transform: scale(.93); } 50% { transform: scale(1.07); } }
+@keyframes rxSpin { to { transform: rotate(360deg); } }
+.rx-seg { stroke: var(--primary); stroke-width: 5; stroke-linecap: round; opacity: .16; transition: opacity .5s; }
+.rx-seg.on { opacity: 1; filter: drop-shadow(0 0 3px var(--primary)); }
+.rx-seg.lead { stroke: var(--primary-2); opacity: 1; filter: drop-shadow(0 0 5px var(--primary-2)); }
+.reactor.done .rx-seg { stroke: var(--primary-2); opacity: 1; }
+#rx-glow { transition: opacity .8s; }
+.rx-pulse { fill: none; stroke: var(--primary-2); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.rx-pulse.go { animation: rxPulse 1s ease-out; }
+@keyframes rxPulse { 0% { opacity: .95; transform: scale(.8); } 100% { opacity: 0; transform: scale(1.3); } }
+.reactor.draw .rx-seg { animation: rxSegIn .5s backwards; }
+@keyframes rxSegIn { from { opacity: 0; } }
+
+/* ---------- tick feedback ---------- */
+html[data-theme] .th-row { position: relative; overflow: hidden; }
+.m7-scan { position: absolute; width: 90px; z-index: 5; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--fx-rgb), .55), transparent); animation: m7ScanX .55s ease-out forwards; }
+@keyframes m7ScanX { from { transform: translateX(-90px); opacity: 1; } to { transform: translateX(var(--w)); opacity: 0; } }
+.m7-scan-in { position: absolute; top: 0; bottom: 0; left: 0; width: 45%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--fx-rgb), .5), transparent); animation: m7ScanIn .55s ease-out forwards; }
+@keyframes m7ScanIn { from { transform: translateX(-100%); } to { transform: translateX(230%); } }
+
+/* ---------- bars / tabs / status strip ---------- */
+.mini-fill { width: 100%; transform: scaleX(0); transform-origin: left; transition: transform .9s cubic-bezier(.2, .7, .2, 1); }
+.bar-fill { height: 100%; transform-origin: bottom; transition: transform .8s cubic-bezier(.2, .7, .2, 1); }
+.mm-bar > div { width: 100%; transform: scaleX(0); transform-origin: left; transition: transform .9s cubic-bezier(.2, .7, .2, 1); }
+html[data-theme] .mini-fill { box-shadow: 0 0 10px rgba(var(--fx-rgb2), .5); }
+html[data-theme] :is(.ins-bar .tr i, .gym-pr-bar i, .rpt-bar i, .gym-mbar-track i, .ins-twin .tr i, .wd-track i) { transform-origin: left; animation: m7BarIn .7s cubic-bezier(.2, .7, .2, 1) backwards; }
+@keyframes m7BarIn { from { transform: scaleX(0); } }
+html[data-theme] .section.active { animation: m7Tab .32s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes m7Tab { from { opacity: 0; transform: translateY(10px) scale(.992); } to { opacity: 1; transform: none; } }
+html[data-theme] .section.active > * { animation: m7Rise .55s cubic-bezier(.2, .8, .2, 1) backwards; }
+html[data-theme] .section.active > :nth-child(2) { animation-delay: .05s; }
+html[data-theme] .section.active > :nth-child(3) { animation-delay: .10s; }
+html[data-theme] .section.active > :nth-child(4) { animation-delay: .15s; }
+html[data-theme] .section.active > :nth-child(5) { animation-delay: .20s; }
+html[data-theme] .section.active > :nth-child(n+6) { animation-delay: .25s; }
+@keyframes m7Rise { from { opacity: 0; transform: translateY(14px); } }
+#m7-wipe { position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%; pointer-events: none; opacity: 0; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, transparent, var(--primary-2) 40%, var(--primary) 60%, transparent); }
+#m7-wipe.run { animation: m7Wipe .5s ease-out; }
+@keyframes m7Wipe { 0% { opacity: 1; transform: scaleX(0); } 70% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1); } }
+html[data-theme] .sys-strip { position: relative; overflow: hidden; }
+html[data-theme] .sys-strip::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 30%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--fx-rgb), .16), transparent); transform: translateX(-100%); animation: m7Sweep 4.5s linear infinite; }
+@keyframes m7Sweep { to { transform: translateX(430%); } }
+
+/* ---------- theme switch transition ---------- */
+#fx-theme-ov { position: fixed; inset: 0; z-index: 10100; pointer-events: all; overflow: hidden; }
+#fx-theme-ov .disc { position: absolute; width: 100px; height: 100px; margin: -50px 0 0 -50px; border-radius: 50%; will-change: transform; }
+#fx-theme-ov .lbl { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-family: var(--font-display); font-size: clamp(30px, 9vw, 72px); letter-spacing: .3em; padding-left: .3em; text-transform: uppercase; opacity: 0; transform: translateY(-50%); will-change: opacity; }
+
+/* ---------- boot sequence ---------- */
+#boot { position: fixed; inset: 0; z-index: 10050; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; transition: opacity .55s ease; font-family: ui-monospace, Menlo, Consolas, monospace; animation: bootFade .2s both; }
+#boot.out { opacity: 0; pointer-events: none; }
+@keyframes bootFade { from { opacity: 0; } }
+.boot-hline { position: absolute; left: 5%; right: 5%; top: 50%; height: 1px; background: linear-gradient(90deg, transparent, var(--primary) 20%, var(--primary) 80%, transparent); opacity: .6; transform: scaleX(0); animation: bootLine .6s .05s ease-out forwards; }
+@keyframes bootLine { to { transform: scaleX(1); } }
+.boot-ringwrap { position: relative; width: 96px; height: 96px; opacity: 0; transform: scale(.4); animation: bootRingIn .45s .4s ease-out forwards; }
+.boot-ringwrap::after { content: ""; position: absolute; inset: 18px; border-radius: 50%; border: 1px dashed color-mix(in srgb, var(--primary) 50%, transparent); }
+.boot-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--primary-2) 20%, transparent); border-top-color: var(--primary-2); border-right-color: var(--primary); animation: bootSpin 1.1s linear infinite; }
+@keyframes bootRingIn { to { opacity: 1; transform: scale(1); } }
+@keyframes bootSpin { to { transform: rotate(360deg); } }
+.boot-ringwrap.open { animation: bootOpen .6s ease-in forwards; }
+@keyframes bootOpen { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(26); } }
+.boot-log { position: relative; margin-top: 34px; min-height: 84px; font-size: 12px; letter-spacing: .16em; color: var(--muted); text-align: left; display: grid; gap: 5px; align-content: start; width: min(260px, 80%); }
+.boot-log div { white-space: nowrap; }
+.boot-log b { color: var(--primary-2); font-weight: 600; }
+.boot-log.calm { text-align: center; color: var(--primary); min-height: 0; margin: 0; width: auto; animation: bootFade .3s both; }
+
+
+/* ---------- IRON MAN BOOT (Mark VII only): black + blue, inside the helmet ---------- */
+#boot.ib { background: #000; overflow: visible; font-family: ui-monospace, Menlo, Consolas, monospace; animation: none; transition: none; --ib1: #1e90ff; --ib2: #4fc3f7; --ibw: #e6f6ff; }
+#boot.ib.out { opacity: 0; transition: opacity .2s; }
+#boot.ib .ib-stage { position: absolute; inset: 0; overflow: hidden; background: #000; }
+
+/* helmet-interior frame: lands first */
+#boot.ib .ib-frame { position: absolute; inset: 0; z-index: 6; transform: translateY(-108%); transform-origin: 50% 41%; will-change: transform, opacity; }
+#boot.ib .ib-frame svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#boot.ib .ib-rim { filter: drop-shadow(0 0 5px rgba(30,144,255,.95)) drop-shadow(0 0 16px rgba(30,144,255,.6)); }
+#boot.ib .ib-led { animation: ibBlink 1.2s steps(2) infinite; }
+#boot.ib.f1 .ib-frame { animation: ibFrameDrop .95s .2s cubic-bezier(.5,0,.55,1) forwards; }
+@keyframes ibFrameDrop { 0% { transform: translateY(-108%); } 70% { transform: translateY(2.4%); } 84% { transform: translateY(-1%); } 100% { transform: translateY(0); } }
+#boot.ib.f1 .ib-stage { animation: ibShake .32s 1.06s linear; }
+@keyframes ibShake { 0%,100% { transform: none; } 20% { transform: translate(-8px, 7px); } 40% { transform: translate(7px,-6px); } 60% { transform: translate(-4px, 3px); } 80% { transform: translate(3px,-2px); } }
+#boot.ib.p .ib-frame { animation: ibPull .6s cubic-bezier(.6,0,.9,.4) forwards; }
+@keyframes ibPull { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.3); opacity: 0; } }
+#boot.ib.h .ib-frame, #boot.ib.h .ib-eyepos { display: none; }
+
+/* eyes: land on top of the frame */
+#boot.ib .ib-eyepos { position: absolute; left: 0; right: 0; top: 41%; height: 0; z-index: 7; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+#boot.ib .ib-eyes { display: flex; gap: clamp(56px, 13vw, 190px); transform: translateY(-95vh); will-change: transform, opacity; transform-origin: 50% 50%; }
+#boot.ib .ib-eyew { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 20px rgba(140,210,255,.95)) drop-shadow(0 0 60px rgba(30,144,255,.85)); }
+#boot.ib .ib-eye { position: relative; width: clamp(104px, 22vw, 300px); height: clamp(18px, 3.5vw, 48px); background: linear-gradient(180deg, #fff, #cfeaff); clip-path: polygon(0 0, 100% 15%, 100% 100%, 0 85%); }
+#boot.ib .ib-eyew:last-child .ib-eye { clip-path: polygon(0 15%, 100% 0, 100% 85%, 0 100%); }
+#boot.ib .ib-eye::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 12px, rgba(30,144,255,.38) 12px 13px); }
+#boot.ib .ib-eye::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: 100%; height: 36vh; background: linear-gradient(0deg, rgba(190,230,255,.7), transparent); filter: blur(4px); transition: opacity .3s; }
+#boot.ib.eland .ib-eye::before { opacity: 0; }
+#boot.ib.e1 .ib-eyes { animation: ibEyeDrop .9s linear forwards; }
+@keyframes ibEyeDrop { 0% { transform: translateY(-140vh) scale(.9,2.6); filter: blur(8px); animation-timing-function: cubic-bezier(.55,0,.85,.55); } 62% { transform: translateY(1.8vh) scale(1.06,.86); filter: blur(0); animation-timing-function: cubic-bezier(.2,.7,.3,1); } 80% { transform: translateY(-1.4vh) scale(.99,1.04); animation-timing-function: ease-in-out; } 100% { transform: none; filter: none; } }
+#boot.ib.e2 .ib-eyes { animation: none; transform: none; }
+#boot.ib.e2 .ib-eyew { animation: ibPower .55s ease-out; }
+@keyframes ibPower { 0% { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 20px rgba(140,210,255,.95)) drop-shadow(0 0 60px rgba(30,144,255,.85)) brightness(1); } 15% { opacity: .25; } 30% { opacity: 1; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 120px #1e90ff) brightness(2); } 45% { opacity: .55; } 65% { opacity: 1; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 110px #1e90ff) brightness(1.8); } }
+/* flicker phase: eyes + LED slabs stutter, whole helmet blinks */
+#boot.ib.fk .ib-eyes { animation: ibEyeFlick .9s linear forwards; transform: none; }
+#boot.ib.fk .ib-eyew { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 110px #1e90ff) brightness(1.7); }
+@keyframes ibEyeFlick { 0% { opacity: 1; } 7% { opacity: .08; } 13% { opacity: 1; } 21% { opacity: .3; } 27% { opacity: .95; } 35% { opacity: 0; } 41% { opacity: 1; } 54% { opacity: .45; } 59% { opacity: 1; } 71% { opacity: .15; } 77% { opacity: 1; } 100% { opacity: 1; } }
+#boot.ib .ib-slab { opacity: .92; filter: drop-shadow(0 0 6px rgba(120,200,255,.95)); }
+#boot.ib.fk .ib-slab { animation: ibEyeFlick .9s linear .06s; }
+#boot.ib .ib-fkov { position: absolute; inset: 0; z-index: 9; pointer-events: none; opacity: 0; background: radial-gradient(ellipse 70% 50% at 50% 41%, rgba(30,144,255,.35), #000 80%); }
+#boot.ib.fk .ib-fkov { animation: ibFkOv .9s linear; }
+@keyframes ibFkOv { 0% { opacity: 0; } 9% { opacity: .85; } 15% { opacity: 0; } 30% { opacity: .6; } 34% { opacity: 0; } 52% { opacity: .92; } 58% { opacity: .1; } 74% { opacity: .7; } 78% { opacity: 0; } 100% { opacity: 0; } }
+#boot.ib.fk .ib-stage { animation: ibJit .9s steps(1); }
+@keyframes ibJit { 0% { transform: translateX(0); } 9% { transform: translateX(-5px); } 15% { transform: translateX(4px); } 34% { transform: translateX(-3px); } 52% { transform: translateX(6px); } 58% { transform: none; } 74% { transform: translateX(-4px); } 78%,100% { transform: none; } }
+#boot.ib.p .ib-eyes { animation: ibOpen .5s cubic-bezier(.7,0,.9,.4) forwards; transform: none; }
+@keyframes ibOpen { 0% { transform: scale(1,1); opacity: 1; } 100% { transform: scale(2.6,34); opacity: 0; } }
+#boot.ib .ib-flash { position: absolute; inset: 0; z-index: 12; pointer-events: none; opacity: 0; background: radial-gradient(ellipse 70% 45% at 50% 41%, #fff, rgba(140,210,255,.8) 45%, transparent 80%); }
+#boot.ib.p .ib-flash { animation: ibFlash .6s .1s ease-out; }
+@keyframes ibFlash { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
+#boot.ib .ib-impact { position: absolute; inset: 0; z-index: 11; pointer-events: none; opacity: 0; background: radial-gradient(ellipse 60% 30% at 50% 41%, rgba(120,200,255,.5), transparent 70%); }
+#boot.ib.e1 .ib-impact { animation: ibFlash .4s .56s ease-out; }
+
+/* visor over HUD */
+#boot.ib .ib-visor { position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0; background: radial-gradient(ellipse 80% 74% at 50% 50%, transparent 52%, rgba(0,0,0,.94) 100%), linear-gradient(180deg, #000 0, transparent 11%), linear-gradient(0deg, #000 0, transparent 11%); }
+#boot.ib .ib-visor::before { content: ""; position: absolute; inset: 0; background: linear-gradient(112deg, transparent 38%, rgba(120,190,255,.07) 48%, transparent 58%); transform: translateX(-80%); }
+#boot.ib .ib-visor::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(120,190,255,.04) 0 1px, transparent 1px 3px); }
+#boot.ib.h .ib-visor, #boot.ib.lp .ib-visor { opacity: 1; transition: opacity .5s; }
+#boot.ib.h .ib-visor::before { animation: ibGlass 2.6s .3s ease-in-out infinite; }
+@keyframes ibGlass { to { transform: translateX(80%); } }
+#boot.ib .ib-grid { position: absolute; inset: -10%; opacity: 0; background: linear-gradient(rgba(30,144,255,.10) 1px, transparent 1px) 0 0 / 46px 46px, linear-gradient(90deg, rgba(30,144,255,.10) 1px, transparent 1px) 0 0 / 46px 46px; transform: perspective(600px) rotateX(55deg) translateY(-12%) scale(1.8); transform-origin: 50% 100%; -webkit-mask-image: linear-gradient(transparent, #000 70%); mask-image: linear-gradient(transparent, #000 70%); }
+#boot.ib.h .ib-grid { animation: ibGridIn .6s ease forwards, ibGridMove 1.4s linear infinite; }
+@keyframes ibGridIn { to { opacity: 1; } }
+@keyframes ibGridMove { to { background-position: 0 46px, 46px 0; } }
+#boot.ib .ib-beam { position: absolute; left: 0; right: 0; top: 0; height: 90px; z-index: 7; opacity: 0; pointer-events: none; background: linear-gradient(180deg, transparent, rgba(30,144,255,.3) 85%, rgba(220,240,255,.8)); }
+#boot.ib.h .ib-beam { animation: ibBeam 1s .05s ease-in forwards; }
+@keyframes ibBeam { 0% { opacity: 1; transform: translateY(-90px); } 100% { opacity: 0; transform: translateY(105vh); } }
+
+/* HUD */
+#boot.ib .ib-hud { position: absolute; inset: 0; z-index: 4; opacity: 0; color: var(--ib2); display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse 62% 56% at 50% 48%, rgba(8,44,100,.7), rgba(0,0,0,0) 78%); }
+#boot.ib.h .ib-hud { animation: ibHudIn .4s ease-out forwards, ibHudFlk 3.2s 1.4s steps(1) infinite; }
+@keyframes ibHudFlk { 0%,100% { opacity: 1; } 91% { opacity: .78; } 92% { opacity: 1; } 96% { opacity: .9; } 97% { opacity: 1; } }
+@keyframes ibHudIn { from { opacity: 0; } to { opacity: 1; } }
+#boot.ib .ib-p, #boot.ib .ib-ret, #boot.ib .ib-dc, #boot.ib .ib-tape, #boot.ib .ib-hdr, #boot.ib .ib-cor, #boot.ib .ib-tag { opacity: 0; }
+#boot.ib.h .sl-l { animation: ibSlL .75s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
+#boot.ib.h .sl-r { animation: ibSlR .75s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
+#boot.ib.h .sl-t { animation: ibSlT .75s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
+#boot.ib.h .sl-b { animation: ibSlB .75s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
+#boot.ib.h .sl-p { animation: ibPop .7s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes ibSlL { 0% { opacity: 0; transform: translateX(-280px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
+@keyframes ibSlR { 0% { opacity: 0; transform: translateX(280px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
+@keyframes ibSlT { 0% { opacity: 0; transform: translateY(-140px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
+@keyframes ibSlB { 0% { opacity: 0; transform: translateY(140px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
+@keyframes ibPop { 0% { opacity: 0; transform: scale(.55); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+
+.ib-cor { position: absolute; width: 34px; height: 34px; border: 2px solid var(--ib2); }
+.ib-cor.tl { top: 30px; left: 30px; border-right: 0; border-bottom: 0; } .ib-cor.tr { top: 30px; right: 30px; border-left: 0; border-bottom: 0; }
+.ib-cor.bl { bottom: 30px; left: 30px; border-right: 0; border-top: 0; } .ib-cor.br { bottom: 30px; right: 30px; border-left: 0; border-top: 0; }
+.ib-tape { position: absolute; top: 40px; left: 50%; margin-left: calc(min(420px, 60vw) / -2); width: min(420px, 60vw); overflow: hidden; height: 26px; border-top: 1px solid rgba(79,195,247,.6); border-bottom: 1px solid rgba(79,195,247,.6); -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); }
+.ib-tape div { display: flex; width: max-content; font-size: 11px; line-height: 24px; letter-spacing: .2em; color: var(--ib2); animation: ibTape 6s linear infinite; }
+.ib-tape span { width: 60px; text-align: center; flex: none; } .ib-tape span.mj { color: #fff; }
+@keyframes ibTape { to { transform: translateX(-50%); } }
+.ib-hdr { position: absolute; top: 78px; left: 0; right: 0; text-align: center; font-size: 10px; letter-spacing: .2em; line-height: 1.8; color: rgba(190,225,255,.8); text-transform: uppercase; min-height: 54px; }
+.ib-hdr div:last-child::after { content: "▌"; color: var(--ib2); animation: ibBlink .7s steps(2) infinite; }
+
+.ib-p { position: absolute; padding: 12px 14px 12px; background: linear-gradient(135deg, rgba(30,120,255,.22), rgba(4,18,46,.5)); border: 1px solid rgba(79,195,247,.55); box-shadow: 0 0 26px -6px rgba(30,144,255,.75) inset, 0 0 20px -8px rgba(30,144,255,.9); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #9fdcff; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+.ib-p h4 { font: 600 11px var(--font-display); letter-spacing: .26em; color: #fff; margin-bottom: 9px; padding-bottom: 5px; border-bottom: 1px solid rgba(79,195,247,.4); }
+#p-diag { left: 4vw; top: 16vh; width: 252px; } #p-gauge { left: 4vw; bottom: 12vh; width: 252px; }
+#p-radar { right: 4vw; top: 16vh; width: 232px; } #p-ana { right: 4vw; bottom: 12vh; width: 252px; }
+
+.ib-center { position: relative; width: min(310px, 62vw); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+.ib-center svg { position: absolute; inset: -12%; width: 124%; height: 124%; overflow: visible; filter: drop-shadow(0 0 8px rgba(30,144,255,.8)); }
+.ib-r1 { transform-origin: 110px 110px; animation: ibSpin 7s linear infinite; }
+.ib-r2 { transform-origin: 110px 110px; animation: ibSpin 4s linear infinite reverse; }
+.ib-r3 { transform-origin: 110px 110px; animation: ibSpin 11s linear infinite; }
+@keyframes ibSpin { to { transform: rotate(360deg); } }
+.ib-arc { transform: rotate(-90deg); transform-origin: 110px 110px; }
+.ib-pct { position: relative; font-family: var(--font-display); font-size: clamp(54px, 14vw, 84px); font-weight: 600; color: #fff; line-height: 1; text-shadow: 0 0 18px rgba(79,195,247,.95), 0 0 44px rgba(30,144,255,.7); }
+.ib-pct small { font-size: .42em; color: var(--ib2); text-shadow: none; margin-left: 2px; }
+.ib-label { position: absolute; left: 0; right: 0; top: calc(50% + min(310px, 62vw) / 2 + 34px); text-align: center; font-size: 12.5px; letter-spacing: .4em; padding-left: .4em; color: var(--ib2); text-transform: uppercase; animation: ibBlink 1s steps(2) infinite; }
+.ib-label.done { animation: none; color: #fff; text-shadow: 0 0 14px var(--ib1); }
+@keyframes ibBlink { 50% { opacity: .35; } }
+.ib-bar { position: absolute; left: 50%; margin-left: calc(min(310px, 62vw) / -2); width: min(310px, 62vw); top: calc(50% + min(310px, 62vw) / 2 + 14px); height: 4px; background: rgba(30,144,255,.15); border: 1px solid rgba(79,195,247,.4); }
+.ib-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ib1), #fff); box-shadow: 0 0 12px var(--ib1); }
+
+.ib-log > div { display: grid; grid-template-columns: 1fr auto; row-gap: 3px; margin-bottom: 8px; animation: ibLine .25s ease-out both; white-space: nowrap; color: rgba(210,235,255,.85); }
+.ib-log b { color: var(--ib2); font-weight: 600; }
+.ib-log em { grid-column: 1 / -1; display: block; height: 2px; background: rgba(30,144,255,.22); }
+.ib-log em i { display: block; height: 100%; width: 0; background: var(--ib2); box-shadow: 0 0 6px var(--ib1); }
+@keyframes ibLine { from { opacity: 0; transform: translateX(-14px); } }
+
+.ib-gauge { display: flex; gap: 12px; align-items: center; }
+.ib-gauge svg { width: 96px; height: 96px; flex: none; overflow: visible; filter: drop-shadow(0 0 5px rgba(30,144,255,.8)); }
+.ib-gauge .g1 { transform-origin: 50px 50px; animation: ibSpin 5s linear infinite; } .ib-gauge .g2 { transform-origin: 50px 50px; animation: ibSpin 3s linear infinite reverse; }
+.ib-gauge div { line-height: 1.9; } .ib-gauge span { color: #fff; }
+.ib-radar { position: relative; width: 150px; height: 150px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--ib2); background: repeating-radial-gradient(circle, transparent 0 24px, rgba(79,195,247,.28) 24px 25px), linear-gradient(rgba(79,195,247,.28), rgba(79,195,247,.28)) 50% 0 / 1px 100% no-repeat, linear-gradient(rgba(79,195,247,.28), rgba(79,195,247,.28)) 0 50% / 100% 1px no-repeat; overflow: hidden; box-shadow: 0 0 20px rgba(30,144,255,.45); }
+.ib-radar::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 78%, rgba(79,195,247,.6) 100%); animation: ibSpin 1.8s linear infinite; }
+.ib-radar i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px var(--ib1), 0 0 4px #fff; animation: ibBlink 1.8s steps(2) infinite; }
+.ib-radar-n { margin-top: 10px; text-align: center; } .ib-radar-n span { color: #fff; }
+.ib-tel { line-height: 1.9; } .ib-tel span { color: #fff; float: right; }
+.ib-abar { height: 3px; margin: 3px 0 9px; background: rgba(30,144,255,.2); } .ib-abar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ib1), #fff); box-shadow: 0 0 8px var(--ib1); }
+.ib-ecg { overflow: hidden; height: 30px; margin-top: 8px; } .ib-ecg svg { width: 500px; height: 30px; animation: ibEcg 1.6s linear infinite; }
+@keyframes ibEcg { to { transform: translateX(-250px); } }
+.ib-tel2 { display: none; position: absolute; right: 22px; bottom: 56px; font-size: 9px; letter-spacing: .14em; line-height: 1.7; text-align: right; color: var(--ib2); text-transform: uppercase; } .ib-tel2 span { color: #fff; }
+
+.ib-ret { position: absolute; top: 41%; width: 92px; height: 92px; margin: -46px 0 0 -46px; }
+.ib-ret svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 0 5px rgba(30,144,255,.9)); }
+.ib-ret .rr { transform-origin: 50px 50px; animation: ibSpin 6s linear infinite; }
+#ib-ret1 { left: calc(50% - min(19vw, 330px)); } #ib-ret2 { left: calc(50% + min(19vw, 330px)); }
+.ib-dc { position: absolute; top: 12vh; bottom: 12vh; width: 46px; overflow: hidden; font-size: 8px; line-height: 1.7; color: rgba(79,195,247,.5); letter-spacing: .08em; -webkit-mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent); }
+.ib-dc div { animation: ibDc 7s linear infinite; } @keyframes ibDc { to { transform: translateY(-50%); } }
+#ib-dcl { left: 1.4vw; } #ib-dcr { right: 1.4vw; text-align: right; }
+@media (max-width: 900px) {
+  #p-gauge, #p-ana, #p-radar, #p-tgt, .ib-ret, .ib-dc { display: none; }
+  #p-diag { top: auto; }
+  #p-wt { display: block; left: 18px; top: 124px; width: 54%; padding: 8px 10px; font-size: 8.5px; }
+  #p-wt h4 { font-size: 9px; letter-spacing: .16em; margin-bottom: 5px; }
+  .ib-wt p { line-height: 1.6; }
+  #p-diag { left: 18px; bottom: 56px; top: auto; width: 58%; padding: 8px 10px; font-size: 8.5px; }
+  #p-diag h4 { display: none; } #p-diag .ib-log > div { margin-bottom: 3px; }
+  .ib-tel2 { display: block; }
+  .ib-cor.tl, .ib-cor.tr { top: 22px; } .ib-cor.bl, .ib-cor.br { bottom: 22px; } .ib-cor.tl, .ib-cor.bl { left: 18px; } .ib-cor.tr, .ib-cor.br { right: 18px; }
+  .ib-tape { top: 28px; } .ib-hdr { top: 64px; font-size: 9px; }
+}
+
+/* ===== black screen: only the lit eye assembly ===== */
+#boot.ib .ib-eyes { gap: 0; transform: translateY(-140vh); }
+#boot.ib .ib-eyec { flex: none; width: clamp(56px, 13vw, 190px); display: flex; align-items: center; }
+#boot.ib .ib-eyec svg { width: 100%; height: auto; display: block; overflow: visible; filter: drop-shadow(0 0 4px rgba(79,195,247,.9)); }
+#boot.ib .ib-eye { clip-path: none !important; background: none; height: auto; }
+#boot.ib .ib-eye::after { display: none; }
+#boot.ib .ib-eye svg { width: 100%; height: auto; display: block; overflow: visible; }
+#boot.ib .ib-eye::before { left: 8%; right: 8%; height: 75vh; background: linear-gradient(0deg, rgba(190,230,255,.75), rgba(79,195,247,.25) 40%, transparent); filter: blur(7px); }
+#boot.ib .ib-eyew { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 14px rgba(140,210,255,.95)) drop-shadow(0 0 46px rgba(30,144,255,.9)) drop-shadow(0 0 120px rgba(30,144,255,.55)); }
+#boot.ib .ib-eyepos::before { content: ""; position: absolute; left: 4%; right: 4%; top: 0; height: 2px; opacity: 0; transform: scaleX(.1); background: linear-gradient(90deg, transparent, rgba(170,220,255,.95), transparent); box-shadow: 0 0 22px 5px rgba(30,144,255,.55); }
+#boot.ib.eland .ib-eyepos::before { animation: ibFlare .9s ease-out forwards; }
+#boot.ib.p .ib-eyepos::before { animation: none; opacity: 0; }
+@keyframes ibFlare { 0% { opacity: 0; transform: scaleX(.1); } 35% { opacity: 1; transform: scaleX(1); } 100% { opacity: .3; transform: scaleX(1); } }
+#boot.ib .ib-led { animation: ibBlink 1.2s steps(2) infinite; }
+
+/* extra Iron Man panels */
+#boot.ib { --ibo: #ffb347; }
+.ib-p::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 34%; pointer-events: none; background: linear-gradient(transparent, rgba(150,215,255,.16), transparent); animation: ibPSweep 2.6s linear infinite; }
+@keyframes ibPSweep { from { transform: translateY(-110%); } to { transform: translateY(300%); } }
+.ib-p .am, .ib-gauge .am { color: var(--ibo); }
+#p-diag { top: 13vh; }
+#p-wt { left: 4vw; top: calc(13vh + 292px); width: 252px; border-color: rgba(255,179,71,.6); background: linear-gradient(135deg, rgba(255,150,30,.14), rgba(4,18,46,.55)); box-shadow: 0 0 26px -6px rgba(255,150,30,.55) inset, 0 0 20px -8px rgba(255,150,30,.8); }
+#p-wt h4 { color: var(--ibo); border-bottom-color: rgba(255,179,71,.45); }
+.ib-wt p { display: flex; justify-content: space-between; line-height: 1.9; }
+.ib-wt p span { color: #fff; }
+.ib-wbar { height: 5px; border: 1px solid rgba(255,179,71,.6); margin: 5px 0 8px; }
+.ib-wbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff8a1f, #ffd27a); box-shadow: 0 0 10px #ff9d2e; }
+#p-tgt { right: 4vw; top: calc(16vh + 248px); width: 232px; }
+.ib-tag { position: absolute; top: 27vh; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 6px 12px; white-space: nowrap; z-index: 5; }
+#ib-tag1 { left: calc(50% - min(30vw, 440px)); border: 1px solid var(--ibo); color: var(--ibo); background: rgba(40,22,0,.55); box-shadow: 0 0 14px -4px var(--ibo); display: flex; gap: 10px; align-items: baseline; }
+#ib-tag1 b { font: 600 22px var(--font-display); color: #fff; letter-spacing: .06em; text-shadow: 0 0 10px var(--ibo); }
+#ib-tag2 { right: calc(50% - min(30vw, 440px)); border: 1px solid #3dffa0; color: #7dffc0; background: rgba(0,70,40,.4); box-shadow: 0 0 14px -4px #3dffa0; }
+#ib-tag2 b { color: #fff; }
+@media (max-width: 1100px) { .ib-tag { display: none; } }
+@media (max-height: 760px) and (min-width: 901px) { #p-wt, #p-tgt { display: none; } }
+
+/* launch */
+#boot.ib .ib-streaks { position: absolute; inset: 0; z-index: 3; opacity: 0; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0 38px, rgba(79,195,247,.55) 38px 39px, transparent 39px 91px, rgba(255,255,255,.6) 91px 92px, transparent 92px 143px); -webkit-mask-image: linear-gradient(0deg, #000, transparent 80%); mask-image: linear-gradient(0deg, #000, transparent 80%); }
+#boot.ib .ib-flame { position: absolute; left: 0; right: 0; top: 100%; height: 55vh; z-index: 2; opacity: 0; pointer-events: none; background: radial-gradient(ellipse 45% 100% at 50% 0%, #fff 0%, rgba(200,235,255,.95) 14%, rgba(79,195,247,.75) 35%, rgba(30,144,255,.4) 60%, transparent 80%); filter: blur(6px); transform-origin: 50% 0; }
+#boot.ib.lp { animation: ibLaunch .85s cubic-bezier(.75,0,.95,.35) forwards; }
+@keyframes ibLaunch { 0% { transform: translateY(0); } 12% { transform: translateY(14px); } 100% { transform: translateY(-125%); } }
+#boot.ib.lp .ib-streaks { animation: ibStreak .3s linear infinite, ibFadeIn .25s forwards; }
+@keyframes ibStreak { to { background-position: 0 -160px; } }
+@keyframes ibFadeIn { to { opacity: 1; } }
+#boot.ib.lp .ib-flame { animation: ibFlame .1s linear infinite alternate, ibFadeIn .15s forwards; }
+@keyframes ibFlame { from { transform: scaleY(.85) scaleX(.95); } to { transform: scaleY(1.15) scaleX(1.05); } }
+#boot.ib.lp .ib-hud { animation: ibHudCharge .25s ease-out forwards; }
+@keyframes ibHudCharge { to { opacity: 1; filter: brightness(1.7); } }
+@media (prefers-reduced-motion: reduce) { #boot.ib * { animation-duration: .01s !important; } }
+
+/* ---------- Lite / reduce-motion / tab hidden ---------- */
+html.fx-lite :is(.rx-spin-a, .rx-spin-b, .rx-spin-c, .rx-orbit, .rx-breathe, .stark-hud::after, .gym-ring-spin, .sysdot, .stark-hud-status i, .flame.lit, .timer-card.running, .brand-logo, .reactor-core .streak-num, .hero-streak::after, nav::after) { animation: none !important; }
+html.fx-lite .sys-strip::after { display: none; }
+html.fx-lite::before, html.fx-lite::after, html.fx-lite body::before, html.fx-lite #fx-canvas { display: none !important; }
+html.fx-lite nav, html.fx-lite .modal-overlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.fx-lite :is(.ins-bar .tr i, .gym-pr-bar i, .rpt-bar i, .gym-mbar-track i, .ins-twin .tr i, .wd-track i) { animation: none; }
+html.fx-lite :is(#m7-wipe, .m7-scan, .m7-scan-in) { display: none !important; }
+html.fx-lite .section.active, html.fx-lite .section.active > * { animation: none; }
+html.fx-lite .reactor.draw .rx-seg { animation: none; }
+html.fx-lite .rx-seg.on, html.fx-lite .rx-seg.lead, html.fx-lite .reactor-core .streak-num, html.fx-lite .brand-logo { filter: none; }
+html.fx-paused *, html.fx-paused *::before, html.fx-paused *::after { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: reduce) { html[data-theme]::before, html[data-theme]::after, html[data-theme] nav::after { animation: none !important; } }
+    </style>
+
+<style id="ib2-style">
+/* ===== BOOT v2: holographic, depth, 3D reactor ===== */
+#boot.ib .ib-hud{perspective:1200px}
+#boot.ib .ib-hud::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'><path d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100M28 0L28 34L0 50L0 84L28 100L56 84L56 50L28 34' fill='none' stroke='%234fc3f7' stroke-opacity='.12'/></svg>");-webkit-mask-image:radial-gradient(ellipse 62% 56% at 50% 50%,#000,transparent 78%);mask-image:radial-gradient(ellipse 62% 56% at 50% 50%,#000,transparent 78%)}
+#ib-3d{position:absolute;left:50%;top:48%;width:min(680px,100vw);height:min(680px,100vw);transform:translate(-50%,-50%);filter:drop-shadow(0 0 7px rgba(30,144,255,.85));pointer-events:none}
+.ib-p{background:linear-gradient(135deg,rgba(24,100,210,.13),rgba(2,10,28,.42));border-color:rgba(79,195,247,.38);box-shadow:inset 0 0 34px -14px rgba(30,144,255,.7),0 0 22px -12px rgba(30,144,255,.9);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.ib-p::before{content:"";position:absolute;left:0;top:0;width:38px;height:2px;background:#fff;box-shadow:0 0 8px #1e90ff}
+#p-diag,#p-wt,#p-gauge{rotate:0 1 0 16deg;transform-origin:0 50%}
+#p-radar,#p-tgt,#p-ana{rotate:0 1 0 -16deg;transform-origin:100% 50%}
+.ib-links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ib-links path{fill:none;stroke:rgba(120,210,255,.55);stroke-width:1;vector-effect:non-scaling-stroke;stroke-dasharray:1;stroke-dashoffset:1;filter:drop-shadow(0 0 3px #1e90ff)}
+#boot.ib.h .ib-links path{animation:ibDraw 1.1s var(--d,.6s) ease-out forwards}
+@keyframes ibDraw{to{stroke-dashoffset:0}}
+.ib-vt{position:absolute;top:58vh;height:22vh;width:46px;overflow:hidden;opacity:0;font-size:9px;letter-spacing:.1em;color:rgba(160,220,255,.75);border-left:1px solid rgba(79,195,247,.5);border-right:1px solid rgba(79,195,247,.5);-webkit-mask-image:linear-gradient(transparent,#000 25%,#000 75%,transparent);mask-image:linear-gradient(transparent,#000 25%,#000 75%,transparent)}
+.ib-vt div{animation:ibVt 6s linear infinite}.ib-vt span{display:block;height:16px;line-height:16px;text-align:center}
+.ib-vt::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#ffb347;box-shadow:0 0 8px #ffb347}
+#ib-vtl{left:calc(50% - min(25vw,380px) - 23px)}#ib-vtr{left:calc(50% + min(25vw,380px) - 23px)}
+@keyframes ibVt{to{transform:translateY(-50%)}}
+@media(max-width:1100px),(max-height:760px){.ib-vt{display:none}}
+@media(max-width:900px){.ib-links{display:none}}
+.ib-eq{position:absolute;left:50%;bottom:4vh;width:min(310px,62vw);margin-left:calc(min(310px,62vw)/-2);height:20px;display:flex;gap:2px;align-items:flex-end}
+.ib-eq i{flex:1;height:20px;transform-origin:50% 100%;transform:scaleY(.12);background:linear-gradient(0deg,#1e90ff,#cfeaff);box-shadow:0 0 6px rgba(30,144,255,.8)}
+
+/* ===== LOGIN v2: dark technical ===== */
+#login-screen{background:radial-gradient(60% 50% at 50% 42%,rgba(var(--fx-rgb),.09),transparent 70%),#02050b !important}
+.lg-grid{position:absolute;inset:0;opacity:.6;background:linear-gradient(rgba(var(--fx-rgb),.07) 1px,transparent 1px) 0 0/44px 44px,linear-gradient(90deg,rgba(var(--fx-rgb),.07) 1px,transparent 1px) 0 0/44px 44px;-webkit-mask-image:radial-gradient(circle at 50% 45%,#000,transparent 70%);mask-image:radial-gradient(circle at 50% 45%,#000,transparent 70%)}
+.lg-scan{position:absolute;left:0;right:0;top:0;height:120px;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(var(--fx-rgb),.07));border-bottom:1px solid rgba(var(--fx-rgb),.25);animation:lgScan 5s linear infinite}
+@keyframes lgScan{from{transform:translateY(-130px)}to{transform:translateY(100vh)}}
+html[data-theme] #login-screen .pin-container{position:relative;max-width:360px;width:90%;padding:20px 28px 20px;border-radius:0;text-align:left;background:linear-gradient(160deg,rgba(10,20,34,.9),rgba(3,7,13,.94));border:1px solid rgba(var(--fx-rgb),.3);box-shadow:0 30px 80px -30px #000,0 0 50px -24px rgba(var(--fx-rgb),.6);clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+.lg-top{display:flex;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid rgba(var(--fx-rgb),.18);font:600 10px ui-monospace,Menlo,monospace;letter-spacing:.22em;color:rgba(var(--fx-rgb),.85)}
+.lg-st i{display:inline-block;width:6px;height:6px;margin-right:7px;background:#ffb347;box-shadow:0 0 8px #ffb347;animation:ibBlink 1.4s steps(2) infinite}
+.lg-ico{display:block;width:84px;height:84px;margin:20px auto 12px;overflow:visible;filter:drop-shadow(0 0 8px rgba(var(--fx-rgb),.6))}
+.lg-ico *{fill:none;stroke:rgb(var(--fx-rgb))}.lg-ico .w{stroke:#fff}.lg-ico .hx{fill:rgba(var(--fx-rgb),.14)}
+.lg-ico .a{transform-origin:50px 50px;animation:ibSpin 9s linear infinite}.lg-ico .b{transform-origin:50px 50px;animation:ibSpin 6s linear infinite reverse}
+html[data-theme] #login-screen .pin-container h2{text-align:center;font-size:21px;letter-spacing:.34em;padding-left:.34em;text-transform:uppercase;margin:0 0 6px}
+html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-monospace,Menlo,monospace;letter-spacing:.16em;color:var(--muted);margin:0 0 20px;text-transform:uppercase}
+.lg-slots{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.lg-slot{height:50px;display:grid;place-items:center;border:1px solid rgba(var(--fx-rgb),.22);background:rgba(var(--fx-rgb),.04);clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,0 100%);transition:border-color .15s,background .15s}
+.lg-slot::after{content:"";width:9px;height:9px;background:rgba(var(--fx-rgb),.18)}
+.lg-slot.f{border-color:rgba(var(--fx-rgb),.85);background:rgba(var(--fx-rgb),.13)}.lg-slot.f::after{background:#fff;box-shadow:0 0 10px rgb(var(--fx-rgb))}
+.lg-slots:focus-within .lg-slot.a{border-color:rgba(var(--fx-rgb),.6)}.lg-slots:focus-within .lg-slot.a::after{background:rgb(var(--fx-rgb));animation:ibBlink .9s steps(2) infinite}
+.lg-slots .pin-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;border:0;cursor:text}
+.pin-container.shake .lg-slot{border-color:var(--danger)}
+.lg-foot{display:flex;justify-content:space-between;margin-top:18px;padding-top:10px;border-top:1px solid rgba(var(--fx-rgb),.14);font:9px ui-monospace,Menlo,monospace;letter-spacing:.2em;color:var(--muted)}
+
+/* ===== BOOT v2.1: no vertical stretch; eyes flicker out -> darkness -> HUD fades in with flicker ===== */
+#boot.ib.p .ib-eyes{animation:ibEyeOut .5s linear forwards;transform:none}
+#boot.ib.p .ib-frame{animation:ibFrameOut .5s linear .05s forwards}
+#boot.ib.p .ib-flash{animation:none}
+@keyframes ibEyeOut{0%{opacity:1}12%{opacity:.15}22%{opacity:1}36%{opacity:.3}46%{opacity:.9}62%{opacity:.1}74%{opacity:.5}100%{opacity:0}}
+@keyframes ibFrameOut{0%{opacity:1;transform:none}30%{opacity:.5;transform:none}45%{opacity:.9;transform:none}100%{opacity:0;transform:none}}
+#boot.ib.h .ib-hud{animation:ibHudBoot 1s ease-out forwards,ibHudFlk 3.2s 1.8s steps(1) infinite}
+@keyframes ibHudBoot{0%{opacity:0;filter:brightness(2.2)}8%{opacity:.7}14%{opacity:.05}24%{opacity:.9;filter:brightness(1.8)}30%{opacity:.15}42%{opacity:.8}50%{opacity:.3}60%{opacity:1;filter:brightness(1.3)}68%{opacity:.6}78%{opacity:1}100%{opacity:1;filter:none}}
+</style>
 </head>
 <body>
     <div id="login-screen">
+        <div class="lg-grid"></div><div class="lg-scan"></div>
         <div class="pin-container" id="pin-box">
+            <div class="lg-top"><span>SYS // AUTH</span><span class="lg-st"><i></i>LOCKED</span></div>
+            <svg class="lg-ico" viewBox="0 0 100 100"><g class="a"><circle cx="50" cy="50" r="46" stroke-width="1.5" stroke-dasharray="30 6 4 6"/></g><g class="b"><circle cx="50" cy="50" r="38" stroke-width="3" stroke-dasharray="1.5 4" opacity=".8"/></g><circle cx="50" cy="50" r="30" stroke-width="1" opacity=".6"/><path d="M50 2v6M50 92v6M2 50h6M92 50h6" class="w" stroke-width="1.5"/><polygon class="hx" points="50,35 63,42.5 63,57.5 50,65 37,57.5 37,42.5" stroke-width="1.5"/><circle class="w" cx="50" cy="50" r="3" fill="#fff"/></svg>
             <h2>Discipline OS</h2>
-            <p>Enter your PIN to open the system.</p>
-            <input type="password" id="pin-input" class="pin-input" maxlength="6" inputmode="numeric" autocomplete="off" autofocus />
+            <p>Authentication required &middot; enter PIN</p>
+            <div class="lg-slots"><b class="lg-slot"></b><b class="lg-slot"></b><b class="lg-slot"></b><b class="lg-slot"></b><b class="lg-slot"></b><b class="lg-slot"></b>
+            <input type="password" id="pin-input" class="pin-input" maxlength="6" inputmode="numeric" autocomplete="off" autofocus /></div>
+            <div class="lg-foot"><span>LOCAL SESSION</span><span>ENCRYPTION &#9679; ON</span></div>
         </div>
     </div>
 
@@ -682,11 +1204,14 @@
                 <button class="nav-btn" data-tab="soul" onclick="switchTab('soul')">Soul Timer</button>
                 <button class="nav-btn" data-tab="punishment" id="nav-punish-btn" onclick="switchTab('punishment')">Punishment</button>
                 <button class="nav-btn" data-tab="report" onclick="switchTab('report')">Reports</button>
+                <button class="nav-btn" data-tab="insights" onclick="switchTab('insights')">Insights</button>
                 <button class="nav-btn" data-tab="hard-truth" onclick="switchTab('hard-truth')">Hard Truth</button>
                 <button class="nav-btn" data-tab="achievements" onclick="switchTab('achievements')">Achievements</button>
                 <button class="nav-btn" data-tab="aar" onclick="switchTab('aar')">Weekly AAR</button>
                 <button class="theme-toggle" id="sync-btn" onclick="syncPromptCode()" aria-label="Set up sync" title="Sync across devices">🔗 Sync</button>
+                <button class="theme-toggle" onclick="lockApp()" aria-label="Lock app" title="Lock (asks for PIN again)">🔒</button>
                 <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch theme"></button>
+                <button class="theme-toggle" id="fx-toggle" onclick="toggleFx()" aria-label="Toggle Lite effects" title="Lite mode: turns off decorative animation and blur (for older phones)">⚡ Lite: off</button>
             </div>
         </nav>
 
@@ -698,6 +1223,7 @@
                     <button class="wd-pill active" data-wdtab="planner" onclick="wdSub('planner')">📅 Outfit Planner</button>
                     <button class="wd-pill" data-wdtab="closet" onclick="wdSub('closet')">🗄️ My Clothes</button>
                     <button class="wd-pill" data-wdtab="favs" onclick="wdSub('favs')">⭐ Favorites</button>
+                    <button class="wd-pill" onclick="wdAddHoliday()" title="Add a no-outfit holiday">🎌 Add holiday</button>
                 </div>
 
                 <div id="wd-pane-planner" class="wd-pane active">
@@ -782,11 +1308,12 @@
                     <button class="link-btn" onclick="editStartDate()">Change start date</button>
                 </div>
 
+                <div id="home-sysstrip" class="sys-strip"></div>
                 <div class="hero">
                     <div class="hero-streak">
-                        <div class="flame out" id="flame">🔥</div>
+                        <div class="reactor" id="reactor"><svg viewBox="0 0 240 240" aria-hidden="true"><defs><radialGradient id="rxCore"><stop offset="0" style="stop-color:var(--primary-2);stop-opacity:.6"/><stop offset="1" style="stop-color:var(--primary-2);stop-opacity:0"/></radialGradient></defs><circle id="rx-glow" class="rx-breathe" cx="120" cy="120" r="92" fill="url(#rxCore)" opacity=".25"/><g id="rx-ticks" class="rx-spin-c"></g><g class="rx-spin-a"><circle class="rx-gold" cx="120" cy="120" r="114" stroke-width="3" stroke-dasharray="46 14"/><circle class="rx-cyan" cx="120" cy="120" r="108" stroke-width="1" stroke-dasharray="2 7" opacity=".7"/></g><g class="rx-spin-b"><circle class="rx-cyan" cx="120" cy="120" r="78" stroke-width="2" stroke-dasharray="28 10 6 10"/></g><g id="rx-seg"></g><circle class="rx-gold" cx="120" cy="120" r="70" stroke-width="1" opacity=".4"/><g class="rx-orbit"><circle cx="120" cy="40" r="3.4" style="fill:var(--primary-2);filter:drop-shadow(0 0 5px var(--primary-2))"/></g><circle class="rx-pulse" id="rx-pulse" cx="120" cy="120" r="100"/></svg><div class="reactor-core"><div class="flame out" id="flame">🔥</div>
                         <div class="streak-num" id="home-streak">0</div>
-                        <div class="streak-label" id="home-streak-label">day streak</div>
+                        <div class="streak-label" id="home-streak-label">day streak</div></div></div>
                         <div class="streak-note" id="home-streak-note"></div>
                     </div>
                     <div class="hero-quote" id="hero-quote">
@@ -795,6 +1322,8 @@
                         <button class="btn-exception" onclick="generateHomeQuote()">New quote</button>
                     </div>
                 </div>
+
+                <div id="home-console"></div>
 
                 <div class="home-stats-row">
                     <div class="home-stat-box">
@@ -926,6 +1455,24 @@
                     <button onclick="changeDateScope(1, 'week')">Next week &rarr;</button>
                 </div>
                 <div class="schedule-grid-container" id="gym-grid-cols"></div>
+            </div>
+
+            <!-- INSIGHTS (Stark HUD) -->
+            <div id="tab-insights" class="section">
+                <div class="stark-hud">
+                    <span class="hud-corner tl"></span><span class="hud-corner tr"></span><span class="hud-corner bl"></span><span class="hud-corner br"></span>
+                    <div class="stark-hud-head">
+                        <span class="stark-hud-status"><i></i> ANALYTICS CORE · THIS WEEK <b id="ins-hud-pwr">--</b></span>
+                    </div>
+                    <div class="stark-hud-tabs" role="tablist">
+                        <button class="ins-tab active" data-tab="overview" onclick="insSetTab('overview')">OVERVIEW</button>
+                        <button class="ins-tab" data-tab="trends" onclick="insSetTab('trends')">TRENDS</button>
+                        <button class="ins-tab" data-tab="heat" onclick="insSetTab('heat')">HEATMAP</button>
+                        <button class="ins-tab" data-tab="weak" onclick="insSetTab('weak')">WEAK LINKS</button>
+                        <button class="ins-tab" data-tab="links" onclick="insSetTab('links')">CORRELATIONS</button>
+                    </div>
+                    <div id="ins-body"></div>
+                </div>
             </div>
 
             <!-- 3. SOUL TIMER -->
@@ -1083,15 +1630,26 @@
     <!-- SYNC CODE MODAL -->
     <div id="sync-modal" class="modal-overlay">
         <div class="modal-card">
-            <h3 style="margin-bottom:8px; font-size:22px;">Sync across devices</h3>
-            <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">Enter any code you like. Use the exact same code on every device you want linked together.</p>
+            <h3 style="margin-bottom:8px; font-size:22px;">Sync &amp; backup</h3>
+            <p style="color:var(--muted); font-size:13px; margin-bottom:16px;">Use the exact same code on every device. The code is the only thing protecting your data, so use a long random one — the generator below makes a good one.</p>
             <div class="form-group">
                 <label for="sync-code-input">Sync code</label>
-                <input type="text" id="sync-code-input" placeholder="e.g. yuvraj123" autocapitalize="off" autocorrect="off" spellcheck="false" />
+                <input type="text" id="sync-code-input" placeholder="long random code" autocapitalize="off" autocorrect="off" spellcheck="false" />
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <button class="btn-exception muted" onclick="syncGenCode()">🎲 Generate secure code</button>
+                <button class="btn-exception muted" onclick="syncResync()">↻ Re-sync now</button>
+            </div>
+            <div id="sync-status" style="font:11.5px ui-monospace,Menlo,monospace; color:var(--muted); margin-top:10px;"></div>
+            <div style="border-top:1px solid var(--border); margin:16px 0 12px;"></div>
+            <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">Backup — a file you can keep. Restoring only adds or overwrites matching entries; nothing else is deleted.</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn-exception muted" onclick="exportData()">⬇ Export backup</button>
+                <label class="btn-exception muted" style="cursor:pointer;">⬆ Import backup<input type="file" accept="application/json,.json" style="display:none" onchange="importData(this)"></label>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
-                <button class="btn-exception muted" onclick="closeSyncModal()">Cancel</button>
-                <button class="btn-exception" onclick="submitSyncCode()">Save</button>
+                <button class="btn-exception muted" onclick="closeSyncModal()">Close</button>
+                <button class="btn-exception" onclick="submitSyncCode()">Save code</button>
             </div>
         </div>
     </div>
@@ -1328,90 +1886,306 @@
             appId: "1:336980709406:web:da53e9e220c7a4e48d1e0f"
         };
 
-        let syncDb = null;
+        /* ---------- SYNC ENGINE v2 ----------
+           - every key carries a timestamp, so un-ticks / deletions sync too
+           - data is sharded into small documents (habits + gym + timetable per month),
+             so the 1 MiB document limit is never reached
+           - incoming changes are applied live (no page reload, no PIN prompt)
+           - list-type data (punishments, AAR, timer log, custom events) is merged, not overwritten
+           - first connection uploads everything that only exists on this device
+           - old single-document data is imported once automatically            */
+        const SYNC_LOCAL_ONLY = new Set(['sync_code', 'sync_ts', 'sync_legacy_done', 'theme', 'last_active_date', 'timer_state', 'last_backup_iso', 'fx_lite']);
+        // Hook Storage.prototype (assigning localStorage.setItem directly is not reliable across browsers).
+        const _protoSet = Storage.prototype.setItem, _protoRemove = Storage.prototype.removeItem;
+        const _rawSet = (k, v) => _protoSet.call(localStorage, k, v);
+        const _rawRemove = k => _protoRemove.call(localStorage, k);
+        try { ['setItem', 'removeItem'].forEach(k => { const v = localStorage.getItem(k); if (v && /^function/.test(v)) _rawRemove(k); }); } catch (e) { }   // junk left by the old direct-assignment hook
+        var _gymPC = null, _gymLogsC = null;   // gym plan + logs caches (var: used before the gym section is defined)
+        function gymCachesTouch(key) {
+            if (key.indexOf('gym_') !== 0) return;
+            if (/^gym_(extra|phase|snap)_/.test(key)) _gymPC = null;
+            if (key.indexOf('gym_sets_') === 0) _gymLogsC = null;
+        }
+        const __timerSaved = (() => { try { return JSON.parse(localStorage.getItem('timer_state') || 'null'); } catch (e) { return null; } })();
+
+        let syncDb = null, syncUnsub = null;
         let syncCode = localStorage.getItem('sync_code') || '';
-        let syncApplyingRemote = false;   // true while we're writing incoming data, so we don't re-upload it
-        let syncPushTimer = null;
-        const SYNC_PENDING = {};
+        let syncTs = {};
+        try { syncTs = JSON.parse(localStorage.getItem('sync_ts') || '{}') || {}; } catch (e) { syncTs = {}; }
+        const SYNC_PENDING = {}, SYNC_DIRTY = {};
+        let syncPushTimer = null, syncTsTimer = null, syncReady = false, syncRemote = {}, syncLast = 0;
+        let syncState = 'off', syncRefreshPending = false, syncWdStale = false, syncToastAt = 0;
+
+        const syncCodeId = () => syncCode.replace(/[\/\s]+/g, '_');
+        const syncEnc = k => k.replace(/%/g, '%25').replace(/\./g, '%2E');
+        const syncDec = k => k.replace(/%2E/g, '.').replace(/%25/g, '%');
+        function syncShard(key) {
+            let m;
+            if ((m = /^habit_(\d+)_(\d+)_/.exec(key))) return `h_${m[1]}_${m[2]}`;
+            if ((m = /^(gym|tt)_[a-z]+_(\d{4}-\d{2})-\d{2}/.exec(key))) return `${m[1]}_${m[2]}`;
+            return 'misc';
+        }
+        function syncDocRef(shard) { return syncDb.collection('discipline-os').doc(syncCodeId() + '__' + shard); }
+        function syncSaveTsSoon() {
+            clearTimeout(syncTsTimer);
+            syncTsTimer = setTimeout(() => { try { _rawSet('sync_ts', JSON.stringify(syncTs)); } catch (e) { } }, 400);
+        }
+        window.addEventListener('pagehide', () => { try { _rawSet('sync_ts', JSON.stringify(syncTs)); } catch (e) { } try { syncFlush(); } catch (e) { } });
+
+        // Called by the patched localStorage below on every real change.
+        function syncOnLocalWrite(key, val) {
+            gymCachesTouch(key);
+            if (!syncCode || SYNC_LOCAL_ONLY.has(key)) return;
+            const t = Math.max(Date.now(), (syncTs[key] || 0) + 1);
+            syncTs[key] = t; SYNC_PENDING[key] = val; SYNC_DIRTY[key] = t;
+            syncSaveTsSoon();
+            if (syncDb) { clearTimeout(syncPushTimer); syncPushTimer = setTimeout(syncFlush, 600); }
+        }
+        // Every existing localStorage.setItem/removeItem call in this file is mirrored automatically.
+        Storage.prototype.setItem = function (key, value) {
+            if (this !== localStorage) return _protoSet.call(this, key, value);
+            const v = String(value), cur = localStorage.getItem(key);
+            _protoSet.call(this, key, v);
+            if (cur !== v) syncOnLocalWrite(key, v);
+        };
+        Storage.prototype.removeItem = function (key) {
+            if (this !== localStorage) return _protoRemove.call(this, key);
+            const had = localStorage.getItem(key) !== null;
+            _protoRemove.call(this, key);
+            if (had) syncOnLocalWrite(key, null);
+        };
+
+        const SYNC_MERGE_KEYS = new Set(['punishment_list', 'aar_logs', 'timer_log', 'custom_tt_events', 'timer_sessions']);
+        function syncUnion(a, b, keyFn) {
+            const seen = new Set(), out = [];
+            (a || []).concat(b || []).forEach(x => { const k = keyFn(x); if (!seen.has(k)) { seen.add(k); out.push(x); } });
+            return out;
+        }
+        function syncMergeValue(key, localStr, remoteStr) {
+            try {
+                const a = JSON.parse(localStr), b = JSON.parse(remoteStr);
+                if (key === 'timer_sessions') return String(Math.max(parseInt(a) || 0, parseInt(b) || 0));
+                if (key === 'punishment_list') {
+                    const served = new Set();
+                    (a || []).concat(b || []).forEach(p => { if (p && p.served) served.add(p.id); });
+                    return JSON.stringify(syncUnion(a, b, p => p.id).map(p => served.has(p.id) ? { ...p, served: true } : p));
+                }
+                if (key === 'aar_logs') return JSON.stringify(syncUnion(a, b, l => l.date + '|' + l.failure + '|' + l.plan));
+                if (key === 'timer_log') return JSON.stringify(syncUnion(a, b, l => l.date).sort((x, y) => x.date < y.date ? 1 : -1).slice(0, 200));
+                if (key === 'custom_tt_events') {
+                    const out = { ...a };
+                    Object.keys(b || {}).forEach(d => { out[d] = syncUnion(out[d] || [], b[d], e => e.id || JSON.stringify(e)); });
+                    return JSON.stringify(out);
+                }
+            } catch (e) { }
+            return null;
+        }
+
+        // Apply one remote document to localStorage. Returns true if anything changed.
+        function syncApply(data) {
+            let changed = false;
+            for (const enc in data) {
+                const e = data[enc];
+                if (!e || typeof e !== 'object' || typeof e.t !== 'number') continue;
+                const key = syncDec(enc);
+                if (SYNC_LOCAL_ONLY.has(key)) continue;
+                const cur = localStorage.getItem(key);
+                const nv = (e.v === undefined) ? null : e.v;
+                // List-type data: if this device has recent unconfirmed edits, merge instead of choosing a winner
+                // (checked before the timestamp test, because the other device's edit may be older OR newer).
+                if (SYNC_MERGE_KEYS.has(key) && SYNC_DIRTY[key] && cur !== null && nv !== null && cur !== nv) {
+                    const merged = syncMergeValue(key, cur, nv);
+                    if (merged !== null) { localStorage.setItem(key, merged); if (merged === cur) syncOnLocalWrite(key, merged); changed = changed || merged !== cur; continue; }
+                }
+                if (e.t <= (syncTs[key] || 0)) continue;           // we already have this or newer
+                if (nv === null) { if (cur !== null) { _rawRemove(key); changed = true; } }
+                else if (cur !== nv) { _rawSet(key, nv); changed = true; }
+                syncTs[key] = e.t;
+                gymCachesTouch(key);
+                try { if (key === WD_KEY || key === WD_STATE) syncWdStale = true; } catch (err) { }
+            }
+            if (changed) syncSaveTsSoon();
+            return changed;
+        }
+
+        // After the first snapshot: upload everything this device has that the cloud doesn't (or has older).
+        function syncReconcile() {
+            syncReady = true;
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (SYNC_LOCAL_ONLY.has(k) || k in SYNC_PENDING) continue;
+                const r = (syncRemote[syncShard(k)] || {})[syncEnc(k)];
+                const lt = syncTs[k] || 0;
+                if (!r || lt > r.t) {
+                    if (!lt) syncTs[k] = 1;
+                    SYNC_PENDING[k] = localStorage.getItem(k); SYNC_DIRTY[k] = syncTs[k];
+                }
+            }
+            syncSaveTsSoon();
+            syncFlush();
+        }
+
+        function syncFlush() {
+            if (!syncDb || !syncCode) return;
+            const keys = Object.keys(SYNC_PENDING);
+            if (!keys.length) return;
+            const byShard = {};
+            keys.forEach(k => {
+                const sh = syncShard(k);
+                (byShard[sh] = byShard[sh] || {})[syncEnc(k)] = { v: SYNC_PENDING[k], t: syncTs[k] || Date.now() };
+                delete SYNC_PENDING[k];
+            });
+            Object.keys(byShard).forEach(sh => {
+                syncDocRef(sh).set(byShard[sh], { merge: true }).then(() => {
+                    // keep the 'unconfirmed' flag for a few seconds: a concurrent edit from another device may still be in flight
+                    const sent = Object.keys(byShard[sh]).map(enc => [syncDec(enc), byShard[sh][enc].t]);
+                    setTimeout(() => sent.forEach(([k, t]) => { if (SYNC_DIRTY[k] === t) delete SYNC_DIRTY[k]; }), 4000);
+                    syncLast = Date.now(); syncState = 'live'; syncUpdateBtn();
+                }).catch(err => {
+                    console.warn('Sync push failed', err);
+                    Object.keys(byShard[sh]).forEach(enc => { const k = syncDec(enc); if (!(k in SYNC_PENDING)) SYNC_PENDING[k] = byShard[sh][enc].v; });
+                    syncState = 'error'; syncUpdateBtn();
+                    clearTimeout(syncPushTimer); syncPushTimer = setTimeout(syncFlush, 15000);
+                });
+            });
+        }
 
         function syncInit() {
-            if (!syncCode || firebaseConfig.apiKey === "PASTE_YOUR_API_KEY") return;
+            if (!syncCode || firebaseConfig.apiKey === "PASTE_YOUR_API_KEY") { syncUpdateBtn(); return; }
             try {
                 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 syncDb = firebase.firestore();
-                syncListen();
-                syncUpdateBtn();
-            } catch (e) { console.warn('Sync init failed', e); }
+            } catch (e) { console.warn('Sync init failed', e); syncState = 'error'; syncUpdateBtn(); return; }
+            syncState = 'connecting'; syncUpdateBtn();
+            if (localStorage.getItem('sync_legacy_done') !== syncCode) {
+                // one-time import from the old single-document format
+                syncDb.collection('discipline-os').doc(syncCodeId()).get().then(doc => {
+                    if (doc.exists) {
+                        const d = doc.data();
+                        for (const k in d) if (typeof d[k] === 'string' && !SYNC_LOCAL_ONLY.has(k) && localStorage.getItem(k) === null) _rawSet(k, d[k]);
+                    }
+                    _rawSet('sync_legacy_done', syncCode);
+                    syncListen();
+                }).catch(() => syncListen());
+            } else syncListen();
         }
+
+        function syncListen() {
+            const prefix = syncCodeId() + '__';
+            const FP = firebase.firestore.FieldPath.documentId();
+            syncUnsub = syncDb.collection('discipline-os').where(FP, '>=', prefix).where(FP, '<', prefix + '\uf8ff').onSnapshot(snap => {
+                let changed = false;
+                snap.docChanges().forEach(ch => {
+                    if (ch.type === 'removed') return;
+                    const doc = ch.doc, sh = doc.id.slice(prefix.length), data = doc.data();
+                    syncRemote[sh] = data;
+                    if (doc.metadata.hasPendingWrites) return;   // our own write echoing back
+                    if (syncApply(data)) changed = true;
+                });
+                if (!syncReady) syncReconcile();
+                syncLast = Date.now(); syncState = 'live'; syncUpdateBtn();
+                if (changed) syncAfterRemote();
+            }, err => {
+                console.warn('Sync listen failed', err);
+                syncState = 'error'; syncUpdateBtn();
+                toast('Sync could not connect. Check your internet and your Firestore security rules.', 'danger');
+            });
+        }
+
+        function syncAfterRemote() {
+            if (syncWdStale) {
+                syncWdStale = false;
+                try { wdItems = readJSON(WD_KEY, wdItems); wdS = readJSON(WD_STATE, wdS); wdNormalize(); } catch (e) { }
+            }
+            try { checkActivePunishments(); } catch (e) { }
+            try { refreshSoulCount(); } catch (e) { }
+            try { wdBadge(); } catch (e) { }
+            syncRefreshUI();
+            if (Date.now() - syncToastAt > 20000) { syncToastAt = Date.now(); toast('↻ Synced from your other device', 'info'); }
+        }
+        // Re-render the visible tab in place. If you're typing or a dialog is open, wait until you're done.
+        function syncRefreshUI() {
+            const ae = document.activeElement;
+            const busy = document.querySelector('.modal-overlay.show') || (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName));
+            if (busy) { syncRefreshPending = true; return; }
+            syncRefreshPending = false;
+            const a = document.querySelector('.section.active');
+            if (!a) return;
+            try { renderTabContent(a.id.replace(/^tab-/, ''), true); } catch (e) { console.warn(e); }
+        }
+        setInterval(() => { if (syncRefreshPending) syncRefreshUI(); }, 4000);
 
         function syncUpdateBtn() {
             const b = $('sync-btn');
-            if (b) b.innerHTML = syncCode ? '🔗 Synced' : '🔗 Sync';
+            if (b) b.innerHTML = !syncCode ? '🔗 Sync' : syncState === 'error' ? '⚠ Sync' : syncState === 'live' ? '🔗 Synced' : '🔗 Sync…';
+            const s = $('sync-status');
+            if (s) s.textContent = !syncCode ? 'Sync is off on this device.'
+                : syncState === 'live' ? `Live · last update ${new Date(syncLast).toLocaleTimeString()}`
+                : syncState === 'error' ? 'Cannot reach the cloud — check your connection and Firestore rules.' : 'Connecting…';
         }
-
         function syncPromptCode() {
             $('sync-code-input').value = syncCode || '';
+            syncUpdateBtn();
             $('sync-modal').classList.add('show');
             setTimeout(() => $('sync-code-input').focus(), 50);
         }
         function closeSyncModal() { $('sync-modal').classList.remove('show'); }
+        function syncGenCode() {
+            const a = new Uint8Array(14), al = 'abcdefghjkmnpqrstuvwxyz23456789';
+            crypto.getRandomValues(a);
+            $('sync-code-input').value = Array.from(a, x => al[x % al.length]).join('');
+            toast('Random code generated. Press Save, then use the same code on your other device.', 'info');
+        }
+        function syncResync() {
+            if (!syncCode) { toast('Save a sync code first.', 'danger'); return; }
+            if (syncUnsub) { try { syncUnsub(); } catch (e) { } syncUnsub = null; }
+            syncReady = false; syncRemote = {};
+            syncInit();
+            toast('Re-syncing…', 'info');
+        }
         function submitSyncCode() {
             const v = $('sync-code-input').value.trim();
             closeSyncModal();
             if (!v) return;
-            syncCode = v;
-            localStorage.setItem('sync_code', syncCode);
+            if (v.length < 8 && !confirm('That code is short and easy to guess — anyone who guesses it could read your data. Use it anyway?')) return;
+            if (syncUnsub) { try { syncUnsub(); } catch (e) { } syncUnsub = null; }
+            if (v !== syncCode) { syncTs = {}; _rawSet('sync_ts', '{}'); }
+            syncCode = v; _rawSet('sync_code', v);
+            syncReady = false; syncRemote = {};
             syncInit();
-            toast('Sync code saved. Open this app on your other device and enter the exact same code.', 'win');
-            syncUpdateBtn();
+            toast('Sync code saved. Enter the exact same code on your other device.', 'win');
         }
 
-        // Called by the monkey-patched localStorage below on every write/removal
-        function syncQueueKey(key, value) {
-            if (!syncDb || !syncCode || syncApplyingRemote) return;
-            SYNC_PENDING[key] = value;
-            clearTimeout(syncPushTimer);
-            syncPushTimer = setTimeout(syncFlush, 600);
+        /* ---------- backup / restore ---------- */
+        function exportData() {
+            const data = {};
+            for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!SYNC_LOCAL_ONLY.has(k)) data[k] = localStorage.getItem(k); }
+            const blob = new Blob([JSON.stringify({ app: 'discipline-os', version: 2, exported: new Date().toISOString(), data })], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = `discipline-os-backup-${isoDate(new Date())}.json`;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+            _rawSet('last_backup_iso', isoDate(new Date()));
+            toast('Backup downloaded.', 'win');
         }
-        function syncQueueRemoval(key) {
-            if (!syncDb || !syncCode || syncApplyingRemote) return;
-            SYNC_PENDING[key] = firebase.firestore.FieldValue.delete();
-            clearTimeout(syncPushTimer);
-            syncPushTimer = setTimeout(syncFlush, 600);
+        function importData(input) {
+            const f = input.files && input.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = () => {
+                try {
+                    const o = JSON.parse(r.result);
+                    if (!o || o.app !== 'discipline-os' || typeof o.data !== 'object') throw new Error('bad file');
+                    const keys = Object.keys(o.data);
+                    if (!confirm(`Restore ${keys.length} entries from this backup? Matching entries on this device will be overwritten; nothing else is deleted.`)) { input.value = ''; return; }
+                    keys.forEach(k => { if (!SYNC_LOCAL_ONLY.has(k) && typeof o.data[k] === 'string') localStorage.setItem(k, o.data[k]); });
+                    toast('Backup restored. Reloading…', 'win');
+                    setTimeout(() => location.reload(), 900);
+                } catch (e) { toast('That file is not a valid Discipline OS backup.', 'danger'); }
+                input.value = '';
+            };
+            r.readAsText(f);
         }
-        function syncFlush() {
-            if (!syncDb || !syncCode) return;
-            const batch = { ...SYNC_PENDING };
-            for (const k in SYNC_PENDING) delete SYNC_PENDING[k];
-            syncDb.collection('discipline-os').doc(syncCode).set(batch, { merge: true })
-                .catch(e => console.warn('Sync push failed', e));
-        }
-
-        function syncListen() {
-            syncDb.collection('discipline-os').doc(syncCode).onSnapshot(doc => {
-                if (!doc.exists) return;
-                const data = doc.data();
-                syncApplyingRemote = true;
-                let changed = false;
-                for (const key in data) {
-                    const incoming = data[key];
-                    const current = localStorage.getItem(key);
-                    if (current !== incoming) { localStorage.setItem(key, incoming); changed = true; }
-                }
-                syncApplyingRemote = false;
-                if (changed) { toast('Synced from your other device', 'info'); location.reload(); }
-            }, err => console.warn('Sync listen failed', err));
-        }
-
-        // Every existing call to localStorage.setItem/removeItem anywhere in this
-        // file now also mirrors to the cloud — the 30+ call sites above did not
-        // need to be touched.
-        (function () {
-            const _setItem = localStorage.setItem.bind(localStorage);
-            const _removeItem = localStorage.removeItem.bind(localStorage);
-            localStorage.setItem = function (key, value) { _setItem(key, value); syncQueueKey(key, value); };
-            localStorage.removeItem = function (key) { _removeItem(key); syncQueueRemoval(key); };
-        })();
 
         function animateNumber(el, to, fmt = (n => n), dur = 700) {
             if (!el) return;
@@ -1442,14 +2216,19 @@
            THEME
         ===================================================== */
         function applyTheme(t) {
+            if (!['goggins', 'mark7'].includes(t)) t = 'mark7';   // old saved "light" falls back to Mark VII
             document.documentElement.setAttribute('data-theme', t);
+            try { const mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.setAttribute('content', t === 'mark7' ? '#050B18' : '#0A0A0A'); } catch (e) {}
             localStorage.setItem('theme', t);
             const b = $('theme-toggle');
-            if (b) b.innerHTML = t === 'goggins' ? '☀️ Light mode' : '🔥 Stay hard mode';
+            if (b) b.innerHTML = t === 'mark7' ? '🔥 Stay hard mode' : '⚙️ Mark VII';
             try { if ($('tab-gym') && $('tab-gym').classList.contains('active')) renderGymHUD(); } catch (e) {}
+            try { if ($('tab-insights') && $('tab-insights').classList.contains('active')) renderInsights(); } catch (e) {}
+            try { if (window.fxThemeChanged) window.fxThemeChanged(); } catch (e) {}
         }
         function toggleTheme() {
-            applyTheme(document.documentElement.getAttribute('data-theme') === 'goggins' ? 'light' : 'goggins');
+            const next = document.documentElement.getAttribute('data-theme') === 'mark7' ? 'goggins' : 'mark7';
+            if (window.themeTransition) window.themeTransition(next); else applyTheme(next);
         }
 
         /* =====================================================
@@ -1469,8 +2248,8 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            applyTheme(localStorage.getItem('theme') || 'light');
-            if (!localStorage.getItem("bunk_bank_data")) writeJSON("bunk_bank_data", BASE_ATTENDANCE);
+            applyTheme(localStorage.getItem('theme') || 'mark7');
+            bunkMigrate();
 
             // Migrate the old free-text start date if it exists, otherwise use the default
             if (!localStorage.getItem('system_start_iso')) {
@@ -1487,6 +2266,7 @@
                 if (v === CORRECT_PIN) {
                     $("login-screen").classList.add("unlocking");
                     setTimeout(() => { $("login-screen").style.display = "none"; }, 500);
+                    try { sessionStorage.setItem('pin_ok', '1'); } catch (e) { }
                     switchTab('home');
                 } else {
                     const box = $("pin-box");
@@ -1555,19 +2335,15 @@
 
         function saveActiveDate() { localStorage.setItem('last_active_date', activeDate.toISOString()); }
 
-        function switchTab(tabId) {
-            document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-            document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-            const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-            if (btn) btn.classList.add("active");
-            $(`tab-${tabId}`).classList.add("active");
-
-            if (tabId === 'home') renderHomePage();
+        function renderTabContent(tabId, soft) {
+            if (tabId === 'home') { window.__homeSoft = !!soft; try { renderHomePage(); } finally { window.__homeSoft = false; } }
             if (tabId === 'tick') renderExecutionGrid(true);
             if (tabId === 'timetable') renderTimetableSection();
             if (tabId === 'gym') {
-                const q = pickGymQuote(), cut = q.lastIndexOf(' — ');
-                $("gym-quote-box").innerHTML = cut > -1 ? `${esc(q.slice(0, cut))} — <strong>${esc(q.slice(cut + 3))}</strong>` : esc(q);
+                if (!soft) {
+                    const q = pickGymQuote(), cut = q.lastIndexOf(' — ');
+                    $("gym-quote-box").innerHTML = cut > -1 ? `${esc(q.slice(0, cut))} — <strong>${esc(q.slice(cut + 3))}</strong>` : esc(q);
+                }
                 renderGymSection();
             }
             if (tabId === 'punishment') renderPunishmentSection();
@@ -1577,6 +2353,18 @@
             if (tabId === 'report') renderMultiMonthReports();
             if (tabId === 'hard-truth') generateHardTruth();
             if (tabId === 'achievements') renderAchievements();
+            if (tabId === 'insights') renderInsights();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+            const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+            if (btn) btn.classList.add("active");
+            $(`tab-${tabId}`).classList.add("active");
+
+            try { sessionStorage.setItem('last_tab', tabId); } catch (e) { }
+            renderTabContent(tabId, false);
             window.scrollTo({ top: 0 });
         }
 
@@ -1717,13 +2505,13 @@
                 ? `Day ${dayN}, started ${MONTH_NAMES[start.getMonth()].substring(0, 3)} ${start.getDate()}, ${start.getFullYear()}`
                 : `Starts ${MONTH_NAMES[start.getMonth()].substring(0, 3)} ${start.getDate()}, ${start.getFullYear()}`;
 
-            generateHomeQuote(true);
+            if (!window.__homeSoft) generateHomeQuote(true);
 
             const { current, best } = calcStreaks();
             const streakEl = $("home-streak");
-            streakEl.dataset.val = 0;
+            if (!window.__homeSoft) streakEl.dataset.val = 0;
             animateNumber(streakEl, current, n => n, 900);
-            $("home-streak-label").innerText = current === 1 ? "day streak" : "day streak";
+            $("home-streak-label").innerText = "day streak";
             $("home-streak-note").innerText = `A day counts when you finish ${STREAK_MIN_PCT}% or more of its habits. Today keeps the streak alive until it ends.`;
             const fl = $("flame");
             fl.classList.toggle("lit", current > 0);
@@ -1736,12 +2524,12 @@
             animateNumber($("home-month-completion"), mp, n => n + '%');
             const ts = dayHabitScore(startOfDay(today));
             $("home-today-progress").innerText = `${ts.done} / ${ts.possible}`;
-            $("home-month-bar").style.width = '0%';
-            $("home-today-bar").style.width = '0%';
+            if (!window.__homeSoft) { $("home-month-bar").style.transform = 'scaleX(0)'; $("home-today-bar").style.transform = 'scaleX(0)'; }
             requestAnimationFrame(() => requestAnimationFrame(() => {
-                $("home-month-bar").style.width = mp + '%';
-                $("home-today-bar").style.width = pctOf(ts.done, ts.possible) + '%';
+                $("home-month-bar").style.transform = 'scaleX(' + (mp / 100) + ')';
+                $("home-today-bar").style.transform = 'scaleX(' + (pctOf(ts.done, ts.possible) / 100) + ')';
             }));
+            try { renderHomeHud(); } catch (e) { console.warn('home hud', e); }
         }
 
         let lastQuoteIdx = -1;
@@ -1765,14 +2553,14 @@
         function renderWeekBars(weeks, key, intro) {
             const c = $("bars-container");
             if (intro || c.dataset.key !== key) {
-                c.innerHTML = weeks.map((w, i) => `<div class="bar-col"><div class="bar-val" data-val="0">0%</div><div class="bar-track"><div class="bar-fill" style="height:0%"></div></div><div class="bar-label">W${i + 1}</div></div>`).join('');
+                c.innerHTML = weeks.map((w, i) => `<div class="bar-col"><div class="bar-val" data-val="0">0%</div><div class="bar-track"><div class="bar-fill" style="transform:scaleY(0)"></div></div><div class="bar-label">W${i + 1}</div></div>`).join('');
                 c.dataset.key = key;
                 void c.offsetHeight;
             }
             c.querySelectorAll('.bar-col').forEach((col, i) => {
                 const w = weeks[i];
                 const p = w && w.possible ? pctOf(w.done, w.possible) : 0;
-                col.querySelector('.bar-fill').style.height = p + '%';
+                col.querySelector('.bar-fill').style.transform = 'scaleY(' + (p / 100) + ')';
                 animateNumber(col.querySelector('.bar-val'), p, n => n + '%');
             });
         }
@@ -1873,7 +2661,7 @@
             let cur = getGymStatus(iso);
             if (!cur && localStorage.getItem(key) === "true") cur = "done";
             const next = order[(order.indexOf(cur) + 1) % order.length];
-            if (next) localStorage.setItem(`gym_status_${iso}`, next); else localStorage.removeItem(`gym_status_${iso}`);
+            if (next) { localStorage.setItem(`gym_status_${iso}`, next); gymFreeze(iso); } else { localStorage.removeItem(`gym_status_${iso}`); gymMaybeUnfreeze(iso); }
             localStorage.removeItem(key);
             if (next === "done") toast(GYM_DONE_LINES[Math.floor(Math.random() * GYM_DONE_LINES.length)]);
             else if (next === "missed") toast(GYM_MISS_LINES[Math.floor(Math.random() * GYM_MISS_LINES.length)], "danger");
@@ -1885,6 +2673,7 @@
         function onHabitCheck(key, checked, d) {
             popKey = key;
             localStorage.setItem(key, checked);
+            try { const p = key.split('_'); linkHabitToTT(new Date(+p[1], +p[2], +p[4]), HABITS[parseInt(p[3])].id); } catch (e) { }
             syncDate(d);
             renderExecutionGrid();
         }
@@ -2010,19 +2799,12 @@
             const next = old === state ? "pending" : state;
             if (isGym) {
                 const g = next === "completed" ? "done" : next === "missed" ? "missed" : next === "excepted" ? "exception" : "";
-                if (g) localStorage.setItem(`gym_status_${dtStr}`, g); else localStorage.removeItem(`gym_status_${dtStr}`);
+                if (g) { localStorage.setItem(`gym_status_${dtStr}`, g); gymFreeze(dtStr); } else { localStorage.removeItem(`gym_status_${dtStr}`); gymMaybeUnfreeze(dtStr); }
                 localStorage.removeItem(key);
             } else if (next === "pending") localStorage.removeItem(key); else localStorage.setItem(key, next);
 
-            if (ev.subCode) {
-                const b = readJSON("bunk_bank_data", {});
-                const s = b[ev.subCode];
-                if (s) {
-                    if (old === "completed") { s.attended--; s.total--; } else if (old === "missed") { s.total--; }
-                    if (next === "completed") { s.attended++; s.total++; } else if (next === "missed") { s.total++; }
-                    writeJSON("bunk_bank_data", b);
-                }
-            }
+            // attendance counters are now derived from the saved timetable states (see bunkData), so nothing to update here
+            linkTTToHabit(ev, parseISO(dtStr), next, old);
             if (next === "missed" && (ev.type === "gym" || ev.type === "class")) {
                 const made = assignPunishment(`Missed schedule: ${ev.title}`, "Unexcused absence. Sentence: 50 Burpees or Extra Study Block.", `pun_miss_${key}`);
                 if (made) toast("Missed block logged. Penalty assigned.", "danger");
@@ -2032,7 +2814,7 @@
         }
 
         function renderBunkBank() {
-            const data = readJSON("bunk_bank_data", {});
+            const data = bunkData();
             let html = "";
             for (const [sub, s] of Object.entries(data)) {
                 const pct = s.total > 0 ? (s.attended / s.total) * 100 : 100;
@@ -2102,7 +2884,7 @@
         function getGymStatus(iso) { return localStorage.getItem(`gym_status_${iso}`) || ""; }
         function getGymExtra(iso) { return localStorage.getItem(`gym_extra_${iso}`) || ""; }
         function getGymSets(iso, exName) { return readJSON(`gym_sets_${iso}_${slug(exName)}`, []); }
-        function saveGymSets(iso, exName, sets) { writeJSON(`gym_sets_${iso}_${slug(exName)}`, sets); }
+        function saveGymSets(iso, exName, sets) { writeJSON(`gym_sets_${iso}_${slug(exName)}`, sets); gymFreeze(iso); }
         // A "make exception" swap: reseeds which muscle group this date gets. Rotation continues
         // normally from there, so nothing else needs to move — the next day just picks up from here.
         function getGymPhase(iso) { const v = localStorage.getItem(`gym_phase_${iso}`); return v === null || v === "" ? null : parseInt(v); }
@@ -2163,29 +2945,35 @@
         function gymPlanRange(fromIso, toIso) {
             const out = {};
             if (toIso < GYM_EPOCH_ISO) return out;
-            let cur = parseISO(GYM_EPOCH_ISO);
-            let idx = 0;
-            const counts = [0, 0, 0];
-            let guard = 0;
-            while (true) {
-                const iso = isoDate(cur);
-                const dow = cur.getDay();
-                const isWorkout = dow !== 0 || getGymExtra(iso) === "workout";
+            if (!_gymPC) _gymPC = { plans: {}, counts: [0, 0, 0], next: GYM_EPOCH_ISO };   // cached walk; reset when a plan-affecting key changes
+            const c = _gymPC;
+            let cur = parseISO(c.next), guard = 0;
+            while (isoDate(cur) <= toIso && guard++ < 4000) {
+                const iso = isoDate(cur), dow = cur.getDay();
+                let snap = null;
+                try { snap = JSON.parse(localStorage.getItem(`gym_snap_${iso}`) || "null"); } catch (e) { }
+                const isWorkout = !!snap || dow !== 0 || getGymExtra(iso) === "workout";
                 let dayPlan;
                 if (isWorkout) {
-                    idx = GYM_WEEKDAY_SLOT[dow];
+                    let idx = GYM_WEEKDAY_SLOT[dow];
                     const ph = getGymPhase(iso);
                     if (ph !== null && ph >= 0 && ph <= 2) idx = ph;
-                    const s = GYM_ORDER[idx];
-                    const variant = counts[idx] % 2 === 0 ? "A" : "B";
-                    dayPlan = { type: "workout", title: s.title, short: s.short, also: s.also, variant, exercises: s[variant], groups: s.groups };
+                    if (snap && snap.i >= 0 && snap.i <= 2) idx = snap.i;      // a day you already marked/logged keeps the plan it had
+                    const sl = GYM_ORDER[idx];
+                    let variant = c.counts[idx] % 2 === 0 ? "A" : "B";
+                    if (snap && (snap.v === "A" || snap.v === "B")) variant = snap.v;
+                    dayPlan = { type: "workout", idx, title: sl.title, short: sl.short, also: sl.also, variant, exercises: sl[variant], groups: sl.groups };
+                    c.counts[idx]++;
                 } else {
                     dayPlan = { type: "rest" };
                 }
-                if (iso >= fromIso && iso <= toIso) out[iso] = dayPlan;
-                if (iso >= toIso || ++guard > 4000) break;
-                if (isWorkout) { counts[idx]++; }
+                c.plans[iso] = dayPlan;
                 cur.setDate(cur.getDate() + 1);
+            }
+            c.next = isoDate(cur);
+            for (let d = parseISO(fromIso < GYM_EPOCH_ISO ? GYM_EPOCH_ISO : fromIso); isoDate(d) <= toIso; d.setDate(d.getDate() + 1)) {
+                const iso = isoDate(d);
+                if (c.plans[iso]) out[iso] = c.plans[iso];
             }
             return out;
         }
@@ -2194,11 +2982,7 @@
         function gymBestWeight(exName, excludeIso) {
             const want = slug(exName);
             let best = null, bestDate = null;
-            for (let i = 0; i < localStorage.length; i++) {
-                const p = gymParseSetKey(localStorage.key(i));
-                if (!p || p.slug !== want || p.iso === excludeIso) continue;
-                readJSON(localStorage.key(i), []).forEach(st => { if (typeof st.weight === "number" && (best === null || st.weight > best)) { best = st.weight; bestDate = p.iso; } });
-            }
+            gymCollectLogs().forEach(l => { if (l.slug === want && l.iso !== excludeIso && l.maxW > 0 && (best === null || l.maxW > best)) { best = l.maxW; bestDate = l.iso; } });
             return best === null ? null : { weight: best, date: bestDate };
         }
 
@@ -2208,7 +2992,7 @@
         function gymMark(state, iso) {
             const old = getGymStatus(iso);
             const next = old === state ? "" : state;
-            if (next) localStorage.setItem(`gym_status_${iso}`, next); else localStorage.removeItem(`gym_status_${iso}`);
+            if (next) { localStorage.setItem(`gym_status_${iso}`, next); gymFreeze(iso); } else { localStorage.removeItem(`gym_status_${iso}`); gymMaybeUnfreeze(iso); }
             if (next === "done") toast(GYM_DONE_LINES[Math.floor(Math.random() * GYM_DONE_LINES.length)]);
             else if (next === "missed") toast(GYM_MISS_LINES[Math.floor(Math.random() * GYM_MISS_LINES.length)], "danger");
             else if (next === "exception") toast(GYM_EXC_LINES[Math.floor(Math.random() * GYM_EXC_LINES.length)]);
@@ -2409,7 +3193,7 @@
         ===================================================== */
         let gymHudTab = "overview", gymHudEx = "", gymHudMetric = "w";
         const GYM_METRICS = { w: ["maxW", "TOP WEIGHT"], e: ["e1rm", "EST. 1RM"], v: ["vol", "VOLUME"] };
-        // Chart colours are read from the active theme (light = green, stay-hard = red/black) every render,
+        // Chart colours are read from the active theme (Mark VII = gold/cyan, Stay Hard = red/black) every render,
         // so the HUD always matches the rest of the app instead of a fixed blue/black palette.
         let GYM_HUD = {};
         function gymCssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
@@ -2437,7 +3221,8 @@
         function gymNiceMax(v) { if (v <= 0) return 1; const mag = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (m * mag >= v) return m * mag; return 10 * mag; }
 
         // One pass over every logged exercise-day: sets, reps, volume (kg x reps), top weight, est. 1RM.
-        function gymCollectLogs() {
+        function gymCollectLogs() { return _gymLogsC || (_gymLogsC = gymCollectLogsRaw()); }
+        function gymCollectLogsRaw() {
             const out = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i), p = gymParseSetKey(k);
@@ -2713,11 +3498,13 @@
             const iso = $("gym-exc-date").value || isoDate(new Date());
             const typeVal = $("gym-exc-type").value;
             if (typeVal !== "") {
+                localStorage.removeItem(`gym_snap_${iso}`);   // an explicit swap replaces the frozen plan for that day
                 localStorage.setItem(`gym_phase_${iso}`, typeVal);
                 if (parseISO(iso).getDay() === 0) localStorage.setItem(`gym_extra_${iso}`, "workout");
             }
             const boxes = document.querySelectorAll("#gym-exc-exercises input[type=checkbox]");
             if (boxes.length) setGymSkips(iso, [...boxes].filter(b => b.checked).map(b => b.dataset.ex));
+            if (getGymStatus(iso)) gymFreeze(iso);
             toast("Exception saved for " + iso);
             renderGymExceptionForm();
             renderGymSection();
@@ -2857,6 +3644,7 @@
             $("timer-display").innerText = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
             $("timer-progress").style.strokeDashoffset = RING_LEN * (1 - s / timerTotalSec);
             document.title = timerRunning ? `${$("timer-display").innerText} | Discipline OS` : "Discipline OS";
+            timerSave();
         }
         function refreshSoulCount() {
             const n = parseInt(localStorage.getItem('timer_sessions') || '0');
@@ -2872,11 +3660,13 @@
         function toggleTimer() {
             const btn = $("timer-start-btn");
             if (!timerRunning) {
+                try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (e) { }
                 timerRunning = true; timerStarted = true;
                 timerEndTs = Date.now() + timerRemainingSec * 1000;
                 btn.innerText = "Pause";
                 $("timer-card").classList.add("running");
                 timerInterval = setInterval(tickTimer, 250);
+                timerSave();
             } else {
                 clearInterval(timerInterval); timerRunning = false;
                 timerRemainingSec = Math.max(0, Math.ceil((timerEndTs - Date.now()) / 1000));
@@ -2900,6 +3690,7 @@
         }
         function finishTimer() {
             const minutes = Math.round(timerTotalSec / 60);
+            timerAlert();
             resetTimerState();
             localStorage.setItem('timer_sessions', (parseInt(localStorage.getItem('timer_sessions') || '0') + 1));
             const log = readJSON('timer_log', []);
@@ -2943,7 +3734,7 @@
         function runReportAnim(root) {
             requestAnimationFrame(() => requestAnimationFrame(() => {
                 root.querySelectorAll('[data-ring]').forEach(el => el.style.setProperty('--pct', el.dataset.ring));
-                root.querySelectorAll('[data-w]').forEach(el => el.style.width = el.dataset.w + '%');
+                root.querySelectorAll('[data-w]').forEach(el => el.style.transform = 'scaleX(' + (el.dataset.w / 100) + ')');
                 root.querySelectorAll('[data-count]').forEach(el => { el.dataset.val = 0; animateNumber(el, +el.dataset.count, n => n + '%', 900); });
             }));
         }
@@ -3100,7 +3891,7 @@
         ===================================================== */
         function getComputedStats() {
             const activePenalties = readJSON("punishment_list", []).filter(p => !p.served).length;
-            const bdata = readJSON("bunk_bank_data", {});
+            const bdata = bunkData();
             let lowAttend = false;
             for (const sub in bdata) { if (bdata[sub].total > 0 && bdata[sub].attended / bdata[sub].total < 0.75) lowAttend = true; }
             const now = new Date();
@@ -3253,6 +4044,7 @@
                 } catch (e) { }
             }
             ['wears', 'lastWorn', 'locked', 'disabled'].forEach(k => wdS[k] = wdS[k] || {}); wdS.favs = wdS.favs || [];
+            if (!wdS.counted) { wdS.counted = {}; Object.keys(wdS.locked).forEach(k => wdS.counted[k] = true); }   // wears already counted under the old rule
         })();
 
         const WD_SLOTS = ['top', 'bottom', 'shoes'];
@@ -3387,7 +4179,7 @@
         }
 
         /* ---------- planner ---------- */
-        function wdIsHoliday(d) { const m = d.getMonth() + 1, dt = d.getDate(); return d.getDay() === 0 || (m === 8 && dt === 15) || (m === 1 && dt === 26) || (m === 10 && dt === 2); }
+        // wdIsHoliday now lives in the upgrade module at the bottom (editable holiday list)
         function wdBuildRibbon() {
             const rb = $('wd-ribbon'); rb.innerHTML = ''; const today = new Date(), names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             for (let i = -7; i <= 7; i++) {
@@ -3445,7 +4237,8 @@
             const d = wdDrafts[wdSel], keep = {}; WD_SLOTS.forEach(c => keep[c] = $('wd-check-' + c).checked || !d[c]);
             if (keep.top && keep.bottom && keep.shoes) {
                 wdS.locked[wdSel] = { ...d };
-                WD_SLOTS.forEach(c => { const id = d[c]; if (!id) return; if (wdSel >= wdToday()) wdS.wears[id] = (wdS.wears[id] || 0) + 1; wdS.lastWorn[id] = wdSel; });
+                WD_SLOTS.forEach(c => { const id = d[c]; if (!id) return; if (wdSel === wdToday() && !wdS.counted[wdSel]) wdS.wears[id] = (wdS.wears[id] || 0) + 1; wdS.lastWorn[id] = wdSel; });
+                if (wdSel <= wdToday()) wdS.counted[wdSel] = true;   // future dates are counted automatically when the day arrives
                 wdSave(); $('wd-cards').style.display = 'none'; wdShowLocked(wdSel < wdToday());
                 const b = document.querySelector(`.wd-date[data-k="${wdSel}"]`); if (b) b.classList.add('locked');
                 toast('Outfit locked ✔', 'info');
@@ -3460,7 +4253,8 @@
         }
         function wdUnlock() {
             const l = wdS.locked[wdSel];
-            WD_SLOTS.forEach(c => { const id = l[c]; if (!id) return; if (wdSel >= wdToday() && wdS.wears[id] > 0) wdS.wears[id]--; if (wdS.lastWorn[id] === wdSel) delete wdS.lastWorn[id]; });
+            WD_SLOTS.forEach(c => { const id = l[c]; if (!id) return; if (wdS.counted[wdSel] && wdSel >= wdToday() && wdS.wears[id] > 0) wdS.wears[id]--; if (wdS.lastWorn[id] === wdSel) delete wdS.lastWorn[id]; });
+            delete wdS.counted[wdSel];
             wdDrafts[wdSel] = { ...l }; delete wdS.locked[wdSel]; wdSave();
             const b = document.querySelector(`.wd-date[data-k="${wdSel}"]`); if (b) b.classList.remove('locked');
             $('wd-lockedbox').style.display = 'none'; $('wd-cards').style.display = 'block';
@@ -3578,6 +4372,7 @@
 
         /* ---------- laundry ---------- */
         function wdBadge() {
+            try { wdApplyDueWears(); } catch (e) { }
             const n = wdItems.filter(wdDirty).length, b = $('wd-badge');
             if (b) { b.textContent = n; b.style.display = n ? 'inline-block' : 'none'; }
         }
@@ -3606,5 +4401,1035 @@
         function wdOpen() { if (!wdBuilt) { wdBuilt = true; wdBuildRibbon(); } wdRenderCloset(); wdRenderFavs(); wdBadge(); }
         wdBadge();
     </script>
+<script>
+/* =========================================================
+   STARK UPGRADE MODULE (additive — loads after the main script)
+   bunk-bank derivation · gym plan snapshots · habit↔timetable links
+   wardrobe wear fix · timer persistence · Today console · Insights
+========================================================= */
+
+/* ---------- session lock ---------- */
+function lockApp() { try { sessionStorage.removeItem('pin_ok'); sessionStorage.removeItem('boot_done'); } catch (e) { } location.reload(); }
+
+/* ---------- Bunk bank: derived from timetable marks, so two devices can never overwrite each other's counters ---------- */
+function bunkSubMap() { const m = {}; Object.values(TT_BLUEPRINT).forEach(a => a.forEach(e => { if (e.subCode) m[e.id] = e.subCode; })); return m; }
+function bunkTallies() {
+    const sm = bunkSubMap(), out = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i), m = /^tt_state_\d{4}-\d{2}-\d{2}_(.+)$/.exec(k || '');
+        if (!m || !sm[m[1]]) continue;
+        const o = out[sm[m[1]]] || (out[sm[m[1]]] = { attended: 0, total: 0 }), v = localStorage.getItem(k);
+        if (v === 'completed') { o.attended++; o.total++; } else if (v === 'missed') o.total++;
+    }
+    return out;
+}
+function bunkMigrate() {
+    if (localStorage.getItem('bunk_base_v2')) return;
+    const stored = readJSON('bunk_bank_data', null) || JSON.parse(JSON.stringify(BASE_ATTENDANCE)), t = bunkTallies(), base = {};
+    Object.keys(stored).forEach(s => { const x = t[s] || { attended: 0, total: 0 }; base[s] = { attended: stored[s].attended - x.attended, total: stored[s].total - x.total }; });
+    writeJSON('bunk_base_v2', base);
+}
+function bunkData() {
+    const base = readJSON('bunk_base_v2', null);
+    if (!base) return readJSON('bunk_bank_data', BASE_ATTENDANCE);
+    const t = bunkTallies(), out = {};
+    Object.keys(base).forEach(s => { const x = t[s] || { attended: 0, total: 0 }; out[s] = { attended: base[s].attended + x.attended, total: base[s].total + x.total }; });
+    return out;
+}
+
+/* ---------- Gym: freeze a day's plan once it has been marked / logged ---------- */
+function gymFreeze(iso) {
+    try {
+        if (localStorage.getItem('gym_snap_' + iso)) return;
+        const p = gymPlanFor(iso);
+        if (!p || p.type !== 'workout') return;
+        localStorage.setItem('gym_snap_' + iso, JSON.stringify({ i: p.idx, v: p.variant }));
+    } catch (e) { }
+}
+function gymMaybeUnfreeze(iso) {
+    if (getGymStatus(iso)) return;
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('gym_sets_' + iso + '_') === 0) return; }
+    if (localStorage.getItem('gym_snap_' + iso) !== null) localStorage.removeItem('gym_snap_' + iso);
+}
+
+/* ---------- Habits <-> timetable links (tick one, the other follows) ---------- */
+const habitIdx = id => HABITS.findIndex(h => h.id === id);
+const habitKeyFor = (dt, id) => `habit_${dt.getFullYear()}_${dt.getMonth()}_${habitIdx(id)}_${dt.getDate()}`;
+function ttLinkedHabits(ev) {
+    if (!ev) return [];
+    if (/^(mon|tue|wed|thu|fri|sat|sun)_1$/.test(ev.id) && /fruit/i.test(ev.title)) return ['fruit'];
+    if (/^Night Routine/i.test(ev.title)) return ['no_phone_night', 'reading'];
+    if (ev.id === 'mon_6') return ['study'];
+    if (ev.id === 'sun_3') return ['project_work'];
+    return [];
+}
+function linkTTToHabit(ev, dt, next, old) {
+    const links = ttLinkedHabits(ev);
+    if (!links.length) return;
+    if (next === 'completed') links.forEach(h => localStorage.setItem(habitKeyFor(dt, h), 'true'));
+    else if (old === 'completed') links.forEach(h => localStorage.setItem(habitKeyFor(dt, h), 'false'));
+}
+function linkHabitToTT(dt, hid) {
+    const iso = isoDate(dt);
+    eventsFor(dt, readJSON('custom_tt_events', {})).forEach(ev => {
+        const links = ttLinkedHabits(ev);
+        if (!links.includes(hid)) return;
+        const all = links.every(h => localStorage.getItem(habitKeyFor(dt, h)) === 'true');
+        const key = `tt_state_${iso}_${ev.id}`, cur = localStorage.getItem(key) || 'pending';
+        if (all && cur !== 'completed') localStorage.setItem(key, 'completed');
+        else if (!all && cur === 'completed') localStorage.removeItem(key);
+    });
+}
+
+/* ---------- Wardrobe: wears count on the day, not when you lock; editable holidays ---------- */
+function wdNormalize() {
+    ['wears', 'lastWorn', 'locked', 'disabled'].forEach(k => wdS[k] = wdS[k] || {});
+    wdS.favs = wdS.favs || [];
+    if (!wdS.counted) { wdS.counted = {}; Object.keys(wdS.locked).forEach(k => wdS.counted[k] = true); }
+}
+function wdApplyDueWears() {
+    wdNormalize();
+    let ch = false;
+    const t = wdToday();
+    Object.keys(wdS.locked).forEach(k => {
+        if (k <= t && !wdS.counted[k]) {
+            const l = wdS.locked[k];
+            WD_SLOTS.forEach(c => { const id = l[c]; if (id) wdS.wears[id] = (wdS.wears[id] || 0) + 1; });
+            wdS.counted[k] = true; ch = true;
+        }
+    });
+    if (ch) writeJSON(WD_STATE, wdS);
+}
+const WD_HOLIDAYS = ['01-26', '08-15', '10-02'];   // MM-DD, repeats yearly. Use the "Add holiday" pill for more.
+function wdIsHoliday(d) {
+    const k = pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    return d.getDay() === 0 || WD_HOLIDAYS.includes(k) || readJSON('wd_holidays', []).includes(k) || readJSON('wd_holiday_dates', []).includes(isoDate(d));
+}
+function wdAddHoliday() {
+    const v = (prompt('Add a holiday.\nMM-DD repeats every year (e.g. 11-12). YYYY-MM-DD is that one date only.') || '').trim();
+    if (!v) return;
+    if (/^\d{2}-\d{2}$/.test(v)) { const L = readJSON('wd_holidays', []); if (!L.includes(v)) L.push(v); writeJSON('wd_holidays', L); }
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(parseISO(v))) { const L = readJSON('wd_holiday_dates', []); if (!L.includes(v)) L.push(v); writeJSON('wd_holiday_dates', L); }
+    else { toast('Use MM-DD or YYYY-MM-DD.', 'danger'); return; }
+    toast('Holiday added.', 'info');
+    if (wdBuilt) wdBuildRibbon();
+}
+
+/* ---------- Soul Timer: survives reloads, alerts when done ---------- */
+function timerSave() {
+    try {
+        if (!timerStarted) _rawRemove('timer_state');
+        else _rawSet('timer_state', JSON.stringify({ total: timerTotalSec, rem: timerRemainingSec, running: timerRunning, end: timerEndTs }));
+    } catch (e) { }
+}
+function timerRestore() {
+    const s = __timerSaved;
+    if (!s || !s.total) return;
+    timerTotalSec = s.total; timerRemainingSec = s.rem; timerStarted = true;
+    [90, 30].forEach(m => { const b = $('preset-' + m); if (b) b.classList.toggle('sel', s.total === m * 60); });
+    if (s.running) {
+        const rem = Math.ceil((s.end - Date.now()) / 1000);
+        if (rem <= 0) { timerEndTs = s.end; finishTimer(); toast('Your session finished while you were away.', 'win'); return; }
+        timerEndTs = s.end; timerRemainingSec = rem; timerRunning = true;
+        $('timer-start-btn').innerText = 'Pause'; $('timer-card').classList.add('running');
+        timerInterval = setInterval(tickTimer, 250);
+    } else $('timer-start-btn').innerText = 'Resume';
+    paintTimer();
+}
+function timerAlert() {
+    try { if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 500]); } catch (e) { }
+    try {
+        const C = window.AudioContext || window.webkitAudioContext;
+        if (C) { const a = new C(); [0, .35, .7].forEach(t => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; g.gain.value = .06; o.connect(g); g.connect(a.destination); o.start(a.currentTime + t); o.stop(a.currentTime + t + .2); }); }
+    } catch (e) { }
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Session complete', { body: 'Souls taken.' }); } catch (e) { }
+}
+
+/* ---------- HUD clock ---------- */
+let hudClockT = null;
+function hudClockStart() {
+    if (hudClockT) return;
+    hudClockT = setInterval(() => { const el = $('hud-clock'); if (el) el.textContent = new Date().toLocaleTimeString([], { hour12: false }); }, 1000);
+}
+
+/* =========================================================
+   HOME: system strip + Today console
+========================================================= */
+function nextBlockToday() {
+    const now = new Date(), iso = isoDate(now), mins = now.getHours() * 60 + now.getMinutes();
+    const evs = eventsFor(startOfDay(now), readJSON('custom_tt_events', {})), list = [];
+    evs.forEach(ev => {
+        const m = /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/.exec(ev.time || '');
+        if (!m) return;
+        const s = +m[1] * 60 + +m[2]; let e = +m[3] * 60 + +m[4]; if (e <= s) e += 1440;
+        if (getTTState(iso, ev.id) === 'pending' && e > mins) list.push({ ev, s, e });
+    });
+    list.sort((a, b) => a.s - b.s);
+    return list[0] || null;
+}
+function homeBriefing(days) {
+    const lines = [], today = startOfDay(new Date()), ts = dayHabitScore(today);
+    lines.push(`Today: <b>${Math.max(0, ts.done)} / ${ts.possible}</b> habits locked in.`);
+    const nb = nextBlockToday();
+    if (nb) { const f = x => pad(Math.floor(x / 60) % 24) + ':' + pad(x % 60); lines.push(`Next block: <b>${f(nb.s)}–${f(nb.e)}</b> · ${esc(nb.ev.title)}`); }
+    else lines.push('No more pending timetable blocks today.');
+    try {
+        const rates = insHabitRates(days, isoDate(new Date(today.getFullYear(), today.getMonth(), 1))).filter(r => r.poss >= 5).sort((a, b) => a.rate - b.rate);
+        if (rates.length) lines.push(`Weak link this month: <b>${esc(rates[0].name)}</b> (${rates[0].rate}%).`);
+    } catch (e) { }
+    const pend = readJSON('punishment_list', []).filter(p => !p.served).length;
+    if (pend) lines.push(`<b>${pend}</b> unserved punishment${pend > 1 ? 's' : ''} on record.`);
+    const lb = localStorage.getItem('last_backup_iso');
+    if (days.length >= 3 && (!lb || (today - parseISO(lb)) / 86400000 >= 7)) lines.push(`Backup is ${lb ? 'over a week old' : 'not made yet'} — <button onclick="exportData()">download one now</button>.`);
+    return lines.map(l => `<div>${l}</div>`).join('');
+}
+function renderHomeHud() {
+    if (!$('home-sysstrip') || !$('home-console')) return;
+    const now = new Date(), dt = startOfDay(now), dow = dt.getDay();
+    const dayN = Math.floor((dt - startOfDay(parseISO(getStartISO()))) / 86400000) + 1;
+    const link = !syncCode ? 'LOCAL' : syncState === 'live' ? 'ONLINE' : syncState === 'error' ? 'FAULT' : 'LINKING';
+    const tsc = dayHabitScore(dt), tp = tsc.possible ? Math.round(Math.max(0, tsc.done) / tsc.possible * 100) : 0;
+    const syncAt = (syncCode && syncState === 'live' && syncLast) ? new Date(syncLast).toLocaleTimeString([], { hour12: false }) : '--:--:--';
+    $('home-sysstrip').innerHTML = `<span class="sysdot"></span><b>${m7() ? 'MARK VII ONLINE' : 'STAY HARD ACTIVE'}</b><span>DAY <b>${Math.max(dayN, 0)}</b></span><span>${DAY_NAMES[dow].slice(0, 3).toUpperCase()} <b id="hud-clock">${now.toLocaleTimeString([], { hour12: false })}</b></span><span>TODAY <b>${tp}%</b></span><span class="sp"></span><span>SYNC <b>${syncAt}</b></span><span>LINK <b>${link}</b></span>`;
+    hudClockStart();
+
+    let rows = '', done = 0, total = 0;
+    HABITS.forEach((h, i) => {
+        if (isExempt(h, dow)) return;
+        const key = habitKeyFor(dt, h.id), v = localStorage.getItem(key);
+        let cls = '', st = 'OPEN', click = `todayAct('${h.id}')`, name = esc(h.name);
+        if (h.id === 'gym') {
+            const gs = gymHabitState(dt, key);
+            if (gs && gs.kind === 'rest') { rows += `<div class="th-row rest"><span class="th-dot"></span><span class="th-name">${name}</span><span class="th-st">REST DAY</span></div>`; return; }
+            const k = gs ? gs.kind : 'pending';
+            const t = gs && gs.plan && gs.plan.title ? gs.plan.title.replace(/^\S+\s/, '') + ' ' + gs.plan.variant : '';
+            name = esc('🏋️ Gym' + (t ? ' · ' + t : ''));
+            total++;
+            if (k === 'done') { cls = 'on'; st = 'DONE'; done++; } else if (k === 'missed') { cls = 'bad'; st = 'MISSED'; } else if (k === 'exception') { cls = 'warn'; st = 'EXCUSED'; done++; }
+        } else if (h.type === 'tristate') {
+            total++; const c = v || 'NO';
+            if (c === 'YES' || c === 'MET') { cls = 'on'; st = c; done++; } else st = 'NO';
+        } else if (h.type === 'scroll_numeric') {
+            total++; const n = parseInt(v || '0');
+            if (n === 0) { cls = 'on'; st = 'CLEAN'; done++; } else { cls = 'bad'; st = 'LEVEL ' + n; }
+        } else {
+            total++;
+            if (v === 'true') { cls = 'on'; st = 'DONE'; done++; }
+        }
+        rows += `<button class="th-row ${cls}" data-hid="${h.id}" onclick="${click}"><span class="th-dot"></span><span class="th-name">${name}</span><span class="th-st">${st}</span></button>`;
+    });
+    let days = []; try { days = insBuild(); } catch (e) { }
+    $('home-console').innerHTML = `<div class="stark-hud" style="margin-bottom:16px;">
+        <span class="hud-corner tl"></span><span class="hud-corner tr"></span><span class="hud-corner bl"></span><span class="hud-corner br"></span>
+        <div class="stark-hud-head"><span class="stark-hud-status"><i></i> TODAY CONSOLE · <b>${done}/${total}</b> LOCKED</span></div>
+        <div class="hud-brief">${homeBriefing(days)}</div>
+        <div class="th-grid">${rows}</div>
+        <div class="gym-foot" style="margin-top:10px;">Tap a row to cycle it. Gym, classes and scrolling control cycle through their own states. Study, fruit, night routine and project work also tick their timetable block.</div>
+    </div>`;
+}
+function todayRefresh() {
+    window.__homeSoft = true;
+    try { renderHomePage(); } finally { window.__homeSoft = false; }
+    try { checkActivePunishments(); } catch (e) { }
+}
+function todayAct(hid) {
+    const dt = startOfDay(new Date()), iso = isoDate(dt), i = habitIdx(hid), h = HABITS[i], key = habitKeyFor(dt, hid);
+    if (hid === 'gym') {
+        const order = ['', 'done', 'missed', 'exception'];
+        let cur = getGymStatus(iso);
+        if (!cur && localStorage.getItem(key) === 'true') cur = 'done';
+        const next = order[(order.indexOf(cur) + 1) % order.length];
+        if (next) { localStorage.setItem(`gym_status_${iso}`, next); gymFreeze(iso); } else { localStorage.removeItem(`gym_status_${iso}`); gymMaybeUnfreeze(iso); }
+        localStorage.removeItem(key);
+        if (next === 'done') toast(GYM_DONE_LINES[Math.floor(Math.random() * GYM_DONE_LINES.length)]);
+        else if (next === 'missed') toast(GYM_MISS_LINES[Math.floor(Math.random() * GYM_MISS_LINES.length)], 'danger');
+        else if (next === 'exception') toast(GYM_EXC_LINES[Math.floor(Math.random() * GYM_EXC_LINES.length)]);
+    } else if (h.type === 'tristate') {
+        const c = localStorage.getItem(key) || 'NO';
+        localStorage.setItem(key, c === 'YES' ? 'MET' : c === 'MET' ? 'NO' : 'YES');
+    } else if (h.type === 'scroll_numeric') {
+        const n = ((parseInt(localStorage.getItem(key) || '0')) + 1) % 4;
+        localStorage.setItem(key, n);
+        if (n === 0) toast('Back to zero. Keep it there.', 'info');
+        else {
+            const made = assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${dt.getFullYear()}_${dt.getMonth()}_${dt.getDate()}`);
+            toast(made ? `Level ${n} logged. Penalty assigned: ${SCROLL_SENTENCES[n]}` : `Level ${n} logged. Today's Level ${n} penalty was already issued.`, 'danger');
+        }
+        toast(pickUrgeQuote(), 'quote');
+    } else {
+        localStorage.setItem(key, localStorage.getItem(key) === 'true' ? 'false' : 'true');
+        linkHabitToTT(dt, hid);
+    }
+    todayRefresh();
+}
+
+/* =========================================================
+   INSIGHTS (Stark HUD): overview · trends · heatmap · weak links · correlations
+========================================================= */
+let insTab = 'overview', insHmWeeks = 8, insWeakScope = 'month', insDriver = 'sleep', insOutcome = 'study';
+
+function insHabitVal(dt, hi) {      // null = not applicable that day, 1 = done, 0 = missed
+    const h = HABITS[hi];
+    if (isExempt(h, dt.getDay())) return null;
+    const key = `habit_${dt.getFullYear()}_${dt.getMonth()}_${hi}_${dt.getDate()}`;
+    if (h.id === 'gym') {
+        const gs = gymHabitState(dt, key);
+        if (gs) { if (gs.kind === 'rest' || gs.kind === 'exception') return null; return gs.kind === 'done' ? 1 : 0; }
+    }
+    const v = localStorage.getItem(key);
+    if (h.type === 'tristate') return (v === 'YES' || v === 'MET') ? 1 : 0;
+    if (h.type === 'scroll_numeric') return parseInt(v || '0') === 0 ? 1 : 0;
+    return v === 'true' ? 1 : 0;
+}
+function insBuild() {
+    const today = startOfDay(new Date()), start = startOfDay(parseISO(getStartISO())), days = [];
+    const scrollI = HABITS.findIndex(h => h.type === 'scroll_numeric');
+    for (let t = new Date(start); t <= today; t.setDate(t.getDate() + 1)) {
+        const dt = new Date(t), sc = dayHabitScore(dt), iso = isoDate(dt);
+        const vals = HABITS.map((h, i) => insHabitVal(dt, i));
+        const touched = HABITS.some((h, i) => localStorage.getItem(`habit_${dt.getFullYear()}_${dt.getMonth()}_${i}_${dt.getDate()}`) !== null) || !!getGymStatus(iso);
+        if (!touched && scrollI >= 0) vals[scrollI] = null;          // an untouched day is not a "clean" scrolling day
+        days.push({ dt, iso, done: sc.done, possible: sc.possible, pct: sc.possible > 0 ? Math.max(0, Math.round(sc.done / sc.possible * 100)) : null, vals, touched });
+    }
+    return days;
+}
+function insWeekSeries(days, n) {
+    const todayIso = isoDate(new Date()), thisKey = gymMondayIso(todayIso), by = {};
+    days.forEach(d => { const k = gymMondayIso(d.iso), w = by[k] || (by[k] = { done: 0, possible: 0 }); w.done += Math.max(0, d.done); w.possible += d.possible; });
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) {
+        const k = gymAddDays(thisKey, -7 * i), w = by[k];
+        out.push({ key: k, pct: w && w.possible ? Math.round(w.done / w.possible * 100) : null });
+    }
+    return out;
+}
+function insHabitRates(days, fromIso) {
+    const todayIso = isoDate(new Date());
+    return HABITS.map((h, i) => {
+        let done = 0, poss = 0, streak = 0;
+        days.forEach(d => { if (d.iso < fromIso || d.iso === todayIso) return; const v = d.vals[i]; if (v === null) return; poss++; done += v; });
+        for (let k = days.length - 1; k >= 0; k--) {
+            const d = days[k]; if (d.iso < fromIso) break;
+            const v = d.vals[i]; if (v === null || d.iso === todayIso) continue;
+            if (v === 0) streak++; else break;
+        }
+        return { i, id: h.id, name: h.name, done, poss, rate: poss ? Math.round(done / poss * 100) : null, streak };
+    }).filter(r => r.poss >= 3);
+}
+function insPair(days, xi, yi) {
+    const todayIso = isoDate(new Date());
+    let n11 = 0, n10 = 0, n01 = 0, n00 = 0;
+    days.forEach(d => {
+        if (!d.touched || d.iso === todayIso) return;
+        const x = d.vals[xi], y = d.vals[yi];
+        if (x === null || y === null) return;
+        if (x === 1 && y === 1) n11++; else if (x === 1) n10++; else if (y === 1) n01++; else n00++;
+    });
+    const nx1 = n11 + n10, nx0 = n01 + n00;
+    const py1 = nx1 ? n11 / nx1 : null, py0 = nx0 ? n01 / nx0 : null;
+    const den = Math.sqrt(nx1 * nx0 * (n11 + n01) * (n10 + n00));
+    return { n11, n10, n01, n00, nx1, nx0, py1, py0, n: nx1 + nx0, phi: den ? (n11 * n00 - n10 * n01) / den : 0, delta: py1 !== null && py0 !== null ? Math.round((py1 - py0) * 100) : null };
+}
+const insStrength = phi => { const a = Math.abs(phi); return a >= .5 ? ['STRONG', 's3'] : a >= .3 ? ['MODERATE', 's2'] : a >= .15 ? ['WEAK', 's1'] : ['NOISE', '']; };
+const insShort = n => n.replace(/\s*\(.*?\)/g, '');
+
+function insBarsSVG(items, thr) {
+    const W = 420, H = 178, pl = 30, pr = 8, pt = 18, pb = 26, n = items.length, plotH = H - pt - pb, slot = (W - pl - pr) / n, bw = slot * 0.62;
+    let g = '';
+    [0, 50, 100].forEach(v => { const y = pt + plotH * (1 - v / 100); g += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="${gymRGBA(GYM_HUD.pri, .16)}" stroke-dasharray="3 4"/><text x="${pl - 5}" y="${y + 3}" text-anchor="end" class="gym-svg-t">${v}</text>`; });
+    if (thr != null) { const y = pt + plotH * (1 - thr / 100); g += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="${GYM_HUD.gold}" stroke-opacity=".75" stroke-dasharray="5 4"/><text x="${W - pr}" y="${y - 3}" text-anchor="end" class="gym-svg-t" style="fill:${GYM_HUD.gold}">${thr}% = STREAK LINE</text>`; }
+    items.forEach((it, i) => {
+        const x = pl + i * slot + (slot - bw) / 2;
+        if (it.val !== null) {
+            const h = plotH * it.val / 100, y = pt + plotH - h;
+            g += `<rect class="gym-bar" x="${x}" y="${y}" width="${bw}" height="${Math.max(h, 2)}" rx="2" fill="url(#${it.cur ? 'insBarGold' : 'insBarPri'})" style="filter:drop-shadow(0 0 4px ${gymRGBA(it.cur ? GYM_HUD.gold : GYM_HUD.pri, .55)})"/>`;
+            g += `<text x="${x + bw / 2}" y="${y - 4}" text-anchor="middle" class="gym-svg-t" style="fill:${it.cur ? GYM_HUD.gold : GYM_HUD.text}">${it.val}</text>`;
+        }
+        g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" class="gym-svg-t">${esc(it.label)}</text>`;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" class="gym-svg"><defs>
+        <linearGradient id="insBarPri" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${GYM_HUD.pri2}"/><stop offset="1" stop-color="${GYM_HUD.pri}"/></linearGradient>
+        <linearGradient id="insBarGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${GYM_HUD.gold}"/><stop offset="1" stop-color="${GYM_HUD.orange}"/></linearGradient></defs>${g}</svg>`;
+}
+const insDelta = d => d === null ? '—' : (d > 0 ? '+' : d < 0 ? '−' : '±') + Math.abs(d) + ' pts';
+
+function insSetTab(t) { insTab = t; renderInsights(); }
+function insSetWeeks(n) { insHmWeeks = n; renderInsights(); }
+function insSetScope(s) { insWeakScope = s; renderInsights(); }
+function insSetPair(d, o) { insDriver = d; insOutcome = o; renderInsights(); }
+
+function insOverview(days) {
+    if (!days.length) return `<div class="gym-hud-empty">Your start date is in the future — nothing to analyse yet.</div>`;
+    const today = new Date(), ms = habitMonthStats(today.getFullYear(), today.getMonth()), sk = calcStreaks();
+    const wk = insWeekSeries(days, 8), cur = wk[7].pct, prev = wk[6].pct;
+    const all = insWeekSeries(days, Math.ceil(days.length / 7) + 1).filter(w => w.pct !== null);
+    const best = all.length ? Math.max(...all.map(w => w.pct)) : 0;
+    let ticks = 0, perfect = 0, good = 0;
+    days.forEach(d => { d.vals.forEach(v => { if (v === 1) ticks++; }); if (d.possible > 0 && d.done >= d.possible) perfect++; if (d.pct !== null && d.pct >= STREAK_MIN_PCT) good++; });
+    const tracked = days.filter(d => d.touched).length, mp = pctOf(ms.done, ms.possible);
+    const rings = gymRing((cur || 0) / 100, GYM_HUD.pri, cur === null ? '—' : cur + '%', 'THIS WEEK', 'habit completion') +
+        gymRing((prev || 0) / 100, GYM_HUD.pri2, prev === null ? '—' : prev + '%', 'LAST WEEK', 'for comparison') +
+        gymRing(mp / 100, GYM_HUD.gold, mp + '%', 'THIS MONTH', 'so far') +
+        gymRing(sk.best ? sk.current / sk.best : 0, GYM_HUD.orange, String(sk.current), 'STREAK', `best ${sk.best}`);
+    const counters = [['HABIT TICKS', gymFmt(ticks)], ['PERFECT DAYS', perfect], [`DAYS ≥ ${STREAK_MIN_PCT}%`, good], ['TRACKED DAYS', tracked], ['BEST WEEK', best + '%']]
+        .map(c => `<div class="gym-counter"><b>${c[1]}</b><span>${c[0]}</span></div>`).join('');
+    const d = cur !== null && prev !== null ? cur - prev : null;
+    const items = wk.map((w, i) => ({ label: gymDL(w.key), val: w.pct, cur: i === 7 }));
+    return `<div class="gym-rings">${rings}</div>
+        <div class="gym-counters">${counters}</div>
+        <div class="hud-panel-title">WEEKLY HABIT COMPLETION · LAST 8 WEEKS</div>
+        ${insBarsSVG(items, STREAK_MIN_PCT)}
+        <div class="gym-chips"><span class="${d === null ? '' : d >= 0 ? 'up' : 'down'}">WEEK OVER WEEK <b>${insDelta(d)}</b></span><span>BEST WEEK <b>${best}%</b></span></div>
+        <div class="gym-foot">Percentages use the same scoring as Home and Reports (a scrolling slip subtracts from that day).</div>`;
+}
+function insTrends(days) {
+    if (days.length < 2) return `<div class="gym-hud-empty">Not enough days yet — come back after a few days of tracking.</div>`;
+    const wk = insWeekSeries(days, 12), items = wk.map((w, i) => ({ label: gymDL(w.key), val: w.pct, cur: i === 11 }));
+    const vals = wk.map(w => w.pct).filter(v => v !== null);
+    const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+    const last4 = avg(vals.slice(-4)), prev4 = avg(vals.slice(-8, -4));
+    const mom = last4 !== null && prev4 !== null ? Math.round(last4 - prev4) : null;
+    let rows = '';
+    for (let i = wk.length - 1; i >= Math.max(0, wk.length - 8); i--) {
+        const w = wk[i], p = i > 0 ? wk[i - 1].pct : null, dd = w.pct !== null && p !== null ? w.pct - p : null;
+        rows += `<div class="ins-bar"><span class="nm">${gymDL(w.key)}${i === wk.length - 1 ? ' · now' : ''}</span><span class="tr"><i class="${w.pct !== null && w.pct < 50 ? 'lo' : w.pct !== null && w.pct < STREAK_MIN_PCT ? 'mid' : ''}" style="width:${w.pct || 0}%"></i></span><span class="pc">${w.pct === null ? '—' : w.pct + '%'}</span><span class="pc" style="width:62px;color:${dd === null ? 'var(--muted)' : dd >= 0 ? 'var(--ok)' : 'var(--danger)'}">${dd === null ? '' : (dd >= 0 ? '▲ ' : '▼ ') + Math.abs(dd)}</span></div>`;
+    }
+    const dow = [0, 0, 0, 0, 0, 0, 0], cnt = [0, 0, 0, 0, 0, 0, 0], todayIso = isoDate(new Date());
+    days.forEach(d => { if (d.pct === null || !d.touched || d.iso === todayIso) return; const k = (d.dt.getDay() + 6) % 7; dow[k] += d.pct; cnt[k]++; });
+    const av = dow.map((s, i) => cnt[i] >= 2 ? Math.round(s / cnt[i]) : null), known = av.filter(v => v !== null);
+    const mx = known.length ? Math.max(...known) : null, mn = known.length ? Math.min(...known) : null;
+    const wkBars = av.map((v, i) => `<div class="${v === null ? '' : v === mn && mn !== mx ? 'lo' : v === mx && mn !== mx ? 'hi' : ''}">${v === null ? '' : v}<i style="height:${v || 0}%"></i>${'MTWTFSS'[i]}</div>`).join('');
+    return `<div class="hud-panel-title">12-WEEK TREND</div>${insBarsSVG(items, STREAK_MIN_PCT)}
+        <div class="gym-chips"><span class="${mom === null ? '' : mom >= 0 ? 'up' : 'down'}">MOMENTUM (last 4 wks vs prior 4) <b>${insDelta(mom)}</b></span></div>
+        <div class="hud-panel-title" style="margin-top:14px;">WEEK-OVER-WEEK</div>${rows}
+        <div class="hud-panel-title" style="margin-top:14px;">AVERAGE BY WEEKDAY</div>
+        <div class="ins-wk">${wkBars}</div>
+        <div class="gym-foot">${mn !== null && mn !== mx ? `Your weakest weekday is <b>${DAY_NAMES[(av.indexOf(mn) + 1) % 7]}</b> (${mn}%); your strongest is <b>${DAY_NAMES[(av.indexOf(mx) + 1) % 7]}</b> (${mx}%).` : 'Weekday pattern appears after a couple of weeks of data.'}</div>`;
+}
+function insHeat(days) {
+    if (!days.length) return `<div class="gym-hud-empty">Nothing to show yet.</div>`;
+    const todayIso = isoDate(new Date()), n = insHmWeeks, mon0 = gymAddDays(gymMondayIso(todayIso), -7 * (n - 1)), total = n * 7;
+    const map = new Map(days.map(d => [d.iso, d]));
+    let rows = '';
+    HABITS.forEach((h, i) => {
+        let cells = '', done = 0, poss = 0, any = false;
+        for (let k = 0; k < total; k++) {
+            const iso = gymAddDays(mon0, k), d = map.get(iso);
+            let c = '';
+            if (iso > todayIso) c = 'cf';
+            else if (d) { const v = d.vals[i]; if (v === 1) { c = 'c1'; any = true; } else if (v === 0) { c = 'c0'; any = true; } if (v !== null && iso !== todayIso) { poss++; done += v; } }
+            if (iso === todayIso) c += ' ct';
+            if (k > 0 && k % 7 === 0) c += ' wk';
+            cells += `<i class="${c.trim()}" title="${iso}"></i>`;
+        }
+        if (!any && !poss) return;
+        rows += `<div class="ins-hm-row"><span class="ins-hm-label" title="${esc(h.name)}">${esc(insShort(h.name))}</span><span class="ins-hm-cells" style="--cols:${total}">${cells}</span><span class="ins-hm-pct">${poss ? Math.round(done / poss * 100) + '%' : '—'}</span></div>`;
+    });
+    const sel = [4, 8, 12].map(w => `<button class="ins-chip ${insHmWeeks === w ? 'active' : ''}" onclick="insSetWeeks(${w})">${w} WEEKS</button>`).join('');
+    return `<div class="ins-row">${sel}</div>
+        <div class="hud-panel-title">HABIT × DAY MATRIX</div>
+        <div class="ins-hm-wrap">${rows || '<div class="gym-hud-empty">No habit data in this window.</div>'}</div>
+        <div class="gym-legend"><i style="background:var(--ok)"></i> done <i style="background:color-mix(in srgb,var(--danger) 55%,transparent)"></i> missed <i style="background:none;border:1px dashed var(--muted)"></i> upcoming · blank = not applicable (rest day, exempt, or nothing logged for Scrolling Control)</div>`;
+}
+function insWeak(days) {
+    if (!days.length) return `<div class="gym-hud-empty">Nothing to analyse yet.</div>`;
+    const t = new Date(), from = insWeakScope === 'month' ? isoDate(new Date(t.getFullYear(), t.getMonth(), 1)) : '0000-00-00';
+    const rates = insHabitRates(days, from).sort((a, b) => a.rate - b.rate);
+    const sel = `<button class="ins-chip ${insWeakScope === 'month' ? 'active' : ''}" onclick="insSetScope('month')">THIS MONTH</button><button class="ins-chip ${insWeakScope === 'all' ? 'active' : ''}" onclick="insSetScope('all')">ALL TIME</button>`;
+    if (!rates.length) return `<div class="ins-row">${sel}</div><div class="gym-hud-empty">Not enough tracked days in this window yet (need 3+ per habit).</div>`;
+    const cards = rates.slice(0, 3).map((r, idx) => {
+        const lev = insBestLever(days, r.i);
+        return `<div class="ins-card ${idx === 0 ? 'danger' : ''}"><div class="k">${idx === 0 ? 'WEAKEST LINK' : 'NEEDS WORK #' + (idx + 1)}</div><div class="v">${r.rate}%</div>
+            <div class="s"><b>${esc(r.name)}</b><br>Missed ${r.poss - r.done} of ${r.poss} days${r.streak >= 2 ? ` · <b>${r.streak} misses in a row</b>` : ''}.
+            ${lev ? `<br>Lever: when you do <b>${esc(insShort(HABITS[lev.xi].name))}</b>, this lands ${Math.round(lev.p.py1 * 100)}% vs ${Math.round(lev.p.py0 * 100)}% when you don't.` : ''}</div></div>`;
+    }).join('');
+    const list = rates.map(r => `<div class="ins-bar"><span class="nm" title="${esc(r.name)}">${esc(insShort(r.name))}</span><span class="tr"><i class="${r.rate < 50 ? 'lo' : r.rate < 75 ? 'mid' : ''}" style="width:${r.rate}%"></i></span><span class="pc">${r.rate}%</span></div>`).join('');
+    return `<div class="ins-row">${sel}</div><div class="ins-weak">${cards}</div>
+        <div class="hud-panel-title">ALL HABITS · WEAKEST FIRST</div>${list}
+        <div class="gym-foot">Today is left out until it ends. Habits with fewer than 3 applicable days are hidden.</div>`;
+}
+function insBestLever(days, yi) {
+    let best = null;
+    HABITS.forEach((h, xi) => {
+        if (xi === yi) return;
+        const p = insPair(days, xi, yi);
+        if (p.nx1 < 4 || p.nx0 < 4 || p.delta === null || p.delta < 12) return;
+        if (!best || p.delta > best.p.delta) best = { xi, p };
+    });
+    return best;
+}
+function insLinks(days) {
+    const todayIso = isoDate(new Date()), usable = days.filter(d => d.touched && d.iso !== todayIso).length;
+    const opts = sel => HABITS.map((h, i) => `<option value="${h.id}" ${h.id === sel ? 'selected' : ''}>${esc(h.name)}</option>`).join('');
+    const presets = [['sleep', 'study', 'Sleep → Study'], ['gym', 'media_scroll', 'Gym → Scrolling'], ['sleep', 'gym', 'Sleep → Gym'], ['no_phone_morning', 'study', 'Morning phone → Study'], ['water', 'study', 'Water → Study']]
+        .map(p => `<button class="ins-chip ${insDriver === p[0] && insOutcome === p[1] ? 'active' : ''}" onclick="insSetPair('${p[0]}','${p[1]}')">${p[2]}</button>`).join('');
+    if (usable < 14) return `<div class="gym-hud-empty">Correlations need at least 14 days with logged habits. You have ${usable}. Keep logging — this unlocks soon.</div>`;
+    const xi = habitIdx(insDriver), yi = habitIdx(insOutcome);
+    let ex = '';
+    if (xi === yi) ex = `<div class="gym-hud-empty">Pick two different habits.</div>`;
+    else {
+        const p = insPair(days, xi, yi), st = insStrength(p.phi);
+        if (p.nx1 < 3 || p.nx0 < 3) ex = `<div class="gym-hud-empty">Not enough variety yet: you need at least 3 days with <b>${esc(insShort(HABITS[xi].name))}</b> done and 3 days without it (you have ${p.nx1} and ${p.nx0}).</div>`;
+        else ex = `<div class="ins-twin">
+            <div class="row"><span class="lb">${esc(insShort(HABITS[xi].name))} ✓</span><span class="tr"><i style="width:${Math.round(p.py1 * 100)}%"></i></span><span class="pc">${Math.round(p.py1 * 100)}% · ${p.nx1} days</span></div>
+            <div class="row no"><span class="lb">${esc(insShort(HABITS[xi].name))} ✗</span><span class="tr"><i style="width:${Math.round(p.py0 * 100)}%"></i></span><span class="pc">${Math.round(p.py0 * 100)}% · ${p.nx0} days</span></div></div>
+            <div class="gym-chips"><span class="${p.delta >= 0 ? 'up' : 'down'}">EFFECT ON ${esc(insShort(HABITS[yi].name)).toUpperCase()} <b>${insDelta(p.delta)}</b></span><span>LINK <b>${st[0]}</b> (φ ${p.phi.toFixed(2)})</span>${p.n < 21 ? '<span>LOW DATA — treat as a hint</span>' : ''}</div>`;
+    }
+    const pairs = [];
+    HABITS.forEach((a, i) => HABITS.forEach((b, j) => {
+        if (j <= i) return;
+        const p = insPair(days, i, j);
+        if (p.nx1 < 4 || p.nx0 < 4 || p.delta === null || Math.abs(p.phi) < .15) return;
+        pairs.push({ i, j, p });
+    }));
+    pairs.sort((a, b) => Math.abs(b.p.phi) - Math.abs(a.p.phi));
+    const cards = pairs.slice(0, 6).map(q => {
+        const st = insStrength(q.p.phi);
+        return `<div class="ins-card"><div class="k">${esc(insShort(HABITS[q.i].name))} ↔ ${esc(insShort(HABITS[q.j].name))}<span class="ins-tag ${st[1]}">${st[0]}</span></div>
+            <div class="v">${insDelta(q.p.delta)}</div>
+            <div class="s">When <b>${esc(insShort(HABITS[q.i].name))}</b> is done, <b>${esc(insShort(HABITS[q.j].name))}</b> happens ${Math.round(q.p.py1 * 100)}% of the time vs ${Math.round(q.p.py0 * 100)}% when it isn't (${q.p.n} days).</div></div>`;
+    }).join('');
+    return `<div class="hud-panel-title">LINK EXPLORER</div>
+        <div class="ins-row">${presets}</div>
+        <div class="ins-select-row"><select class="gym-hud-select" id="ins-dr" onchange="insSetPair(this.value, $('ins-oc').value)">${opts(insDriver)}</select><span style="color:var(--primary)">→</span><select class="gym-hud-select" id="ins-oc" onchange="insSetPair($('ins-dr').value, this.value)">${opts(insOutcome)}</select></div>
+        ${ex}
+        <div class="hud-panel-title" style="margin-top:16px;">STRONGEST LINKS FOUND IN YOUR DATA</div>
+        ${cards ? `<div class="ins-weak">${cards}</div>` : '<div class="gym-hud-empty">No clear links yet — your habits move mostly independently so far.</div>'}
+        <div class="gym-foot">"Done" for Scrolling Control means a clean Level 0 day. Only days where you logged something are used, today excluded. A link shows habits move together — it doesn't prove one causes the other.</div>`;
+}
+function renderInsights() {
+    const body = $('ins-body'); if (!body) return;
+    gymHudRefreshColors();
+    document.querySelectorAll('.ins-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === insTab));
+    const days = insBuild();
+    const wk = insWeekSeries(days, 1)[0];
+    $('ins-hud-pwr').innerText = wk && wk.pct !== null ? wk.pct + '%' : '--';
+    body.innerHTML = insTab === 'trends' ? insTrends(days) : insTab === 'heat' ? insHeat(days) : insTab === 'weak' ? insWeak(days) : insTab === 'links' ? insLinks(days) : insOverview(days);
+}
+
+/* ---------- start-up ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+    timerRestore();
+    hudClockStart();
+    try {
+        if (sessionStorage.getItem('pin_ok') === '1') {
+            $('login-screen').style.display = 'none';
+            const t = sessionStorage.getItem('last_tab');
+            switchTab(t && $('tab-' + t) ? t : 'home');
+        }
+    } catch (e) { }
+});
+</script>
+
+<script id="m7-script">
+/* =========================================================
+   MARK VII MODULE (additive). Loads after everything else.
+   Animates only transform/opacity; capped; paused when hidden; Lite switch.
+========================================================= */
+function m7() { return document.documentElement.getAttribute('data-theme') === 'mark7'; }
+const fxRM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+function fxLite() { try { return localStorage.getItem('fx_lite') === '1'; } catch (e) { return false; } }
+function fxCalm() { return fxLite() || !!(fxRM && fxRM.matches); }
+function fxOn() { return !fxCalm() && !document.hidden; }
+function applyFx() {
+    document.documentElement.classList.toggle('fx-lite', fxCalm());
+    const b = $('fx-toggle');
+    if (b) b.textContent = fxLite() ? '⚡ Lite: on' : (fxRM && fxRM.matches ? '⚡ Reduced (OS)' : '⚡ Lite: off');
+    try { fxCanvasSync(); } catch (e) { }
+}
+function toggleFx() {
+    try { localStorage.setItem('fx_lite', fxLite() ? '0' : '1'); } catch (e) { }
+    applyFx();
+    toast(fxLite() ? 'Lite mode on: decorative animation and blur are off.' : 'Full effects on.', 'info');
+}
+if (fxRM && fxRM.addEventListener) fxRM.addEventListener('change', applyFx);
+applyFx();
+
+function haptic(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 10); } catch (e) { } }
+
+/* ---------- pause everything while the tab is hidden ---------- */
+document.addEventListener('visibilitychange', () => {
+    const h = document.hidden;
+    document.documentElement.classList.toggle('fx-paused', h);
+    if (h) { clearInterval(hudClockT); hudClockT = null; } else hudClockStart();
+});
+
+/* ---------- tab wipe ---------- */
+function m7Wipe() {
+    if (!fxOn()) return;
+    let w = $('m7-wipe');
+    if (!w) { const nav = document.querySelector('nav'); if (!nav) return; w = document.createElement('i'); w.id = 'm7-wipe'; nav.appendChild(w); }
+    w.classList.remove('run'); void w.offsetWidth; w.classList.add('run');
+}
+const _m7switch = window.switchTab;
+window.switchTab = function () { const r = _m7switch.apply(this, arguments); try { m7Wipe(); } catch (e) { } return r; };
+
+/* ---------- reactor ring ---------- */
+let rxPrevDone = null, rxPrevDay = '';
+function reactorBuild() {
+    const g = $('rx-seg'); if (!g || g.firstChild) return;
+    let h = '';
+    for (let i = 0; i < 24; i++) h += `<line class="rx-seg" x1="120" y1="22" x2="120" y2="33" transform="rotate(${i * 15} 120 120)" style="animation-delay:${i * 22}ms"/>`;
+    g.innerHTML = h;
+}
+function reactorDraw() {
+    const el = $('reactor'); if (!el || !fxOn()) return;
+    el.classList.remove('draw'); void el.offsetWidth; el.classList.add('draw');
+    setTimeout(() => el.classList.remove('draw'), 1300);
+}
+function reactorPulse() {
+    haptic([18, 40, 18]);
+    const p = $('rx-pulse'); if (!p || !fxOn()) return;
+    p.classList.remove('go'); void p.getBoundingClientRect(); p.classList.add('go');
+    p.addEventListener('animationend', () => p.classList.remove('go'), { once: true });
+}
+function renderReactor(draw) {
+    const el = $('reactor'); if (!el) return;
+    reactorBuild();
+    const dt = startOfDay(new Date()), s = dayHabitScore(dt), poss = s.possible, done = Math.max(0, s.done);
+    const pct = poss ? Math.min(1, done / poss) : 0, complete = poss > 0 && done >= poss, lit = Math.round(pct * 24);
+    el.querySelectorAll('.rx-seg').forEach((n, i) => { n.classList.toggle('on', i < lit); n.classList.toggle('lead', i === lit - 1 && !complete); });
+    el.classList.toggle('done', complete);
+    $('rx-glow').style.opacity = (.22 + .78 * pct).toFixed(2);
+    const day = isoDate(dt);
+    if (rxPrevDay === day && rxPrevDone === false && complete) reactorPulse();   // pulse once, when the day flips to complete
+    rxPrevDay = day; rxPrevDone = complete;
+    if (draw) reactorDraw();
+}
+const _m7hud = window.renderHomeHud;
+window.renderHomeHud = function () { _m7hud.apply(this, arguments); try { renderReactor(!window.__homeSoft); } catch (e) { console.warn('reactor', e); } };
+
+/* ---------- tick feedback: cyan scan line + haptic ---------- */
+function scanTableRow(tr) {
+    if (!tr || !fxOn()) return;
+    const wrap = tr.closest('.table-wrapper'); if (!wrap) return;
+    wrap.querySelectorAll('.m7-scan').forEach(n => n.remove());       // never more than one running
+    const wr = wrap.getBoundingClientRect(), rr = tr.getBoundingClientRect(), s = document.createElement('i');
+    s.className = 'm7-scan';
+    s.style.cssText = `top:${rr.top - wr.top - wrap.clientTop + wrap.scrollTop}px;left:${wrap.scrollLeft}px;height:${rr.height}px;--w:${wrap.clientWidth}px`;
+    wrap.appendChild(s);
+    s.addEventListener('animationend', () => s.remove());
+    setTimeout(() => s.remove(), 900);
+}
+function scanRowIn(btn) {
+    if (!btn || !fxOn()) return;
+    btn.querySelectorAll('.m7-scan-in').forEach(n => n.remove());
+    const s = document.createElement('i'); s.className = 'm7-scan-in'; btn.appendChild(s);
+    s.addEventListener('animationend', () => s.remove());
+    setTimeout(() => s.remove(), 900);
+}
+['onHabitCheck', 'cycleH', 'gymCycleCell'].forEach(n => {
+    const f = window[n]; if (typeof f !== 'function') return;
+    window[n] = function () {
+        const r = f.apply(this, arguments);
+        try { haptic(10); const p = document.querySelector('#table-body .pop'); if (p) scanTableRow(p.closest('tr')); } catch (e) { }
+        return r;
+    };
+});
+const _m7today = window.todayAct;
+window.todayAct = function (hid) {
+    const r = _m7today.apply(this, arguments);
+    try { haptic(10); scanRowIn(document.querySelector('.th-row[data-hid="' + hid + '"]')); } catch (e) { }
+    return r;
+};
+['ttMark', 'gymMark'].forEach(n => {
+    const f = window[n]; if (typeof f !== 'function') return;
+    window[n] = function () { const r = f.apply(this, arguments); try { haptic(10); } catch (e) { } return r; };
+});
+
+/* ---------- boot sequence (once per session, right after the PIN) ---------- */
+function bootType(el, text) {
+    return new Promise(res => { let i = 0; const t = setInterval(() => { el.textContent = text.slice(0, ++i); if (i >= text.length) { clearInterval(t); res(); } }, 11); });
+}
+function bootStartLegacy() {
+    try { if (sessionStorage.getItem('boot_done') === '1') return; sessionStorage.setItem('boot_done', '1'); } catch (e) { }
+    const BT = m7() ? 'MARK VII ONLINE' : 'STAY HARD ENGAGED';
+    const calm = fxCalm(), el = document.createElement('div');
+    el.id = 'boot';
+    el.innerHTML = calm
+        ? '<div class="boot-log calm"><div>' + BT + '</div></div>'
+        : '<div class="boot-hline"></div><div class="boot-ringwrap" id="boot-rw"><div class="boot-ring"></div></div><div class="boot-log" id="boot-log"></div>';
+    document.body.appendChild(el);
+    let ended = false;
+    const end = fast => {
+        if (ended) return; ended = true;
+        const rw = $('boot-rw'); if (rw && !fast) rw.classList.add('open');
+        el.style.transitionDuration = fast ? '.2s' : '.55s';
+        el.classList.add('out');
+        setTimeout(() => { el.remove(); reactorDraw(); }, fast ? 260 : 620);
+    };
+    el.addEventListener('pointerdown', () => end(true));       // tap anywhere skips
+    setTimeout(() => end(true), 4000);                          // safety net
+    if (calm) { setTimeout(() => end(true), 600); return; }
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const steps = [
+        [BT, async () => { await Promise.race([document.fonts ? document.fonts.ready : 0, sleep(450)]); }],
+        [m7() ? 'HABIT CORE' : 'NO EXCUSES', async () => { calcStreaks(); }],
+        ['TIMETABLE', async () => { const n = new Date(); ttMonthStats(n.getFullYear(), n.getMonth()); }],
+        ['SYNC LINK', async () => {
+            const t0 = Date.now();
+            while (syncCode && (syncState === 'connecting' || syncState === 'off') && Date.now() - t0 < 700 && !ended) await sleep(60);
+            return !syncCode ? 'LOCAL' : syncState === 'live' ? 'LIVE' : syncState === 'error' ? 'OFFLINE' : 'PENDING';
+        }]
+    ];
+    (async () => {
+        const log = $('boot-log'); await sleep(420);
+        for (const [name, work] of steps) {
+            if (ended) return;
+            const row = document.createElement('div'); log.appendChild(row);
+            await bootType(row, '› ' + name);
+            let note = ''; try { note = (await work()) || ''; } catch (e) { note = 'ERR'; }
+            if (ended) return;
+            row.insertAdjacentHTML('beforeend', ` <b>${note ? esc(note) + ' ' : ''}✓</b>`);
+            await sleep(70);
+        }
+        await sleep(120); end(false);
+    })();
+}
+
+function bootStart() { if (m7() && !fxCalm()) return ironBoot(); return bootStartLegacy(); }
+
+/* ---------- IRON MAN cinematic boot (Mark VII): black + blue, inside the helmet ---------- */
+function ironBoot() {
+    try { if (sessionStorage.getItem('boot_done') === '1') return; sessionStorage.setItem('boot_done', '1'); } catch (e) { }
+    const el = document.createElement('div');
+    el.id = 'boot'; el.className = 'ib';
+    const R = 76, C = 2 * Math.PI * R;
+    let ticks = '';
+    for (let i = 0; i < 72; i++) { const big = i % 6 === 0; ticks += '<line x1="110" y1="' + (big ? 4 : 8) + '" x2="110" y2="14" transform="rotate(' + i * 5 + ' 110 110)" stroke="' + (big ? '#e6f6ff' : 'rgba(79,195,247,.75)') + '" stroke-width="' + (big ? 2 : 1) + '"/>'; }
+    let tape = ''; const dirs = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' };
+    for (let r = 0; r < 2; r++) for (let d = 0; d < 360; d += 10) tape += '<span' + (dirs[d] ? ' class="mj">' + dirs[d] : '>' + String(d).padStart(3, '0')) + '</span>';
+    let hex = ''; for (let i = 0; i < 44; i++) hex += (Math.random() * 0xffffff | 0).toString(16).padStart(6, '0').toUpperCase() + '<br>';
+    const W = 'M40 70L160 70L180 94L220 94L240 70L360 70L352 250L302 400L252 442L148 442L98 400L48 250Z';
+    const frame =
+        '<svg viewBox="0 0 400 500" preserveAspectRatio="none"><defs>' +
+        '<pattern id="ibMesh" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r="1.1" fill="#16202e"/></pattern>' +
+        '<linearGradient id="ibIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b2d6e"/><stop offset=".55" stop-color="#061b42"/><stop offset="1" stop-color="#020a1c"/></linearGradient>' +
+        '<linearGradient id="ibRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a070b"/><stop offset=".6" stop-color="#a50f15"/><stop offset="1" stop-color="#e8231f"/></linearGradient>' +
+        '<radialGradient id="ibGl" cx=".5" cy=".42" r=".55"><stop offset="0" stop-color="rgba(40,150,255,.6)"/><stop offset="1" stop-color="rgba(0,0,0,0)"/></radialGradient></defs>' +
+        '<path d="' + W + '" fill="url(#ibIn)"/><path d="' + W + '" fill="url(#ibGl)"/>' +
+        '<g fill="none" stroke="#2f8bff" stroke-width="1" vector-effect="non-scaling-stroke" opacity=".55">' +
+        '<path d="M60 150H340M70 300H330M100 380H300M200 94V150M130 150V300M270 150V300" vector-effect="non-scaling-stroke"/>' +
+        '<rect x="176" y="100" width="48" height="30" vector-effect="non-scaling-stroke"/><circle cx="200" cy="115" r="8" vector-effect="non-scaling-stroke"/>' +
+        '<circle cx="112" cy="240" r="14" vector-effect="non-scaling-stroke"/><circle cx="288" cy="240" r="14" vector-effect="non-scaling-stroke"/>' +
+        '<rect x="150" y="330" width="100" height="30" vector-effect="non-scaling-stroke"/></g>' +
+        '<rect x="166" y="94" width="68" height="44" fill="#0a1226" stroke="#2f8bff" stroke-width="1" vector-effect="non-scaling-stroke"/><circle cx="200" cy="116" r="12" fill="#02050c" stroke="#4fc3f7" stroke-width="1.5" vector-effect="non-scaling-stroke"/><circle cx="200" cy="116" r="4" fill="#1e90ff" class="ib-led"/>' +
+        '<g class="ib-slabs" fill="#bfe6ff"><polygon class="ib-slab" points="60,198 182,205 178,227 66,225"/><polygon class="ib-slab" points="340,198 218,205 222,227 334,225"/></g>' +
+        '<g fill="#6fd0ff"><circle class="ib-led" cx="150" cy="82" r="2"/><circle class="ib-led" cx="250" cy="82" r="2" style="animation-delay:.4s"/><circle class="ib-led" cx="200" cy="345" r="2.4" style="animation-delay:.8s"/></g>' +
+        '<path fill-rule="evenodd" fill="#04070d" d="M-300 -300H700V800H-300Z' + W + '"/>' +
+        '<path fill-rule="evenodd" fill="url(#ibMesh)" opacity=".8" d="M-300 -300H700V800H-300Z' + W + '"/>' +
+        '<path d="M98 400L148 442H252L302 400L338 478H62Z" fill="url(#ibRed)"/>' +
+        '<path d="' + W + '" fill="none" stroke="url(#ibRed)" stroke-width="12" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+        '<path class="ib-rim" d="' + W + '" fill="none" stroke="#4fc3f7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>';
+    const ret = n => '<div class="ib-ret sl-p" id="ib-ret' + n + '" style="--d:' + (n * .25) + 's"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#4fc3f7" stroke-width="1"/><g class="rr"><circle cx="50" cy="50" r="38" fill="none" stroke="#e6f6ff" stroke-width="2" stroke-dasharray="14 6 3 6"/></g><path d="M50 2v12M50 86v12M2 50h12M86 50h12" stroke="#4fc3f7" stroke-width="1.5"/><circle cx="50" cy="50" r="2" fill="#fff"/></svg></div>';
+    // helmet eye-light assembly (drawn from the real helmet photo): faceted glass slab + hot core, lit housing edge, camera lens + status LEDs
+    const eyeSvg = r => {
+        const P = '8,2 296,12 296,47 2,38', k = r ? 'R' : 'L';
+        return '<svg viewBox="0 0 300 56"><defs>' +
+          '<linearGradient id="egG' + k + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".3" stop-color="#e6f6ff"/><stop offset=".68" stop-color="#8fd0ff"/><stop offset="1" stop-color="#2f8fff"/></linearGradient>' +
+          '<linearGradient id="egH' + k + '" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".7"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+          '<clipPath id="egC' + k + '"><polygon points="' + P + '"/></clipPath>' +
+          '<pattern id="egP' + k + '" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="skewX(-16)"><path d="M0 0V11" stroke="rgba(20,100,225,.55)" stroke-width="1"/><path d="M0 5.5H11" stroke="rgba(20,100,225,.2)" stroke-width="1"/></pattern></defs>' +
+          '<g' + (r ? ' transform="translate(300 0) scale(-1 1)"' : '') + '>' +
+            '<polygon points="' + P + '" fill="#050b16" stroke="rgba(120,180,255,.55)" stroke-width="6" stroke-linejoin="round"/>' +
+            '<polygon points="' + P + '" fill="url(#egG' + k + ')"/>' +
+            '<g clip-path="url(#egC' + k + ')"><rect width="300" height="56" fill="url(#egP' + k + ')"/>' +
+              '<rect y="2" width="300" height="15" fill="url(#egH' + k + ')"/>' +
+              '<path d="M26 56L84 0M118 56L176 0M210 56L268 0" stroke="rgba(255,255,255,.38)" stroke-width="7"/>' +
+              '<rect y="36" width="300" height="20" fill="rgba(30,110,255,.5)"/></g>' +
+            '<polygon points="' + P + '" fill="none" stroke="#fff" stroke-width="1.4" opacity=".95"/>' +
+            '<circle cx="15" cy="21" r="2.3" fill="#cfeaff"/><circle cx="287" cy="30" r="2.3" fill="#cfeaff"/>' +
+            '<path d="M40 52v7M70 53v7M100 54v7" stroke="#4fc3f7" stroke-width="2" opacity=".7"/>' +
+          '</g></svg>';
+    };
+    const camSvg = '<svg viewBox="0 0 190 56"><rect x="62" y="1" width="66" height="42" fill="none" stroke="rgba(79,195,247,.35)" stroke-width="1"/>' +
+        '<circle cx="95" cy="21" r="12.5" fill="#02060f" stroke="#4fc3f7" stroke-width="2"/><circle cx="95" cy="21" r="6.5" fill="none" stroke="#1e90ff" stroke-width="1.5"/><circle class="ib-led" cx="95" cy="21" r="2.6" fill="#fff"/>' +
+        '<circle class="ib-led" cx="70" cy="9" r="1.7" fill="#6fd0ff"/><circle class="ib-led" cx="120" cy="9" r="1.7" fill="#6fd0ff" style="animation-delay:.5s"/><circle class="ib-led" cx="70" cy="34" r="1.7" fill="#6fd0ff" style="animation-delay:.9s"/><circle class="ib-led" cx="120" cy="34" r="1.7" fill="#6fd0ff" style="animation-delay:.3s"/>' +
+        '<path d="M80 50h30" stroke="#4fc3f7" stroke-width="3" opacity=".85"/></svg>';
+    el.innerHTML =
+        '<div class="ib-stage">' +
+          '<div class="ib-grid"></div><div class="ib-streaks"></div>' +
+          '<div class="ib-hud">' +
+            '<i class="ib-cor tl sl-p"></i><i class="ib-cor tr sl-p"></i><i class="ib-cor bl sl-p"></i><i class="ib-cor br sl-p"></i>' +
+            '<div class="ib-tape sl-t" style="--d:.05s"><div>' + tape + '</div></div>' +
+            '<div class="ib-hdr sl-t" style="--d:.2s" id="ib-hdr"></div>' +
+            '<div class="ib-dc sl-l" id="ib-dcl" style="--d:.3s"><div>' + hex + hex + '</div></div><div class="ib-dc sl-r" id="ib-dcr" style="--d:.3s"><div>' + hex + hex + '</div></div>' +
+            '<div class="ib-p sl-l" id="p-diag" style="--d:.15s"><h4>System Diagnostics</h4><div class="ib-log" id="ib-log"></div></div>' +
+            '<div class="ib-p sl-l" id="p-wt" style="--d:.3s"><h4>Mk VII Weight Analysis</h4><div class="ib-wt"><p>Max. weight limit <span class="am">900 lbs</span></p><p>Projected load <span class="am" id="ib-wl">0 lbs</span></p><div class="ib-wbar"><i id="ib-wb"></i></div><p>Height-to-flight ratio <span id="ib-wr">0.00</span></p></div></div>' +
+            '<div class="ib-p sl-r" id="p-tgt" style="--d:.28s"><h4>Target Lock</h4><div class="ib-gauge"><svg viewBox="0 0 100 100"><g class="g1"><circle cx="50" cy="50" r="44" fill="none" stroke="#ffb347" stroke-width="1.5" stroke-dasharray="20 6 3 6"/></g><g class="g2"><circle cx="50" cy="50" r="32" fill="none" stroke="#4fc3f7" stroke-width="3" stroke-dasharray="1.5 4"/></g><path d="M50 8v16M50 76v16M8 50h16M76 50h16" stroke="#fff" stroke-width="1.5"/><circle class="ib-led" cx="50" cy="50" r="3" fill="#ffb347"/></svg><div>Lock <span id="ib-tl">0%</span><br>Range <span id="ib-tr">0000</span><br>Mode <span class="am">AUTO</span></div></div></div>' +
+            '<div class="ib-tag sl-l" id="ib-tag1" style="--d:.5s"><b id="ib-t1">000</b><span>Altitude</span></div><div class="ib-tag sl-r" id="ib-tag2" style="--d:.55s">Super Accelerator &middot; <b>Nominal</b></div>' +
+            '<div class="ib-p sl-l" id="p-gauge" style="--d:.4s"><h4>Thrust Vector</h4><div class="ib-gauge"><svg viewBox="0 0 100 100"><g class="g1"><circle cx="50" cy="50" r="46" fill="none" stroke="#4fc3f7" stroke-width="2" stroke-dasharray="30 8 6 8"/></g><g class="g2"><circle cx="50" cy="50" r="36" fill="none" stroke="#1e90ff" stroke-width="4" stroke-dasharray="2 5"/></g><circle cx="50" cy="50" r="26" fill="none" stroke="rgba(79,195,247,.4)"/><text id="ib-g" x="50" y="56" text-anchor="middle" fill="#fff" font-size="17" font-family="monospace">0</text></svg><div>Stability <span id="ib-g2">0.0</span><br>Gyro <span>LOCKED</span><br>Pitch <span id="ib-g3">0.0°</span></div></div></div>' +
+            '<div class="ib-p sl-r" id="p-radar" style="--d:.15s"><h4>Proximity Scan</h4><div class="ib-radar"><i style="left:30%;top:28%"></i><i style="left:68%;top:40%;animation-delay:.5s"></i><i style="left:46%;top:70%;animation-delay:1s"></i></div><div class="ib-radar-n">Contacts <span id="ib-rc">0</span></div></div>' +
+            '<div class="ib-p sl-r" id="p-ana" style="--d:.4s"><h4>Mk VII Analysis</h4><div class="ib-tel" id="ib-tel"></div><div class="ib-abar"><i id="ib-abar"></i></div><div class="ib-ecg"><svg viewBox="0 0 500 30"><polyline fill="none" stroke="#4fc3f7" stroke-width="1.5" points="0,15 30,15 40,15 46,4 52,26 58,15 110,15 140,15 150,15 156,4 162,26 168,15 250,15 280,15 290,15 296,4 302,26 308,15 360,15 390,15 400,15 406,4 412,26 418,15 500,15"/></svg></div></div>' +
+            ret(1) + ret(2) +
+            '<div class="ib-center sl-p" style="--d:.1s">' +
+              '<svg viewBox="0 0 220 220"><g class="ib-r1"><circle cx="110" cy="110" r="104" fill="none" stroke="#4fc3f7" stroke-width="1.5" stroke-dasharray="44 8 4 8"/></g>' +
+              '<g class="ib-r2"><circle cx="110" cy="110" r="94" fill="none" stroke="#1e90ff" stroke-width="5" stroke-dasharray="1.5 6" opacity=".8"/></g>' +
+              '<g>' + ticks + '</g>' +
+              '<g class="ib-r3"><circle cx="110" cy="110" r="58" fill="none" stroke="#4fc3f7" stroke-width="1" stroke-dasharray="3 5" opacity=".85"/><path d="M110 44v10M110 166v10M44 110h10M166 110h10" stroke="#e6f6ff" stroke-width="2"/></g>' +
+              '<circle cx="110" cy="110" r="' + R + '" fill="none" stroke="rgba(30,144,255,.2)" stroke-width="6"/>' +
+              '<circle class="ib-arc" id="ib-arc" cx="110" cy="110" r="' + R + '" fill="none" stroke="#4fc3f7" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + C.toFixed(1) + '"/></svg>' +
+              '<div class="ib-pct"><span id="ib-num">0</span><small>%</small></div>' +
+            '</div>' +
+            '<div class="ib-bar sl-b" style="--d:.3s"><i id="ib-fill"></i></div>' +
+            '<div class="ib-label sl-b" style="--d:.35s" id="ib-label">System engaging</div>' +
+            '<div class="ib-tel2" id="ib-tel2"></div>' +
+          '</div>' +
+          '<div class="ib-beam"></div>' +
+          
+          '<div class="ib-eyepos"><div class="ib-eyes"><div class="ib-eyew"><div class="ib-eye">' + eyeSvg(0) + '</div></div><div class="ib-eyec">' + camSvg + '</div><div class="ib-eyew"><div class="ib-eye">' + eyeSvg(1) + '</div></div></div></div>' +
+          '<div class="ib-fkov"></div>' +
+        '</div>' +
+        '<div class="ib-visor"></div><div class="ib-flame"></div><div class="ib-impact"></div><div class="ib-flash"></div>';
+    document.body.appendChild(el);
+
+    ib2Build(el);
+    const T = []; let ended = false, raf = 0;
+    const at = (ms, fn) => T.push(setTimeout(() => { if (!ended) fn(); }, ms));
+    const finish = fast => {
+        if (ended) return; ended = true;
+        T.forEach(clearTimeout); cancelAnimationFrame(raf);
+        if (fast) { el.classList.add('out'); setTimeout(() => { el.remove(); reactorDraw(); }, 230); }
+        else { el.remove(); reactorDraw(); }
+    };
+    el.addEventListener('pointerdown', () => finish(true));      // tap skips
+    at(11500, () => finish(true));                                // safety net
+
+    // black -> frame lands -> eyes land on the frame -> eyes power on -> pull into visor -> HUD slides in -> jets off
+    requestAnimationFrame(() => el.classList.add('f1'));
+    at(500, () => el.classList.add('e1'));          // black beat, then the eyes fall in from above the screen
+    at(1060, () => el.classList.add('eland'));
+    at(1100, () => el.classList.add('e2'));
+    at(1700, () => { el.classList.remove('e2'); el.classList.add('fk'); try { haptic([12, 40, 12, 60, 18]); } catch (e) { } });   // flicker after the eyes
+    at(2650, () => { el.classList.remove('fk'); el.classList.add('p'); });
+    at(3400, () => { el.classList.add('h'); runHud(); });
+
+    function runHud() {
+        const num = $('ib-num'), arc = $('ib-arc'), fill = $('ib-fill'), log = $('ib-log'), tel = $('ib-tel'), tel2 = $('ib-tel2'), lab = $('ib-label'), hdr = $('ib-hdr');
+        const abar = $('ib-abar'), g = $('ib-g'), g2 = $('ib-g2'), g3 = $('ib-g3'), rc = $('ib-rc');
+        (async () => {
+            for (const t of ['Neural link .... established', 'Biometrics ...... verified', 'Welcome back, Mr. Stark']) {
+                if (ended) return; const d = document.createElement('div'); hdr.appendChild(d); await bootType(d, t); await new Promise(r => setTimeout(r, 120));
+            }
+        })();
+        const steps = [
+            [3, 'ARC REACTOR', () => 'ONLINE'],
+            [14, 'REPULSORS', () => 'ARMED'],
+            [27, 'FLIGHT STABILIZERS', () => 'LOCKED'],
+            [40, 'TARGETING', () => 'CALIBRATED'],
+            [53, 'HABIT CORE', () => { calcStreaks(); return 'OK'; }],
+            [66, 'TIMETABLE', () => { const n = new Date(); ttMonthStats(n.getFullYear(), n.getMonth()); return 'OK'; }],
+            [78, 'SYNC LINK', () => !syncCode ? 'LOCAL' : syncState === 'live' ? 'LIVE' : syncState === 'error' ? 'OFFLINE' : 'PENDING'],
+            [88, 'J.A.R.V.I.S.', () => 'READY']
+        ];
+        const rows = []; let si = 0; const DUR = 2600, t0 = performance.now();
+        const rnd = (a, b) => Math.floor(a + Math.random() * (b - a));
+        const tick = now => {
+            if (ended) return;
+            const k = Math.min(1, (now - t0) / DUR);
+            const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+            const pct = Math.min(100, Math.round((k * .55 + e * .45) * 100)); window.ib2P = pct;
+            num.textContent = pct; fill.style.width = pct + '%'; abar.style.width = pct + '%';
+            arc.style.strokeDashoffset = (C * (1 - pct / 100)).toFixed(1);
+            while (si < steps.length && pct >= steps[si][0]) {
+                const [th, name, work] = steps[si++]; let note = ''; try { note = work(); } catch (er) { note = 'ERR'; }
+                const row = document.createElement('div');
+                row.innerHTML = '<span>› ' + esc(name) + '</span><b>···</b><em><i></i></em>';
+                log.appendChild(row); rows.push({ th, note, b: row.querySelector('b'), i: row.querySelector('i'), done: false });
+            }
+            for (const r of rows) {
+                const f = Math.max(0, Math.min(1, (pct - r.th) / 10)); r.i.style.width = (f * 100) + '%';
+                if (f >= 1 && !r.done) { r.done = true; r.b.textContent = r.note + ' ✓'; }
+            }
+            const t = 'READINESS <span>' + pct + '%</span><br>POWER <span>' + Math.min(100, pct + rnd(0, 3)) + '%</span><br>ALT <span>' + String(rnd(0, 9999)).padStart(4, '0') + '</span><br>VEL <span>' + rnd(100, 999) + '</span><br>TEMP <span>' + rnd(20, 40) + '°C</span>';
+            const _s = (id, v) => { const n = $(id); if (n) n.textContent = v; };
+            _s('ib-wl', Math.round(pct * 23.4) + ' lbs'); _s('ib-wr', (pct / 100 * 2.6).toFixed(2)); _s('ib-tl', Math.min(100, pct + rnd(0, 3)) + '%'); _s('ib-tr', String(rnd(0, 9999)).padStart(4, '0')); _s('ib-t1', rnd(100, 999));
+            const wb = $('ib-wb'); if (wb) wb.style.width = pct + '%';
+            tel.innerHTML = t; tel2.innerHTML = t.replace(/READINESS <span>[^<]*<\/span><br>/, '');
+            g.textContent = rnd(100, 999); g2.textContent = (90 + Math.random() * 9.9).toFixed(1); g3.textContent = (Math.random() * 4 - 2).toFixed(1) + '°'; rc.textContent = pct > 30 ? 3 : pct > 12 ? 1 : 0;
+            if (k < 1) { raf = requestAnimationFrame(tick); return; }
+            rows.forEach(r => { r.i.style.width = '100%'; r.b.textContent = r.note + ' ✓'; });
+            num.textContent = '100'; fill.style.width = '100%'; abar.style.width = '100%'; arc.style.strokeDashoffset = '0';
+            lab.textContent = 'All systems online'; lab.classList.add('done');
+            at(600, () => { el.classList.add('lp'); at(900, () => finish(false)); });   // jets off upward
+        };
+        raf = requestAnimationFrame(tick);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pin = $('pin-input');
+    if (pin) pin.addEventListener('input', e => { if (e.target.value === CORRECT_PIN) bootStart(); });
+    applyFx();
+});
+
+/* ---------- reactor tick ring (built once) ---------- */
+(function () {
+    const g = document.getElementById('rx-ticks'); if (!g) return;
+    let h = '';
+    for (let i = 0; i < 60; i++) { const big = i % 5 === 0; h += `<line class="rx-tick${big ? ' big' : ''}" x1="120" y1="${big ? 3 : 5}" x2="120" y2="9" transform="rotate(${i * 6} 120 120)"/>`; }
+    g.innerHTML = h;
+})();
+
+/* ---------- ambient particle layer: motes (Mark VII) / rising embers (Stay Hard) ---------- */
+var fxCv = null, fxCx = null, fxPs = [], fxRaf = 0, fxLast = 0, fxW = 0, fxH = 0;
+function fxStay() { return document.documentElement.getAttribute('data-theme') === 'goggins'; }
+function fxSpawn(p, init) {
+    const ember = fxStay();
+    p.x = Math.random() * fxW;
+    p.y = ember ? (init ? Math.random() * fxH : fxH + 10) : Math.random() * fxH;
+    p.r = ember ? .8 + Math.random() * 2 : .7 + Math.random() * 1.6;
+    p.vx = ember ? (Math.random() - .5) * 14 : (Math.random() - .5) * 12;
+    p.vy = ember ? -(14 + Math.random() * 34) : (Math.random() - .5) * 12;
+    p.ph = Math.random() * 6.28; p.a = .25 + Math.random() * .55;
+    p.c = ember ? (Math.random() < .5 ? '255,107,69' : '227,43,37') : (Math.random() < .5 ? '242,182,50' : '55,227,247');
+}
+function fxSeed() {
+    const n = (fxW < 700 ? 18 : 40);
+    fxPs = []; for (let i = 0; i < n; i++) { const p = {}; fxSpawn(p, true); fxPs.push(p); }
+}
+function fxResize() {
+    if (!fxCv) return;
+    fxW = fxCv.width = window.innerWidth; fxH = fxCv.height = window.innerHeight; fxSeed();
+}
+function fxFrame(t) {
+    fxRaf = requestAnimationFrame(fxFrame);
+    if (t - fxLast < 33) return;                       // ~30fps cap
+    const dt = Math.min(.1, (t - fxLast) / 1000); fxLast = t;
+    const ember = fxStay(), c = fxCx;
+    c.clearRect(0, 0, fxW, fxH);
+    for (const p of fxPs) {
+        p.ph += dt * (ember ? 3 : 1.2);
+        p.x += (p.vx + (ember ? Math.sin(p.ph) * 14 : 0)) * dt; p.y += p.vy * dt;
+        if (p.y < -12 || p.x < -12 || p.x > fxW + 12 || p.y > fxH + 12) { if (ember) fxSpawn(p, false); else { p.x = (p.x + fxW) % fxW; p.y = (p.y + fxH) % fxH; } }
+        const al = ember ? p.a * (.55 + .45 * Math.sin(p.ph * 2)) * Math.min(1, p.y / (fxH * .5)) : p.a * (.6 + .4 * Math.sin(p.ph));
+        c.fillStyle = `rgba(${p.c},${Math.max(0, al).toFixed(3)})`;
+        c.beginPath(); c.arc(p.x, p.y, p.r, 0, 6.2832); c.fill();
+    }
+    if (!ember) {                                       // faint links between close motes
+        c.lineWidth = 1;
+        for (let i = 0; i < fxPs.length; i++) for (let j = i + 1; j < fxPs.length; j++) {
+            const a = fxPs[i], b = fxPs[j], dx = a.x - b.x, dy = a.y - b.y, d = dx * dx + dy * dy;
+            if (d < 9600) { c.strokeStyle = `rgba(55,227,247,${(.13 * (1 - d / 9600)).toFixed(3)})`; c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y); c.stroke(); }
+        }
+    }
+}
+function fxCanvasSync() {
+    const want = fxOn();
+    if (want && !fxCv) {
+        fxCv = document.createElement('canvas'); fxCv.id = 'fx-canvas'; fxCv.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(fxCv); fxCx = fxCv.getContext('2d'); fxResize();
+        window.addEventListener('resize', fxResize, { passive: true });
+    }
+    if (want && !fxRaf && fxCv) { fxLast = 0; fxRaf = requestAnimationFrame(fxFrame); }
+    if (!want && fxRaf) { cancelAnimationFrame(fxRaf); fxRaf = 0; if (fxCx) fxCx.clearRect(0, 0, fxW, fxH); }
+}
+document.addEventListener('visibilitychange', () => { try { fxCanvasSync(); } catch (e) { } });
+window.fxThemeChanged = function () { try { fxSeed(); fxCanvasSync(); reactorDraw(); } catch (e) { } };
+document.addEventListener('DOMContentLoaded', () => { try { fxCanvasSync(); } catch (e) { } });
+
+/* ---------- cursor spotlight on panels (desktop only) ---------- */
+(function () {
+    if (!window.matchMedia || !matchMedia('(hover: hover)').matches) return;
+    const SEL = '.dash-card,.home-stat-box,.wd-card,.bunk-bank-card,.punish-card,.aar-card,.timer-card,.detailed-breakdown-card,.month-selector,.table-wrapper';
+    let cur = null, ev = null, queued = false;
+    function clear() { if (cur) { cur.style.removeProperty('--mx'); cur.style.removeProperty('--my'); cur = null; } }
+    function run() {
+        queued = false; if (!ev) return;
+        if (!fxOn()) { clear(); return; }
+        const el = ev.target && ev.target.closest ? ev.target.closest(SEL) : null;
+        if (el !== cur) clear();
+        if (el) { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (ev.clientX - r.left) + 'px'); el.style.setProperty('--my', (ev.clientY - r.top) + 'px'); cur = el; }
+    }
+    document.addEventListener('pointermove', e => { ev = e; if (!queued) { queued = true; requestAnimationFrame(run); } }, { passive: true });
+    document.addEventListener('pointerleave', clear);
+})();
+
+/* ---------- animated theme switch ---------- */
+(function () {
+    const T = {
+        mark7:   { bg: '#050B18', p: '#F2B632', p2: '#37E3F7', label: 'MARK VII' },
+        goggins: { bg: '#0A0A0A', p: '#E32B25', p2: '#FF6B45', label: 'STAY HARD' }
+    };
+    let busy = false;
+    window.themeTransition = function (next) {
+        if (busy) return;
+        const cfg = T[next]; if (!cfg) return applyTheme(next);
+        if (fxCalm() || !document.body.animate) { applyTheme(next); return; }
+        busy = true;
+        const btn = $('theme-toggle'), r = btn ? btn.getBoundingClientRect() : null;
+        const cx = r ? r.left + r.width / 2 : innerWidth / 2, cy = r ? r.top + r.height / 2 : 60;
+        const far = Math.max(Math.hypot(cx, cy), Math.hypot(innerWidth - cx, cy), Math.hypot(cx, innerHeight - cy), Math.hypot(innerWidth - cx, innerHeight - cy));
+        const scale = (far * 2.2) / 100;
+        const ov = document.createElement('div'); ov.id = 'fx-theme-ov';
+        ov.innerHTML = '<div class="disc"></div><div class="lbl"></div>';
+        const disc = ov.firstChild, lbl = ov.lastChild;
+        disc.style.left = cx + 'px'; disc.style.top = cy + 'px';
+        disc.style.background = `radial-gradient(circle closest-side, ${cfg.bg} 0, ${cfg.bg} 90%, ${cfg.p} 95%, ${cfg.p2} 98%, transparent 100%)`;
+        lbl.textContent = cfg.label; lbl.style.color = cfg.p; lbl.style.textShadow = `0 0 24px ${cfg.p}`;
+        document.body.appendChild(ov);
+        try { haptic([20, 30, 20]); } catch (e) { }
+        const done = () => { ov.remove(); busy = false; reactorDraw(); };
+        const grow = disc.animate([{ transform: 'scale(0)' }, { transform: `scale(${scale})` }], { duration: 520, easing: 'cubic-bezier(.6,.05,.3,1)', fill: 'forwards' });
+        lbl.animate([{ opacity: 0, transform: 'translateY(-50%) scale(.9)' }, { opacity: 1, transform: 'translateY(-50%) scale(1)', offset: .55 }, { opacity: 1, transform: 'translateY(-50%) scale(1.04)' }], { duration: 900, easing: 'ease-out', fill: 'forwards' });
+        grow.onfinish = () => {
+            applyTheme(next);
+            const out = ov.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, delay: 260, easing: 'ease-in', fill: 'forwards' });
+            out.onfinish = done;
+        };
+        setTimeout(() => { if (busy) { try { applyTheme(next); } catch (e) { } done(); } }, 2500);   // safety net
+    };
+})();
+
+</script>
+
+<script id="ib2-script">
+/* Boot v2: 3D wireframe arc reactor + extra HUD layers. Hooked from ironBoot(); login slot sync. */
+function ib2Build(el) {
+    const hud = el.querySelector('.ib-hud'); if (!hud) return;
+    let nums = ''; for (let r = 0; r < 2; r++) for (let i = 100; i > 0; i -= 5) nums += '<span' + (i % 20 ? '' : ' style="color:#fff"') + '>' + String(i).padStart(3, '0') + '</span>';
+    const vt = (id, sp) => '<div class="ib-vt sl-p" id="' + id + '" style="--d:.6s"><div style="animation-duration:' + sp + 's">' + nums + '</div></div>';
+    const L = (d, dl) => '<path pathLength="1" d="' + d + '" style="--d:' + dl + 's"/>';
+    let eq = ''; for (let i = 0; i < 40; i++) eq += '<i></i>';
+    hud.insertAdjacentHTML('afterbegin', '<canvas id="ib-3d"></canvas>');
+    hud.insertAdjacentHTML('beforeend', '<svg class="ib-links" viewBox="0 0 100 100" preserveAspectRatio="none">' + L('M38 44H30L26 31H23', .5) + L('M38 56H30L26 69H23', .65) + L('M62 44H70L74 31H77', .5) + L('M62 56H70L74 69H77', .65) + '</svg>' + vt('ib-vtl', 6) + vt('ib-vtr', 9) + '<div class="ib-eq sl-b" style="--d:.5s">' + eq + '</div>');
+    const cv = hud.querySelector('#ib-3d'), x = cv.getContext('2d'), bars = [...hud.querySelectorAll('.ib-eq i')];
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), t0 = performance.now(), TAU = 6.2832;
+    const r0 = cv.getBoundingClientRect(); cv.width = Math.max(2, r0.width * dpr); cv.height = Math.max(2, r0.height * dpr);
+    const rot = (p, a, b) => { let c = Math.cos(a), s = Math.sin(a); const X = p[0] * c + p[2] * s, Z = -p[0] * s + p[2] * c; c = Math.cos(b); s = Math.sin(b); return [X, p[1] * c - Z * s, p[1] * s + Z * c]; };
+    const hx = (rr, z) => { const p = []; for (let k = 0; k < 6; k++) p.push([rr * Math.cos(k * 1.0472), rr * Math.sin(k * 1.0472), z]); return p; };
+    const draw = now => {
+        if (!el.isConnected) return;
+        const t = (now - t0) / 1000, W = cv.width, H = cv.height;
+        const u = W / 2 / 1.75 * Math.min(1, .5 + Math.max(0, t - 3.4) * .5), a = t * .8, b = .5 + Math.sin(t * .6) * .15;
+        x.clearRect(0, 0, W, H); x.globalCompositeOperation = 'lighter'; x.lineJoin = 'round';
+        const bk = [], fr = [];
+        const P = p => { const q = rot(p, a, b), k = 3.2 / (3.2 + q[2]); return [W / 2 + q[0] * u * k, H / 2 + q[1] * u * k, q[2]]; };
+        const poly = (pts, cl) => { const q = pts.map(P), n = cl ? q.length : q.length - 1; for (let i = 0; i < n; i++) { const A = q[i], C = q[(i + 1) % q.length]; ((A[2] + C[2]) > 0 ? bk : fr).push(A[0], A[1], C[0], C[1]); } };
+        const R = 1, r = .2;
+        for (let i = 0; i < 36; i += 2) { const th = i / 36 * TAU, p = []; for (let j = 0; j < 12; j++) { const ph = j / 12 * TAU, q = R + r * Math.cos(ph); p.push([q * Math.cos(th), q * Math.sin(th), r * Math.sin(ph)]); } poly(p, 1); }
+        for (let j = 0; j < 12; j += 3) { const ph = j / 12 * TAU, q = R + r * Math.cos(ph), p = []; for (let i = 0; i <= 36; i++) { const th = i / 36 * TAU; p.push([q * Math.cos(th), q * Math.sin(th), r * Math.sin(ph)]); } poly(p); }
+        [.14, -.14].forEach(z => poly(hx(.42, z), 1));
+        const h1 = hx(.42, .14), h2 = hx(.42, -.14); for (let k = 0; k < 6; k++) poly([h1[k], h2[k]]);
+        poly(hx(.22, 0), 1);
+        for (let k = 0; k < 10; k++) { const g = k / 10 * TAU, c = Math.cos(g), s = Math.sin(g); poly([[.55 * c, .55 * s, .1], [.8 * c, .8 * s, .1], [.8 * c, .8 * s, -.1], [.55 * c, .55 * s, -.1]], 1); }
+        for (let k = 0; k < 48; k += 2) { const p = [], p2 = []; for (let m = 0; m <= 1; m++) { const g = (k + m) / 48 * TAU + t * .6; p.push([1.5 * Math.cos(g), 0, 1.5 * Math.sin(g)]); p2.push([0, 1.38 * Math.cos(-g), 1.38 * Math.sin(-g)]); } poly(p); poly(p2); }
+        const st = (arr, col, w) => { x.strokeStyle = col; x.lineWidth = w * dpr; x.beginPath(); for (let i = 0; i < arr.length; i += 4) { x.moveTo(arr[i], arr[i + 1]); x.lineTo(arr[i + 2], arr[i + 3]); } x.stroke(); };
+        st(bk, 'rgba(30,120,255,.38)', 1); st(fr, 'rgba(160,225,255,.95)', 1.15);
+        const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, u * .3); g.addColorStop(0, 'rgba(210,240,255,.5)'); g.addColorStop(1, 'rgba(30,144,255,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+        const p = (window.ib2P || 0) / 100;
+        for (let i = 0; i < bars.length; i++) bars[i].style.transform = 'scaleY(' + (.12 + (Math.sin(now / 130 + i * .7) * .5 + .5) * (.2 + .8 * p) * (.5 + .5 * Math.sin(i * .35 + now / 600))).toFixed(3) + ')';
+        requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
+}
+(function () {
+    const inp = document.getElementById('pin-input'); if (!inp) return;
+    const sl = [...document.querySelectorAll('.lg-slot')], ls = document.getElementById('login-screen');
+    const sync = () => { const n = inp.value.length; sl.forEach((s, i) => { s.classList.toggle('f', i < n); s.classList.toggle('a', i === n); }); };
+    inp.addEventListener('input', sync); setInterval(sync, 120); sync();
+    if (ls) ls.addEventListener('pointerdown', () => inp.focus());
+})();
+</script>
 </body>
 </html>
