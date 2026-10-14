@@ -1324,6 +1324,9 @@ html.booting *:not(#boot):not(#boot *), html.booting *:not(#boot):not(#boot *)::
 ===================================================== */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 button, .nav-btn, .th-row, .qp-btn, .link-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+/* no white/grey tap flash on ANY element (mobile default highlight) */
+*, *::before, *::after { -webkit-tap-highlight-color: rgba(0,0,0,0); }
+:focus:not(:focus-visible) { outline: none; }
 .drawer-tools { display: none; }
 
 /* ---------- top bar + drawer (phones) ---------- */
@@ -1867,7 +1870,7 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
 @media print { :is(#m7x-ret, #m7x-field, #m7x-fab, #m7x-rail, #m7x-call, #m7x-console, #m7x-pal) { display: none !important; } }
 </style>
 
-<link rel="stylesheet" href="jarvis/jarvis.css?v=3">
+<link rel="stylesheet" href="jarvis/jarvis.css?v=4">
 </head>
 <body>
     <div id="login-screen">
@@ -8051,7 +8054,7 @@ function ib2Build(el) {
 </script>
 
 
-<script src="jarvis/jarvis.js?v=3" defer></script>
+<script src="jarvis/jarvis.js?v=4" defer></script>
 
 </body>
 </html>
