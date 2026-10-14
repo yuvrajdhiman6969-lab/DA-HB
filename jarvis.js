@@ -44,7 +44,7 @@ const today = () => new Date();
 const curTab = () => { const s = document.querySelector('.section.active'); return s ? s.id.replace('tab-', '') : 'home'; };
 const idle = (fn, ms) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: ms || 3000 }) : setTimeout(fn, 60));
 const HN = ['sleep', 'classes', 'self study', 'project work', 'gym', 'scrolling control', 'morning phone rule', 'night phone rule', 'water', 'skin care', 'reading', 'fruit'];
-try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); } catch (e) { }
+try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); SYNC_LOCAL_ONLY.add('jv_ai'); SYNC_LOCAL_ONLY.add('jv_model'); } catch (e) { }
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const S = { wake: lsGet('jv_wake') === '1', active: false };
@@ -52,6 +52,9 @@ let muted = lsGet('jv_mute') === '1';
 let locked = true, speaking = false, guardUntil = 0, touched = false, needUnlock = false, welcomed = false;
 let rec = null, restartT = 0, fails = 0, startedAt = 0, idleT = 0, ackT = 0, evalT = 0, netMsgAt = 0;
 let root, el = {};
+/* local AI state (WebLLM, runs on this device) */
+let aiOn = lsGet('jv_ai') === '1', aiSmart = lsGet('jv_model') === 'smart';
+let aiEngine = null, aiLoading = null, aiBusy = false, aiErr = '', aiHist = [], pendingAct = '', ttsU = null;
 
 /* =====================================================================
    UI
@@ -79,13 +82,16 @@ function build() {
           '<div><small>MONTH</small><b id="jv-month">0%</b></div>' +
           '<div class="wide"><small>NEXT BLOCK</small><b id="jv-next">—</b></div></div></div>' +
       '<div id="jv-heard"></div><div id="jv-reply">At your service, sir.</div>' +
+      '<div class="jv-ai"><button type="button" id="jv-ai" title="Free AI that runs on this device"></button><button type="button" id="jv-model" title="FAST = small model, SMART = bigger model (slower, better Hindi)"></button><span id="jv-aist"></span></div>' +
+      '<div class="jv-aibar"><i id="jv-aibar"></i></div>' +
       '<div class="jv-chips">' +
         '<button type="button" data-c="what is left today">What’s left</button>' +
         '<button type="button" data-c="how am i doing">How am I doing</button>' +
         '<button type="button" data-c="next class">Next class</button>' +
-        '<button type="button" data-c="start soul timer">Start timer</button></div>' +
+        '<button type="button" data-c="start soul timer">Start timer</button>' +
+        '<button type="button" data-c="give me advice to improve today">Advice</button></div>' +
       '<form id="jv-form" autocomplete="off"><input id="jv-in" placeholder="Type a command…" enterkeyhint="send"><button id="jv-go" type="submit">Go</button></form>' +
-      '<div class="jv-hint">Say “Jarvis”, then: “tick gym and study”, “open reports”, “attended DAA”, “help”. Keep this tab open and in front.</div>' +
+      '<div class="jv-hint">Say “Jarvis”, then: “tick gym and study”, “open reports”, “attended DAA”, “help”. Keep this tab open and in front. Turn on AI BRAIN for free-form questions, advice and Hinglish.</div>' +
     '</div>' +
     '<div id="jv-dock" hidden>' +
       '<button class="jv-orb" id="jv-mic" aria-label="Talk to Jarvis" title="Tap to talk"><svg viewBox="0 0 64 64" aria-hidden="true">' +
@@ -95,16 +101,17 @@ function build() {
       '<button class="jv-wake" id="jv-wake" title="Always listen for the wake word “Jarvis”"><i></i>JARVIS</button>' +
     '</div>';
   document.body.appendChild(root);
-  ['pop', 'panel', 'state', 'heard', 'reply', 'dock', 'mic', 'wake', 'sound', 'close', 'form', 'in', 'clock', 'tele', 'ring', 'pct', 'today', 'streak', 'month', 'next'].forEach(k => el[k] = $('jv-' + k));
+  ['pop', 'panel', 'state', 'heard', 'reply', 'dock', 'mic', 'wake', 'sound', 'close', 'form', 'in', 'clock', 'tele', 'ring', 'pct', 'today', 'streak', 'month', 'next', 'ai', 'model', 'aist', 'aibar'].forEach(k => el[k] = $('jv-' + k));
 }
 
-const LABEL = { off: 'STANDBY', wake: 'SAY “JARVIS”', listen: 'LISTENING…', speak: 'SPEAKING' };
+const LABEL = { off: 'STANDBY', wake: 'SAY “JARVIS”', listen: 'LISTENING…', speak: 'SPEAKING', think: 'THINKING…' };
 function setState() {
-  const s = speaking ? 'speak' : S.active ? 'listen' : S.wake ? 'wake' : 'off';
+  const s = speaking ? 'speak' : (aiBusy || aiLoading) ? 'think' : S.active ? 'listen' : S.wake ? 'wake' : 'off';
   root.dataset.state = s;
   el.state.textContent = SR ? LABEL[s] : 'TYPE A COMMAND';
   el.wake.classList.toggle('on', S.wake);
   el.sound.classList.toggle('off', muted);
+  setAi();
 }
 let heardRaf = 0, heardTxt = '';
 function showHeard(t) { heardTxt = t; if (!heardRaf) heardRaf = requestAnimationFrame(() => { heardRaf = 0; el.heard.textContent = heardTxt; }); }
@@ -155,6 +162,7 @@ function preload() { Object.keys(CLIPS).forEach(k => CLIPS[k].forEach(clip)); }
 function stopVoice() {
   playTok++;
   if (cur) { try { cur.pause(); } catch (e) { } clearTimeout(cur._t); cur = null; }
+  ttsU = null; try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { }
   speaking = false;
 }
 function say(kind) {
@@ -242,7 +250,7 @@ function onResult(e) {
 function activate() {                                                       // wake word heard (first words, not end of sentence)
   S.active = true; root.dataset.tone = ''; openPanel(); setState(); showReply('At your service, sir.');
   clearTimeout(ackT); ackT = setTimeout(() => say(welcomed ? 'wake' : 'hi'), 600);   // skipped if a command follows right away
-  welcomed = true; armIdle(10000);
+  welcomed = true; armIdle(10000); warmAI();
 }
 
 /* =====================================================================
@@ -425,16 +433,175 @@ function exec(n) {
   if (hs.length) { const d = today(); return R(list(hs.map(i => `${HN[i]} is ${({ done: 'done', missed: 'missed', na: 'excused today', pending: 'still pending' })[hState(d, i)]}`)) + '.'); }
   return R('I did not quite catch that, sir. Say “help” for what I can do.', 'huh');
 }
-function run(n, raw) {
-  clearTimeout(ackT);
-  openPanel(); showHeard('“' + (raw || n) + '”');
-  const res = n.split(/\s+(?:and then|then|after that)\s+/).map(p => { try { return exec(p.trim()); } catch (e) { console.error(e); return R('Something went wrong with that one, sir.', 'err'); } });
+function present(res) {
   const txt = res.map(r => r.t).join('\n'); showReply(txt);
-  const kinds = res.map(r => r.c); say(kinds.includes('err') ? 'err' : kinds[0] || 'ok');
+  const kinds = res.map(r => r.c), sp = res.find(r => r.speak);
+  if (sp) speakText(sp.speak); else say(kinds.includes('err') ? 'err' : kinds[0] || 'ok');
   root.dataset.tone = kinds.some(k => k === 'err' || k === 'warn' || k === 'huh') ? 'bad' : '';
   updateHud(); setTimeout(updateHud, 450);       // after the deferred re-render has saved the tick
   if (res.some(r => r.close)) { setTimeout(sleep, 1200); return; }
-  armIdle(9000 + Math.min(8000, txt.length * 40));
+  armIdle(9000 + Math.min(12000, txt.length * 60));
+}
+function viaAI(text) { askAI(text).then(r => present([r])).catch(() => present([R('Something went wrong, sir.', 'err')])); }
+function run(n, raw) {
+  clearTimeout(ackT);
+  openPanel(); showHeard('“' + (raw || n) + '”');
+  n = hing(n);
+  if (pendingAct) {                                           // confirmation for risky AI-proposed actions
+    const pa = pendingAct; pendingAct = '';
+    if (/^(yes|yeah|yep|yup|sure|ok|okay|do it|confirm|proceed|go ahead|haan|han|ha|theek hai)$/.test(n)) { let r; try { r = exec(pa); refresh(); } catch (e) { r = R('That failed, sir.', 'err'); } present([r]); return; }
+    if (/^(no|nope|cancel|dont|nahi|nahin|mat karo)$/.test(n)) { present([R('Cancelled, sir.')]); return; }
+  }
+  if (aiOn && AI_FIRST.test(n) && !ACT_WORD.test(n)) { viaAI(raw || n); return; }
+  const res = n.split(/\s+(?:and then|then|after that)\s+/).map(p => { try { return exec(p.trim()); } catch (e) { console.error(e); return R('Something went wrong with that one, sir.', 'err'); } });
+  if (aiOn && res.length === 1 && res[0].c === 'huh') { viaAI(raw || n); return; }
+  present(res);
+}
+
+/* =====================================================================
+   HINGLISH — roman-script Hindi mapped onto the commands above
+   ===================================================================== */
+const HING = [
+  [/\b(maine|maine) aaj kya kya kar liya\b|\baaj kya kya (kiya|kar liya)\b|\bkya kya (kiya|kar liya)\b/g, 'what did i do today'],
+  [/\b(kya|kitna) (baaki|baki|bacha)( hai)?\b|\bbaaki kya\b|\babhi kya karna( hai)?\b|\bkya karna hai\b/g, 'what is left today'],
+  [/\b(aaj )?kaisa (chal raha|ja raha)( hai)?\b|\bmera haal\b|\bmain kaisa\b/g, 'how am i doing'],
+  [/\bstreak (kitni|kitna|kya)\b|\bkitni streak\b/g, 'what is my streak'],
+  [/\bagli class\b|\bnext class kab\b/g, 'next class'],
+  [/\b(motivation do|mujhe motivate kar(o|do)|himmat do)\b/g, 'motivate me'],
+  [/\b(nahi|nahin) (kiya|hua|ho paya)\b/g, 'not done'],
+  [/\b(ho gaya|ho gya|hogaya|kar liya|kar diya|kar di|kar lia)\b/g, 'done'],
+  [/\b(tick|check) (kar do|karo|kardo)\b|\b(kar do|kardo)\b/g, 'tick'],
+  [/\b(kholo|khol do|kholiye)\b/g, 'open'], [/\b(dikhao|dikha do)\b/g, 'show'],
+  [/\b(shuru karo|shuru kar do|chalu karo|chalu kar do|start karo)\b/g, 'start'],
+  [/\b(roko|ruko|rok do|band karo)\b/g, 'pause'],
+  [/\b(bata do|batao|bataiye)\b/g, 'tell me']
+];
+const hing = n => HING.reduce((s, r) => s.replace(r[0], r[1]), n).replace(/\s+/g, ' ').trim();
+
+/* =====================================================================
+   LOCAL AI BRAIN — WebLLM on WebGPU. Free, no API key, no billing.
+   Built-in commands stay instant and exact; the AI handles everything
+   the command brain does not understand, plus advice and "why" questions.
+   ===================================================================== */
+const AI_LIB = 'https://esm.run/@mlc-ai/web-llm';
+const AI_IDS = { fast: 'Llama-3.2-1B-Instruct', smart: 'Llama-3.2-3B-Instruct' };
+const AI_FIRST = /\b(why|advice|advise|suggest\w*|improve|analy[sz]e|explain|tips?|should i|how can i|how do i|how to|compare|reason|kaise|kyun|kyu|samjhao|salah)\b/;
+const ACT_WORD = /\b(tick|untick|uncheck|open|start|pause|quit|attended|bunked|lock|serve|theme|mark)\b/;
+const SAFE_ACT = /^(tick|untick|open|start|pause|attended|missed|bunked)\b/;
+const RISKY_ACT = /\b(quit|give up|abort|lock|log me out|serve|punish\w*|penalt\w*)\b/;
+
+async function aiModelId() {
+  let f16 = false;
+  try { const a = await navigator.gpu.requestAdapter(); f16 = !!(a && a.features.has('shader-f16')); } catch (e) { }
+  return AI_IDS[aiSmart ? 'smart' : 'fast'] + (f16 ? '-q4f16_1-MLC' : '-q4f32_1-MLC');     // f32 build for phones without f16
+}
+function setAi() {
+  if (!el.ai) return;
+  el.ai.textContent = 'AI BRAIN: ' + (aiLoading ? 'LOADING' : aiOn ? (aiEngine ? 'ON' : 'READY') : 'OFF');
+  el.ai.classList.toggle('on', aiOn);
+  el.model.textContent = aiSmart ? 'SMART' : 'FAST';
+}
+function ensureAI() {
+  if (aiEngine) return Promise.resolve(true);
+  if (aiLoading) return aiLoading;
+  if (!navigator.gpu) { aiErr = 'WebGPU is not available in this browser.'; return Promise.resolve(false); }
+  aiLoading = (async () => {
+    try {
+      const id = await aiModelId();
+      const lib = await import(AI_LIB);
+      aiEngine = await lib.CreateMLCEngine(id, { initProgressCallback: p => { const pc = Math.round((p.progress || 0) * 100); el.aist.textContent = pc + '%'; el.aibar.style.width = pc + '%'; armIdle(60000); } });
+      return true;
+    } catch (e) { aiEngine = null; aiErr = (e && e.message) || 'unknown error'; return false; }
+    finally { aiLoading = null; el.aist.textContent = ''; el.aibar.style.width = '0'; setState(); }
+  })();
+  setState();
+  return aiLoading;
+}
+function warmAI() { if (aiOn && !aiEngine && !aiLoading) ensureAI(); }
+
+function snapshot() {                    // live, read-only facts the model may use
+  const L = [], d = today(), iso = isoDate(d), none = a => list(a) || 'none';
+  try {
+    const { t, tot, p, s } = summary();
+    L.push(`Now: ${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}, ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
+    L.push(`Today: ${t.done.length}/${tot} habits done (${p}%). Done: ${none(t.done.map(i => HN[i]))}. Left: ${none(t.left.map(i => HN[i]))}. Missed: ${none(t.missed.map(i => HN[i]))}.`);
+    L.push(`Streak ${s.streak} days (best ${s.bestStreak}). Month ${s.hasData ? s.hPct : 0}%. Active penalties: ${s.activePenalties || 0}.`);
+    const rs = HABITS.map((h, i) => ({ i, r: habitRate(i) })).filter(x => x.r.tot > 0).sort((a, b) => a.r.pct - b.r.pct);
+    if (rs.length) L.push(`Weakest habits this month: ${list(rs.slice(0, 3).map(x => HN[x.i] + ' ' + x.r.pct + '%'))}. Strongest: ${HN[rs[rs.length - 1].i]} ${rs[rs.length - 1].r.pct}%.`);
+  } catch (e) { }
+  try { const up = ttToday().filter(x => !x.over).slice(0, 5); L.push('Rest of today\'s schedule: ' + (up.length ? list(up.map(x => `${x.name} at ${x.at}`)) : 'nothing') + '.'); } catch (e) { }
+  try { const bd = bunkData(); L.push('Attendance: ' + list(Object.keys(bd).map(k => { const o = bd[k]; return `${k} ${o.total ? Math.round(o.attended / o.total * 100) : 100}%`; })) + ' (75% is the safe line).'); } catch (e) { }
+  try {
+    const g = gymPlanFor(iso), gi = habitIdx('gym'), gr = habitRate(gi);
+    L.push(`Gym today: ${g ? (g.type === 'workout' ? g.title.replace(/^\S+\s/, '') + (g.variant ? ' (' + g.variant + ')' : '') : 'rest day') : 'no plan'}; status ${getGymStatusRaw(iso) || 'not logged'}. Gym this month: ${gr.done} of ${gr.tot} days (${gr.pct}%).`);
+    const prog = []; gymGroupBySlug(gymCollectLogs()).forEach((a, sl) => { if (a.length >= 2) { const x = a[a.length - 2], y = a[a.length - 1], inf = GYM_SLUG_INFO.get(sl); prog.push({ n: inf ? inf.name : sl, x, y }); } });
+    prog.sort((a, b) => (a.y.iso < b.y.iso ? 1 : -1));
+    if (prog.length) L.push('Lift progress (est. 1RM, previous to latest): ' + prog.slice(0, 5).map(o => `${o.n} ${Math.round(o.x.e1rm)} to ${Math.round(o.y.e1rm)}kg`).join('; ') + '.');
+  } catch (e) { }
+  try { L.push(`Soul timer: ${timerStarted ? Math.ceil(timerRemainingSec / 60) + ' min left' + (timerRunning ? '' : ' (paused)') : 'not running'}.`); } catch (e) { }
+  return L.join('\n');
+}
+function sysPrompt() {
+  return 'You are J.A.R.V.I.S., the personal assistant inside the user\'s Discipline OS habit app. Call the user "sir". Be brief: at most 2 short sentences, plain speech, no markdown, no lists, no emojis. ' +
+    'Use ONLY the LIVE DATA below for facts about the user. Never invent numbers, habits or workouts; if something is not in the data, say you do not have it. ' +
+    'If the user writes Hinglish or Hindi, answer in simple Hinglish using Roman letters. ' +
+    'To perform an app action, add a final separate line "ACTION: <command>" (at most 2). Allowed commands: tick <habit>, untick <habit>, open <tab>, start soul timer, pause soul timer, attended <subject>, missed <subject>. ' +
+    'Habits: sleep, classes, study, project, gym, scrolling, morning phone, night phone, water, skin care, reading, fruit. Tabs: home, daily grid, time table, gym, reports, insights, achievements, soul timer, punishment. ' +
+    'Only act when the user clearly asks for it. For questions and advice give no ACTION.\n\nLIVE DATA:\n' + snapshot();
+}
+function runActs(acts) {                 // allow-list only; risky ones wait for a spoken/typed "yes"
+  const out = []; let ran = false;
+  acts.slice(0, 2).forEach(a => {
+    const c = hing(norm(a));
+    if (RISKY_ACT.test(c)) { pendingAct = c; out.push(`Shall I ${c}, sir? Say yes to confirm.`); return; }
+    if (!SAFE_ACT.test(c)) return;
+    try { const r = exec(c); out.push(r.t); ran = true; } catch (e) { out.push('That action failed, sir.'); }
+  });
+  if (ran) refresh();
+  return out;
+}
+function splitReply(raw) {
+  const acts = [], keep = [];
+  raw.split('\n').forEach(l => { const m = /^\s*[*_`]*ACTION[*_`]*\s*:\s*(.+)$/i.exec(l); if (m) acts.push(m[1]); else if (!/^\s*[*_`]*ACTION/i.test(l)) keep.push(l); });
+  return { acts, reply: keep.join(' ').replace(/[*_`#]/g, '').replace(/\s+/g, ' ').trim().slice(0, 420) };
+}
+async function askAI(text) {
+  if (aiBusy) return R('One moment, sir, I am still thinking.', 'huh');
+  aiBusy = true; setState();
+  try {
+    showReply(aiEngine ? 'Thinking, sir…' : 'Waking my local brain, sir. The first time it downloads the model, after that it is stored on this device.');
+    armIdle(90000);
+    if (!await ensureAI()) return R('My local brain is unavailable, sir: ' + aiErr + ' Command mode still works.', 'err');
+    const stream = await aiEngine.chat.completions.create({ messages: [{ role: 'system', content: sysPrompt() }, ...aiHist.slice(-6), { role: 'user', content: text }], temperature: 0.3, max_tokens: 160, stream: true });
+    let raw = '';
+    el.reply.classList.remove('typing');
+    for await (const ch of stream) {                       // words appear as they are generated
+      raw += (ch.choices && ch.choices[0] && ch.choices[0].delta && ch.choices[0].delta.content) || '';
+      const part = splitReply(raw).reply; if (part) el.reply.textContent = part;
+      armIdle(30000);
+    }
+    const sp = splitReply(raw), acts = sp.acts, reply = sp.reply || 'Understood, sir.';
+    aiHist.push({ role: 'user', content: text }, { role: 'assistant', content: reply }); if (aiHist.length > 8) aiHist.splice(0, aiHist.length - 8);
+    const done = runActs(acts);
+    return Object.assign(R(reply + (done.length ? '\n' + done.join(' ') : ''), 'ok'), { speak: reply + (done.length && !pendingAct ? ' Done.' : done.length ? ' ' + done[done.length - 1] : '') });
+  } catch (e) {
+    console.warn('Jarvis AI', e);
+    return R('My local brain hit an error, sir. Try again.', 'err');
+  } finally { aiBusy = false; setState(); }
+}
+function pickVoice() {
+  const v = (window.speechSynthesis && speechSynthesis.getVoices()) || [], en = v.filter(x => /^en/i.test(x.lang));
+  return en.find(x => /daniel|google uk english male|ryan|george|ravi|prabhat|rishi|male/i.test(x.name) && !/female/i.test(x.name)) || en.find(x => /^en-(GB|IN)/i.test(x.lang)) || en[0] || null;
+}
+function speakText(t) {                  // browser voice, used only for free-form AI answers
+  if (muted || !window.speechSynthesis || !t) return;
+  stopVoice();
+  const u = new SpeechSynthesisUtterance(t), v = pickVoice();
+  if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-GB';
+  u.rate = .97; u.pitch = .8; ttsU = u; speaking = true; guardUntil = Infinity; setState();
+  const fin = () => { if (ttsU !== u) return; ttsU = null; speaking = false; guardUntil = Date.now() + 500; setState(); };
+  u.onend = u.onerror = fin; setTimeout(fin, t.length * 90 + 3000);
+  speechSynthesis.speak(u);
 }
 
 /* =====================================================================
@@ -485,7 +652,7 @@ function wire() {
     if (!SR) { openPanel(); showReply('This browser has no speech recognition (use Chrome or Edge). You can still type or tap a command below.'); setState(); return; }
     if (S.active && !el.panel.hidden) { sleep(); return; }
     S.active = true; openPanel(); showHeard(''); showReply('Listening, sir…'); setState();
-    clearTimeout(ackT); say(welcomed ? 'wake' : 'hi'); welcomed = true; armIdle(12000); start();
+    clearTimeout(ackT); say(welcomed ? 'wake' : 'hi'); welcomed = true; armIdle(12000); start(); warmAI();
   };
   el.wake.onclick = () => {
     if (!SR) { openPanel(); showReply('The wake word needs Chrome or Edge. Firefox has no speech recognition.'); return; }
@@ -495,6 +662,23 @@ function wire() {
     setState();
   };
   el.close.onclick = sleep;
+  el.ai.onclick = async () => {
+    if (aiLoading) return;
+    if (aiOn) { aiOn = false; lsSet('jv_ai', '0'); setAi(); showReply('AI brain off, sir. Command mode only.'); return; }
+    if (!navigator.gpu) { showReply('This browser has no WebGPU, so the local AI cannot run here, sir. Use current Chrome or Edge on desktop, or Chrome on a recent Android phone. Commands still work.'); return; }
+    aiOn = true; lsSet('jv_ai', '1'); setAi(); openPanel(); armIdle(120000);
+    showReply('Loading the local brain, sir. First time only: roughly a 1 GB download, then it lives on this device. Wi-Fi recommended.');
+    const ok = await ensureAI(); armIdle(12000);
+    if (ok) { showReply('Local brain online, sir. Ask me anything about your progress.'); speakText('Local brain online, sir.'); }
+    else { aiOn = false; lsSet('jv_ai', '0'); setAi(); showReply('The model failed to load: ' + aiErr); }
+  };
+  el.model.onclick = () => {
+    if (aiLoading) return;
+    aiSmart = !aiSmart; lsSet('jv_model', aiSmart ? 'smart' : 'fast');
+    const old = aiEngine; aiEngine = null; if (old && old.unload) old.unload().catch(() => { }); setAi(); openPanel();
+    showReply(aiSmart ? 'Smart model selected, sir. Bigger download, slower, better at Hindi.' : 'Fast model selected, sir.');
+    if (aiOn) ensureAI();
+  };
   el.sound.onclick = () => { muted = !muted; lsSet('jv_mute', muted ? '1' : '0'); if (muted) stopVoice(); setState(); };
   el.form.onsubmit = e => { e.preventDefault(); const v = el['in'].value.trim(); if (!v) return; el['in'].value = ''; run(stripWake(norm(v)) || norm(v), v); };
   el['in'].addEventListener('input', () => armIdle(30000));
