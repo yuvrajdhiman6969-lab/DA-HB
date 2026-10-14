@@ -1,9 +1,9 @@
-/* J.A.R.V.I.S. — HUD v4 (holographic / arc-reactor look).
+/* J.A.R.V.I.S. — HUD v5 (helmet-HUD look: cyan + repulsor orange, scrolling waveform, state labels).
    Animations use transform/opacity only (GPU-cheap) and switch off in Lite mode,
    reduced-motion, or when the tab is hidden. All element ids/classes from v3 are kept. */
 
 #jv-root{
-  --jv:#38bdf8;--jv-soft:#8fdcff;--jv-ok:#34d399;--jv-bad:#ff6b6b;--jv-amber:#ffb454;
+  --jv:#38bdf8;--jv-soft:#8fdcff;--jv-ok:#34d399;--jv-bad:#ff6b6b;--jv-amber:#ffb454;--jv-or:#ff6a3d;
   --jv-bg:rgba(3,10,19,.9);--jv-line:rgba(56,189,248,.28);
   font-family:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;color:#e6f6ff}
 #jv-root *{box-sizing:border-box}
@@ -14,7 +14,12 @@
 
 /* ---------- screen-edge HUD (only while Jarvis is active) ---------- */
 #jv-edge{position:fixed;inset:0;z-index:950;pointer-events:none;opacity:0;transition:opacity .45s ease;
-  background:radial-gradient(ellipse at 50% 50%,transparent 58%,rgba(56,189,248,.07) 100%)}
+  background:
+    linear-gradient(90deg,transparent,var(--jv),transparent) top calc(10px + env(safe-area-inset-top,0px)) left 50%/min(46vw,320px) 1px no-repeat,
+    linear-gradient(90deg,transparent,var(--jv),transparent) bottom calc(10px + env(safe-area-inset-bottom,0px)) left 50%/min(46vw,320px) 1px no-repeat,
+    repeating-linear-gradient(0deg,var(--jv) 0 1px,transparent 1px 14px) left 8px top 50%/6px 120px no-repeat,
+    repeating-linear-gradient(0deg,var(--jv) 0 1px,transparent 1px 14px) right 8px top 50%/6px 120px no-repeat,
+    radial-gradient(ellipse at 50% 50%,transparent 55%,color-mix(in srgb,var(--jv) 9%,transparent) 100%)}
 #jv-root[data-state=listen] #jv-edge,#jv-root[data-state=speak] #jv-edge{opacity:1}
 #jv-edge i{position:absolute;width:34px;height:34px;border:2px solid var(--jv);opacity:.8}
 #jv-edge .tl{top:calc(8px + env(safe-area-inset-top,0px));left:8px;border-right:0;border-bottom:0}
@@ -26,7 +31,7 @@
 #jv-dock{position:fixed;left:14px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:960;display:flex;align-items:center;gap:10px}
 #jv-dock[hidden]{display:none}
 
-.jv-orb{position:relative;width:62px;height:62px;border-radius:50%;border:0;padding:0;cursor:pointer;
+.jv-orb{position:relative;width:68px;height:68px;border-radius:50%;border:0;padding:0;cursor:pointer;
   background:radial-gradient(circle,#0c2c47 0,#04101c 70%);
   box-shadow:0 0 0 1px rgba(56,189,248,.45),0 0 14px rgba(56,189,248,.25),0 6px 18px rgba(0,0,0,.55);
   -webkit-tap-highlight-color:transparent;transition:box-shadow .3s}
@@ -39,7 +44,22 @@
 .jv-orb .tri{stroke-width:1.5;stroke-linejoin:round;opacity:.9}
 .jv-orb .core{fill:var(--jv);stroke:none;opacity:.4}
 .jv-orb::after{content:"";position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--jv);opacity:0;pointer-events:none}
+#jv-root button:active{box-shadow:none}
+.jv-orb:active{box-shadow:0 0 0 1px rgba(56,189,248,.45),0 0 14px rgba(56,189,248,.25),0 6px 18px rgba(0,0,0,.55)}
 .jv-orb:focus-visible{outline:2px solid var(--jv-soft);outline-offset:3px}
+.jv-orb::before{content:"";position:absolute;inset:-7px;border-radius:50%;pointer-events:none;
+  border:1px dashed var(--jv);opacity:.28;transition:opacity .3s}
+#jv-root:not([data-state=off]) .jv-orb::before{opacity:.55}
+#jv-root[data-state=wake] .jv-orb::before{animation:jvSpin 40s linear infinite}
+#jv-root[data-state=listen] .jv-orb::before{animation:jvSpinR 12s linear infinite}
+#jv-root[data-state=speak] .jv-orb::before{animation:jvSpin 5s linear infinite}
+/* state label above the orb, like the LISTENING readout in the reference */
+#jv-dock::before{content:"";position:absolute;left:0;top:-19px;width:68px;text-align:center;white-space:nowrap;pointer-events:none;
+  font:600 8.5px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.3em;text-indent:.3em;color:var(--jv-soft);
+  text-shadow:0 0 8px color-mix(in srgb,var(--jv) 70%,transparent)}
+#jv-root[data-state=wake] #jv-dock::before{content:"ARMED";color:#5f8399;text-shadow:none}
+#jv-root[data-state=listen] #jv-dock::before{content:"LISTENING"}
+#jv-root[data-state=speak] #jv-dock::before{content:"SPEAKING"}
 
 /* static state looks (visible even with animations off) */
 #jv-root[data-state=wake] .jv-orb .core{opacity:.65}
@@ -85,7 +105,7 @@
 .jv-wake.on i::after{transform:translateX(11px)}
 
 /* ---------- holographic panel ---------- */
-#jv-panel{position:fixed;left:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:961;
+#jv-panel{position:fixed;left:14px;bottom:calc(100px + env(safe-area-inset-bottom,0px));z-index:961;
   width:min(396px,calc(100vw - 28px));padding:12px 14px 12px;border-radius:4px;overflow:hidden;
   background:
     linear-gradient(180deg,rgba(56,189,248,.08),transparent 38%),
@@ -98,6 +118,12 @@
   animation:jvUp .22s ease-out}
 #jv-panel[hidden]{display:none}
 /* travelling scan band */
+#jv-panel::before{content:"";position:absolute;left:0;bottom:0;width:calc(100% + 96px);height:16px;pointer-events:none;opacity:0;
+  background:linear-gradient(90deg,var(--jv-or),var(--jv) 35%,var(--jv) 65%,var(--jv-or));
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2796%27 height=%2716%27%3E%3Crect x=%272%27 y=%276.5%27 width=%272%27 height=%273%27 rx=%271%27/%3E%3Crect x=%278%27 y=%275.0%27 width=%272%27 height=%276%27 rx=%271%27/%3E%3Crect x=%2714%27 y=%273.0%27 width=%272%27 height=%2710%27 rx=%271%27/%3E%3Crect x=%2720%27 y=%271.0%27 width=%272%27 height=%2714%27 rx=%271%27/%3E%3Crect x=%2726%27 y=%273.5%27 width=%272%27 height=%279%27 rx=%271%27/%3E%3Crect x=%2732%27 y=%275.5%27 width=%272%27 height=%275%27 rx=%271%27/%3E%3Crect x=%2738%27 y=%272.0%27 width=%272%27 height=%2712%27 rx=%271%27/%3E%3Crect x=%2744%27 y=%270.0%27 width=%272%27 height=%2716%27 rx=%271%27/%3E%3Crect x=%2750%27 y=%272.5%27 width=%272%27 height=%2711%27 rx=%271%27/%3E%3Crect x=%2756%27 y=%275.0%27 width=%272%27 height=%276%27 rx=%271%27/%3E%3Crect x=%2762%27 y=%276.5%27 width=%272%27 height=%273%27 rx=%271%27/%3E%3Crect x=%2768%27 y=%274.0%27 width=%272%27 height=%278%27 rx=%271%27/%3E%3Crect x=%2774%27 y=%271.5%27 width=%272%27 height=%2713%27 rx=%271%27/%3E%3Crect x=%2780%27 y=%273.0%27 width=%272%27 height=%2710%27 rx=%271%27/%3E%3Crect x=%2786%27 y=%275.5%27 width=%272%27 height=%275%27 rx=%271%27/%3E%3Crect x=%2792%27 y=%276.5%27 width=%272%27 height=%273%27 rx=%271%27/%3E%3C/svg%3E") repeat-x 0 0/96px 16px;mask:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2796%27 height=%2716%27%3E%3Crect x=%272%27 y=%276.5%27 width=%272%27 height=%273%27 rx=%271%27/%3E%3Crect x=%278%27 y=%275.0%27 width=%272%27 height=%276%27 rx=%271%27/%3E%3Crect x=%2714%27 y=%273.0%27 width=%272%27 height=%2710%27 rx=%271%27/%3E%3Crect x=%2720%27 y=%271.0%27 width=%272%27 height=%2714%27 rx=%271%27/%3E%3Crect x=%2726%27 y=%273.5%27 width=%272%27 height=%279%27 rx=%271%27/%3E%3Crect x=%2732%27 y=%275.5%27 width=%272%27 height=%275%27 rx=%271%27/%3E%3Crect x=%2738%27 y=%272.0%27 width=%272%27 height=%2712%27 rx=%271%27/%3E%3Crect x=%2744%27 y=%270.0%27 width=%272%27 height=%2716%27 rx=%271%27/%3E%3Crect x=%2750%27 y=%272.5%27 width=%272%27 height=%2711%27 rx=%271%27/%3E%3Crect x=%2756%27 y=%275.0%27 width=%272%27 height=%276%27 rx=%271%27/%3E%3Crect x=%2762%27 y=%276.5%27 width=%272%27 height=%273%27 rx=%271%27/%3E%3Crect x=%2768%27 y=%274.0%27 width=%272%27 height=%278%27 rx=%271%27/%3E%3Crect x=%2774%27 y=%271.5%27 width=%272%27 height=%2713%27 rx=%271%27/%3E%3Crect x=%2780%27 y=%273.0%27 width=%272%27 height=%2710%27 rx=%271%27/%3E%3Crect x=%2786%27 y=%275.5%27 width=%272%27 height=%275%27 rx=%271%27/%3E%3Crect x=%2792%27 y=%276.5%27 width=%272%27 height=%273%27 rx=%271%27/%3E%3C/svg%3E") repeat-x 0 0/96px 16px;transition:opacity .3s}
+#jv-root[data-state=listen] #jv-panel::before,#jv-root[data-state=speak] #jv-panel::before{opacity:.5;animation:jvWave 2.6s linear infinite}
+#jv-root[data-state=speak] #jv-panel::before{animation-duration:1.3s}
+@keyframes jvWave{to{transform:translateX(-96px)}}
 #jv-panel::after{content:"";position:absolute;left:0;right:0;top:0;height:46px;pointer-events:none;
   background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--jv) 13%,transparent),transparent);
   transform:translateY(-60px);animation:jvScan 5.5s linear infinite}
@@ -112,7 +138,9 @@
 .jv-c.br{bottom:0;right:0;border-left:0;border-top:0}
 
 .jv-top{position:relative;display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.jv-title{font:700 13px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.3em;color:var(--jv);text-shadow:0 0 10px color-mix(in srgb,var(--jv) 70%,transparent)}
+.jv-title{position:relative;padding-left:14px;font:700 13px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.3em;color:var(--jv);text-shadow:0 0 10px color-mix(in srgb,var(--jv) 70%,transparent)}
+.jv-title::before{content:"";position:absolute;left:0;top:50%;width:7px;height:7px;margin-top:-3.5px;background:var(--jv-or);
+  box-shadow:0 0 8px var(--jv-or);transform:rotate(45deg)}
 #jv-state{flex:1;min-width:0;font:600 10px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.14em;color:#86a3b6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .jv-bars{display:flex;align-items:center;gap:2px;height:16px}
 .jv-bars i{width:2px;height:100%;border-radius:1px;background:var(--jv);transform:scaleY(.2)}
@@ -126,6 +154,7 @@
 
 .jv-sub{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;padding-bottom:7px;
   border-bottom:1px solid var(--jv-line);font:500 9px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.2em;color:#5f8399}
+#jv-root[data-state=listen] .jv-title::before,#jv-root[data-state=speak] .jv-title::before{animation:jvBlink 1s steps(2) infinite}
 #jv-clock{color:var(--jv-soft);font-variant-numeric:tabular-nums;letter-spacing:.14em}
 
 /* telemetry strip */
@@ -135,6 +164,9 @@
 .jv-tele[data-lv=mid]{--lv:#fbbf24}.jv-tele[data-lv=hi]{--lv:#34d399}
 .jv-ringbox{position:relative;width:56px;height:56px;flex:none}
 .jv-ringbox svg{width:100%;height:100%;display:block}
+.jv-ringbox::before{content:"";position:absolute;inset:-3px;border-radius:50%;border:1px dashed var(--jv);opacity:.35;pointer-events:none;animation:jvSpin 18s linear infinite}
+.jv-ringbox::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid transparent;border-top-color:var(--jv-or);
+  filter:drop-shadow(0 0 3px var(--jv-or));pointer-events:none;animation:jvSpinR 4s linear infinite}
 .jv-ringbox circle{fill:none}
 .jv-ringbox .tk{stroke:var(--jv);stroke-width:1.2;stroke-dasharray:1 3.2;opacity:.5}
 .jv-ringbox .bg{stroke:rgba(56,189,248,.16);stroke-width:4}
@@ -146,6 +178,7 @@
 .jv-stats{flex:1;min-width:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px 10px}
 .jv-stats div{min-width:0}
 .jv-stats .wide{grid-column:1/-1}
+.jv-stats small::before{content:"";display:inline-block;width:4px;height:4px;margin-right:5px;vertical-align:1px;background:var(--jv-or);transform:rotate(45deg)}
 .jv-stats small{display:block;font:500 8px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.2em;color:#5f8399;margin-bottom:3px}
 .jv-stats b{display:block;font:700 13px/1.15 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.04em;color:var(--jv-soft);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -161,6 +194,7 @@
 .jv-chips button{padding:8px 11px;cursor:pointer;border:1px solid rgba(56,189,248,.4);background:rgba(56,189,248,.08);
   color:#bfe9fb;font:600 11px/1 'IBM Plex Sans',system-ui,sans-serif;letter-spacing:.03em;-webkit-tap-highlight-color:transparent;
   clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);transition:background .15s,color .15s}
+.jv-chips button::before{content:"› ";color:var(--jv-or)}
 .jv-chips button:hover{background:rgba(56,189,248,.18);color:#fff}
 .jv-chips button:active{background:rgba(56,189,248,.34)}
 
@@ -171,6 +205,7 @@
 #jv-in:focus{outline:none;border-color:var(--jv);box-shadow:0 0 0 1px color-mix(in srgb,var(--jv) 40%,transparent)}
 #jv-go{padding:0 16px;border-radius:2px;border:0;background:var(--jv);color:#04121f;font:700 12px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.14em;cursor:pointer;
   clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%)}
+#jv-go:active{filter:brightness(1.15)}
 .jv-hint{margin-top:9px;font-size:10.5px;line-height:1.4;color:#6c8799}
 
 /* ---------- popups ---------- */
@@ -184,6 +219,7 @@
 .jv-card .ic{flex:none;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:21px;line-height:1;
   background:color-mix(in srgb,var(--c) 18%,transparent);
   clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%)}
+.jv-card .ic{box-shadow:none;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--c) 60%,transparent))}
 .jv-card b{display:block;font:700 13px/1.25 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.05em}
 .jv-card span{font-size:12px;color:#a9c4d4}
 .jv-card small{display:block;margin-top:4px;font:500 9px/1 'Chakra Petch','IBM Plex Sans',sans-serif;color:var(--c);letter-spacing:.18em}

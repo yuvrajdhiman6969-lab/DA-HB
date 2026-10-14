@@ -1642,8 +1642,9 @@ html.booting #visor { opacity: 0; } #visor { transition: opacity .8s ease; }
 .vz-holo { animation: vzHolo 5s steps(1) infinite; }
 @keyframes vzHolo { 0%, 92%, 100% { opacity: 1; } 93% { opacity: .55; } 95% { opacity: .9; } 97% { opacity: .4; } }
 
-/* buttons: ripple ring on press */
-button:active:not(:disabled) { box-shadow: 0 0 0 3px rgba(var(--fx-rgb), .35), 0 0 18px rgba(var(--fx-rgb), .5); }
+/* no press ring / tap flash on any click (removed on purpose) */
+*, *::before, *::after { -webkit-tap-highlight-color: transparent !important; }
+button:active, button:active:not(:disabled) { outline: none; }
 
 @media (max-width: 640px) { .vz-ring { opacity: .38; } .vz-col { display: none; } .dash-card:hover, .wd-card:hover { transform: none; } }
 html.fx-lite .nav-btn.active::after, html.fx-lite .rpt-bar::after, html.fx-lite .ins-bar::after, html.fx-lite .wd-matchbar::after, html.fx-lite .vz-holo { animation: none; }
@@ -1710,7 +1711,6 @@ html[data-theme="mark7"] .toast.quote { font-style: normal; }
 #m7x-ret.lock i { border-color: rgb(var(--m7x-or)); filter: drop-shadow(0 0 5px rgba(var(--m7x-or), .9)); }
 #m7x-ret.lock b { opacity: 0; }
 #m7x-ret.lock em { opacity: 1; transform: none; }
-#m7x-ret.press i { border-color: #fff; }
 @media (pointer: coarse), (max-width: 900px) { #m7x-ret { display: none !important; } }
 
 /* ---------- tab-change callout ---------- */
@@ -1870,7 +1870,7 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
 @media print { :is(#m7x-ret, #m7x-field, #m7x-fab, #m7x-rail, #m7x-call, #m7x-console, #m7x-pal) { display: none !important; } }
 </style>
 
-<link rel="stylesheet" href="jarvis/jarvis.css?v=4">
+<link rel="stylesheet" href="jarvis/jarvis.css?v=5">
 </head>
 <body>
     <div id="login-screen">
@@ -7334,7 +7334,6 @@ function ib2Build(el) {
         safe(hookSwitchTab);
         safe(start);
         window.addEventListener('mousemove', onMove, { passive: true });
-        window.addEventListener('pointerdown', onClick, { passive: true });
         document.addEventListener('visibilitychange', function () {
             if (document.hidden) stop(); else start();
         });
@@ -7535,8 +7534,6 @@ function ib2Build(el) {
         S.ret = el('div', null, '<i></i><i></i><i></i><i></i><b></b><em></em>'); S.ret.id = 'm7x-ret'; S.ret.setAttribute('aria-hidden', 'true');
         document.body.appendChild(S.ret);
         window.addEventListener('pointermove', retMove, { passive: true });
-        window.addEventListener('pointerdown', function () { if (S.ret) S.ret.classList.add('press'); }, { passive: true });
-        window.addEventListener('pointerup', function () { if (S.ret) S.ret.classList.remove('press'); }, { passive: true });
         document.addEventListener('mouseleave', function () { if (S.ret) S.ret.classList.remove('on'); });
         document.addEventListener('scroll', function () { if (R.tgt) retLock(R.tgt); }, { passive: true, capture: true });
     }
