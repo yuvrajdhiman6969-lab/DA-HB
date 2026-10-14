@@ -1,0 +1,75 @@
+JARVIS CUSTOM VOICE LINES
+=========================
+Generate each sentence below in your Jarvis voice (any TTS website), export as MP3,
+and save it in this folder with EXACTLY the file name shown. Missing files are fine:
+Jarvis just uses the browser voice for those lines.
+
+FORMAT:  file name  |  sentence to speak
+
+nothing_left.mp3  |  Nothing left today, sir. A flawless day.
+habits_all_done.mp3  |  All habits are done.
+nothing_logged.mp3  |  Nothing logged yet today, sir. Shall we begin?
+no_penalty.mp3  |  No active penalties, sir. Keep it that way.
+no_data_month.mp3  |  No data this month yet, sir.
+no_data_week.mp3  |  No data for this week yet.
+nothing_today.mp3  |  Nothing is scheduled today, sir.
+schedule_complete.mp3  |  Your schedule is complete for today.
+nothing_tomorrow.mp3  |  Nothing is scheduled tomorrow, sir.
+rest_day.mp3  |  Today is a rest day, sir.
+rest_day_log.mp3  |  Today is a rest day, sir. No gym to log.
+no_gym_plan.mp3  |  No gym plan for today.
+who_are_you.mp3  |  I am J.A.R.V.I.S., sir. Just a rather discerning discipline system.
+gym_done.mp3  |  Gym marked done.
+gym_unticked.mp3  |  Gym unticked.
+gym_missed.mp3  |  Gym marked missed.
+gym_already.mp3  |  Gym is already marked done.
+gym_not_done.mp3  |  Gym is not marked done.
+scroll_zero.mp3  |  Scrolling control back to level 0.
+pop_perfect.mp3  |  Congratulations, sir. You have completed every single habit today. A flawless performance.
+pop_gym.mp3  |  Well done, sir. Gym completed today. You did not stop when you were tired.
+pop_scroll.mp3  |  Sir, you lost the battle against scrolling today. Put the phone down and get back to work.
+pop_gym_missed.mp3  |  Sir, you skipped the gym today. That is not the standard. Tomorrow, no excuses.
+pop_streak_3.mp3  |  Congratulations, sir. You have successfully maintained a 3 day streak. Magnificent.
+pop_streak_7.mp3  |  Congratulations, sir. You have successfully maintained a 7 day streak. Magnificent.
+pop_streak_14.mp3  |  Congratulations, sir. You have successfully maintained a 14 day streak. Magnificent.
+pop_streak_21.mp3  |  Congratulations, sir. You have successfully maintained a 21 day streak. Magnificent.
+pop_streak_30.mp3  |  Congratulations, sir. You have successfully maintained a 30 day streak. Magnificent.
+pop_streak_50.mp3  |  Congratulations, sir. You have successfully maintained a 50 day streak. Magnificent.
+pop_streak_100.mp3  |  Congratulations, sir. You have successfully maintained a 100 day streak. Magnificent.
+pop_penalty_1.mp3  |  Sir, you have 1 active penalty. I suggest you serve them. Stop hiding from your failures.
+pop_penalty_2.mp3  |  Sir, you have 2 active penalties. I suggest you serve them. Stop hiding from your failures.
+pop_penalty_3.mp3  |  Sir, you have 3 active penalties. I suggest you serve them. Stop hiding from your failures.
+pop_penalty_4.mp3  |  Sir, you have 4 active penalties. I suggest you serve them. Stop hiding from your failures.
+pop_penalty_5.mp3  |  Sir, you have 5 active penalties. I suggest you serve them. Stop hiding from your failures.
+pop_soul_1.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 1 soul taken so far.
+pop_soul_2.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 2 souls taken so far.
+pop_soul_3.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 3 souls taken so far.
+pop_soul_4.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 4 souls taken so far.
+pop_soul_5.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 5 souls taken so far.
+pop_soul_6.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 6 souls taken so far.
+pop_soul_7.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 7 souls taken so far.
+pop_soul_8.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 8 souls taken so far.
+pop_soul_9.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 9 souls taken so far.
+pop_soul_10.mp3  |  Congratulations, sir. You have successfully completed a deep work session. 10 souls taken so far.
+tick_sleep.mp3  |  sleep ticked.
+untick_sleep.mp3  |  sleep unticked.
+tick_classes.mp3  |  classes ticked.
+untick_classes.mp3  |  classes unticked.
+tick_self_study.mp3  |  self study ticked.
+untick_self_study.mp3  |  self study unticked.
+tick_project_work.mp3  |  project work ticked.
+untick_project_work.mp3  |  project work unticked.
+tick_scrolling_control.mp3  |  scrolling control ticked.
+untick_scrolling_control.mp3  |  scrolling control unticked.
+tick_morning_phone_rule.mp3  |  morning phone rule ticked.
+untick_morning_phone_rule.mp3  |  morning phone rule unticked.
+tick_night_phone_rule.mp3  |  night phone rule ticked.
+untick_night_phone_rule.mp3  |  night phone rule unticked.
+tick_water.mp3  |  water ticked.
+untick_water.mp3  |  water unticked.
+tick_skin_care.mp3  |  skin care ticked.
+untick_skin_care.mp3  |  skin care unticked.
+tick_reading.mp3  |  reading ticked.
+untick_reading.mp3  |  reading unticked.
+tick_fruit.mp3  |  fruit ticked.
+untick_fruit.mp3  |  fruit unticked.
