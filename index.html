@@ -165,6 +165,54 @@
         .mini-track { height: 6px; background: var(--track); border-radius: 99px; margin-top: 10px; overflow: hidden; }
         .mini-fill { height: 100%; width: 0; background: var(--grad); border-radius: 99px; transition: width .9s cubic-bezier(.2,.7,.2,1); }
 
+        /* ============ QUOTE OF THE DAY (popup) + LAZY TABS ============ */
+        .qp-vol { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 13px; color: var(--muted); }
+        .qp-vol input[type=range] { width: 84px; height: 4px; accent-color: var(--primary); cursor: pointer; }
+        @media (max-width: 520px) { .qp-vol input[type=range] { width: 60px; } }
+        .qotd-overlay { position: fixed; inset: 0; z-index: 10050; display: none; align-items: center; justify-content: center; padding: 18px; background: var(--overlay); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+        .qotd-overlay.show { display: flex; animation: qotdFade .25s ease-out; }
+        .qotd-overlay.closing { animation: qotdFadeOut .2s ease-in forwards; }
+        @keyframes qotdFade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes qotdFadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes qotdRise { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+        .qotd-card { position: relative; width: min(560px, 100%); max-height: 88vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 18px; box-shadow: var(--shadow), 0 24px 70px rgba(0, 0, 0, .45); padding: 56px 34px 28px; animation: qotdRise .32s cubic-bezier(.2, .8, .2, 1); }
+        .qotd-card::before { content: '\201C'; position: absolute; top: -26px; right: 22px; font-family: var(--font-display); font-size: 190px; line-height: 1; color: var(--primary); opacity: .10; pointer-events: none; }
+        .qotd-close { position: absolute; top: 14px; left: 14px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; transition: transform .15s, background .15s, color .15s; }
+        .qotd-close:hover { background: var(--primary); color: #fff; transform: rotate(90deg); }
+        .qotd-close:focus-visible, .qotd-nav button:focus-visible, .qotd-play:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .qotd-label { font-family: var(--font-display); font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--primary); margin-bottom: 4px; }
+        .qotd-date { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+        .qotd-text { font-size: 23px; line-height: 1.5; font-weight: 500; font-style: italic; position: relative; transition: opacity .2s, transform .2s; }
+        .qotd-author { margin-top: 14px; font-weight: 600; color: var(--primary); transition: opacity .2s; }
+        .qotd-card.swap .qotd-text { opacity: 0; transform: translateY(6px); }
+        .qotd-card.swap .qotd-author { opacity: 0; }
+        .qotd-actions { margin-top: 26px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+        .qotd-play { display: inline-flex; align-items: center; gap: 10px; padding: 11px 18px; min-height: 44px; border-radius: 12px; border: 1px solid var(--primary); background: transparent; color: var(--primary); font-weight: 600; font-size: 14px; cursor: pointer; transition: background .15s, color .15s; }
+        .qotd-play:hover, .qotd-play.on { background: var(--primary); color: #fff; }
+        .qotd-nav { display: flex; gap: 8px; }
+        .qotd-nav button { min-height: 40px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--panel-2); color: var(--text); font-size: 13px; cursor: pointer; }
+        .qotd-nav button:disabled { opacity: .4; cursor: default; }
+        .qotd-hint { margin-top: 16px; font-size: 12px; color: var(--muted); }
+        .qotd-pill { display: inline-flex; align-items: center; gap: 6px; }
+        body.qotd-open { overflow: hidden; }
+        html[data-theme="mark7"] .qotd-card { border-color: rgba(var(--m7x-cy), .35); }
+        html[data-theme="mark7"] .qotd-text { font-style: normal; text-shadow: 0 0 24px rgba(var(--m7x-cy), .18); }
+        html[data-theme="mark7"] .qotd-label { text-shadow: 0 0 12px rgba(var(--m7x-cy), .5); }
+        html[data-theme="goggins"] .qotd-card { border-color: var(--danger); }
+        .hero-quote .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+        .hero-quote .btn-row .btn-exception { margin-top: 0; }
+        .lazy-skel { position: absolute; inset: 0 0 auto 0; z-index: 5; padding: 8px 0; pointer-events: none; }
+        .lazy-skel i { display: block; height: 18px; margin: 14px 0; border-radius: 8px; background: linear-gradient(90deg, var(--panel-2) 25%, var(--border-strong) 50%, var(--panel-2) 75%); background-size: 200% 100%; animation: lazyShimmer 1.1s linear infinite; }
+        .lazy-skel i:nth-child(1) { width: 38%; height: 26px; }
+        .lazy-skel i:nth-child(2) { width: 100%; height: 90px; }
+        .lazy-skel i:nth-child(3) { width: 82%; }
+        .lazy-skel i:nth-child(4) { width: 64%; }
+        @keyframes lazyShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+        .section.lazy-pending { position: relative; min-height: 240px; }
+        .section.lazy-pending > *:not(.lazy-skel) { opacity: 0; }
+        @media (prefers-reduced-motion: reduce) { .qotd-card, .qotd-overlay.show { animation: none; } .lazy-skel i { animation: none; } }
+        @media (max-width: 520px) { .qotd-card { padding: 54px 22px 22px; } .qotd-text { font-size: 19px; } .qotd-actions { flex-direction: column; align-items: stretch; } .qotd-play { justify-content: center; } .qotd-nav { justify-content: space-between; } .qotd-nav button { flex: 1; } }
+
         /* ============ QUOTES ============ */
         .quote-box { padding: 14px 20px; margin-bottom: 20px; font-style: italic; border-left: 4px solid; background: var(--panel); border-radius: 0 10px 10px 0; font-size: 14px; box-shadow: var(--shadow); }
         .quote-krishna { border-left-color: var(--primary); }
@@ -2031,7 +2079,10 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
                     <div class="hero-quote" id="hero-quote">
                         <div class="home-quote-text" id="home-quote-text"></div>
                         <div class="home-quote-author" id="home-quote-author"></div>
-                        <button class="btn-exception" onclick="generateHomeQuote()">New quote</button>
+                        <div class="btn-row">
+                            <button class="btn-exception" onclick="generateHomeQuote()">New quote</button>
+                            <button class="btn-exception muted" onclick="qotdOpen(true)" title="Open today's quote of the day">Quote of the day</button>
+                        </div>
                     </div>
                 </div>
                 <div class="qp-wrap">
@@ -2045,6 +2096,10 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
                                 <span class="qp-status" id="qp-status">Press play for a random quote</span>
                                 <div class="qp-seek" id="qp-seek" title="Seek"><div class="qp-fill" id="qp-fill"></div></div>
                             </div>
+                            <label class="qp-vol" title="Volume">
+                                <span aria-hidden="true">🔊</span>
+                                <input type="range" id="qp-vol" min="0" max="100" step="5" value="100" aria-label="Quote volume" oninput="qpSetVolume(this.value)">
+                            </label>
                             <div class="qp-eq" id="qp-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
                         </div>
                 </div>
@@ -2317,6 +2372,26 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
                     <div id="aar-history-list" style="margin-top:12px;"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- QUOTE OF THE DAY POPUP (built here, filled by qotdRender) -->
+    <div id="qotd-overlay" class="qotd-overlay" role="dialog" aria-modal="true" aria-labelledby="qotd-label" aria-hidden="true">
+        <div class="qotd-card" id="qotd-card">
+            <button class="qotd-close" id="qotd-close" onclick="qotdClose()" title="Close" aria-label="Close quote of the day">✕</button>
+            <div class="qotd-label" id="qotd-label">Quote of the day</div>
+            <div class="qotd-date" id="qotd-date"></div>
+            <div class="qotd-text" id="qotd-text"></div>
+            <div class="qotd-author" id="qotd-author"></div>
+            <div class="qotd-actions">
+                <button class="qotd-play" id="qotd-play" onclick="qotdPlay()"><span id="qotd-play-ic">▶</span><span id="qotd-play-tx">Hear today's quote</span></button>
+                <div class="qotd-nav">
+                    <button id="qotd-copy" onclick="qotdCopy()" aria-label="Copy this quote">Copy</button>
+                    <button id="qotd-prev" onclick="qotdStep(-1)" aria-label="Previous day">‹ Earlier</button>
+                    <button id="qotd-next" onclick="qotdStep(1)" aria-label="Next day">Later ›</button>
+                </div>
+            </div>
+            <div class="qotd-hint">Press Esc or tap ✕ to close. It comes back tomorrow.</div>
         </div>
     </div>
 
@@ -2623,7 +2698,7 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
            - list-type data (punishments, AAR, timer log, custom events) is merged, not overwritten
            - first connection uploads everything that only exists on this device
            - old single-document data is imported once automatically            */
-        const SYNC_LOCAL_ONLY = new Set(['sync_code', 'sync_ts', 'sync_legacy_done', 'theme', 'last_active_date', 'timer_state', 'last_backup_iso', 'fx_lite']);
+        const SYNC_LOCAL_ONLY = new Set(['sync_code', 'sync_ts', 'sync_legacy_done', 'theme', 'last_active_date', 'timer_state', 'last_backup_iso', 'fx_lite', 'qotd_seen', 'qp_volume']);
         // Hook Storage.prototype (assigning localStorage.setItem directly is not reliable across browsers).
         const _protoSet = Storage.prototype.setItem, _protoRemove = Storage.prototype.removeItem;
         const _rawSet = (k, v) => _protoSet.call(localStorage, k, v);
@@ -3256,6 +3331,60 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
         function toggleDrawer() { $('drawer').classList.contains('open') ? closeDrawer() : openDrawer(); }
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
+        /* =====================================================
+           LAZY TABS
+           Heavy tabs (Insights, Reports, Achievements, AAR, Punishment,
+           Wardrobe, Laundry, Hard Truth) do no work at start-up. The first
+           time one is opened it shows a light skeleton, paints, and only then
+           builds its content. Later visits render straight away.
+           window.__lazyStats keeps the build time of each tab for debugging.
+        ===================================================== */
+        const LAZY_LOADED = new Set();
+        const LAZY_PENDING = new Set();
+        window.__lazyStats = {};
+
+        function lazySkeleton(tabId) {
+            const sec = $('tab-' + tabId);
+            if (!sec || sec.querySelector(':scope > .lazy-skel')) return null;
+            const sk = document.createElement('div');
+            sk.className = 'lazy-skel';
+            sk.setAttribute('aria-hidden', 'true');
+            sk.innerHTML = '<i></i><i></i><i></i><i></i>';
+            sec.appendChild(sk);
+            sec.classList.add('lazy-pending');
+            return sk;
+        }
+
+        function lazyFinish(tabId, sk, t0, failed) {
+            const sec = $('tab-' + tabId);
+            if (sk && sk.parentNode) sk.parentNode.removeChild(sk);
+            if (sec) sec.classList.remove('lazy-pending');
+            LAZY_PENDING.delete(tabId);
+            if (!failed) LAZY_LOADED.add(tabId);
+            window.__lazyStats[tabId] = Math.round(performance.now() - t0) + 'ms' + (failed ? ' (failed)' : '');
+        }
+
+        // console helper: which tabs have been built so far and how long the first build took
+        function lazyReport() {
+            const rows = Object.keys(window.__lazyStats).map(k => ({ tab: k, firstBuild: window.__lazyStats[k] }));
+            console.table(rows.length ? rows : [{ tab: '(no heavy tab opened yet)', firstBuild: '-' }]);
+            return rows;
+        }
+
+        function lazyTab(tabId, fn, soft) {
+            // already built once, or a background refresh of the open tab: just run it
+            if (soft || LAZY_LOADED.has(tabId)) { LAZY_LOADED.add(tabId); fn(); return; }
+            if (LAZY_PENDING.has(tabId)) return;          // a first build is already queued
+            LAZY_PENDING.add(tabId);
+            const t0 = performance.now();
+            const sk = lazySkeleton(tabId);
+            // let the skeleton paint first, then do the heavy build
+            requestAnimationFrame(() => setTimeout(() => {
+                try { fn(); lazyFinish(tabId, sk, t0, false); }
+                catch (e) { console.warn('lazy tab failed', tabId, e); lazyFinish(tabId, sk, t0, true); }
+            }, 0));
+        }
+
         function renderTabContent(tabId, soft) {
             if (tabId === 'home') { window.__homeSoft = !!soft; try { renderHomePage(); } finally { window.__homeSoft = false; } }
             if (tabId === 'tick') renderExecutionGrid(true);
@@ -3268,14 +3397,14 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
                 }
                 renderGymSection();
             }
-            if (tabId === 'punishment') renderPunishmentSection();
-            if (tabId === 'aar') renderAARSection();
-            if (tabId === 'wardrobe') wdOpen();
-            if (tabId === 'laundry') wdRenderLaundry();
-            if (tabId === 'report') renderMultiMonthReports();
-            if (tabId === 'hard-truth') generateHardTruth();
-            if (tabId === 'achievements') renderAchievements();
-            if (tabId === 'insights') renderInsights();
+            if (tabId === 'punishment') lazyTab(tabId, renderPunishmentSection, soft);
+            if (tabId === 'aar') lazyTab(tabId, renderAARSection, soft);
+            if (tabId === 'wardrobe') lazyTab(tabId, wdOpen, soft);
+            if (tabId === 'laundry') lazyTab(tabId, wdRenderLaundry, soft);
+            if (tabId === 'report') lazyTab(tabId, renderMultiMonthReports, soft);
+            if (tabId === 'hard-truth') lazyTab(tabId, generateHardTruth, soft);
+            if (tabId === 'achievements') lazyTab(tabId, renderAchievements, soft);
+            if (tabId === 'insights') lazyTab(tabId, renderInsights, soft);
         }
 
         function switchTab(tabId) {
@@ -3437,6 +3566,7 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
                 : `Starts ${MONTH_NAMES[start.getMonth()].substring(0, 3)} ${start.getDate()}, ${start.getFullYear()}`;
 
             if (!window.__homeSoft) generateHomeQuote(true);
+            if (!window.__homeSoft) { try { qotdAutoShow(); } catch (e) { console.warn('qotd', e); } }
 
             const { current, best } = calcStreaks();
             const streakEl = $("home-streak");
@@ -3464,45 +3594,365 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
         }
 
 
-        /* ===== Quote audio player: random quotes/quote1.mp3 .. quote27.mp3 ===== */
-        const QP_COUNT = 27;
-        const qpAudio = new Audio();
-        qpAudio.preload = 'auto';
-        let qpBag = [], qpLast = -1, qpOn = false;
-        function qpPick() {
-            if (!qpBag.length) {
-                qpBag = Array.from({ length: QP_COUNT }, (_, i) => i + 1);
-                for (let i = qpBag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [qpBag[i], qpBag[j]] = [qpBag[j], qpBag[i]]; }
-                if (qpBag[qpBag.length - 1] === qpLast) qpBag.unshift(qpBag.pop());
-            }
-            qpLast = qpBag.pop();
-            return qpLast;
+        /* =====================================================
+           QUOTE AUDIO PLAYER
+           quotes/quote1.mp3 .. quote53.mp3 (add more later: raise QP_COUNT).
+           - Every quote gets heard: unheard ones are drawn first and the list
+             only refills once all of them have played.
+           - A quote never comes back until at least QP_COOLDOWN others have
+             played in between (18 here, so the gap is always 15-20+).
+           - The screen never says which quote number is playing.
+           - The Audio element is only created on the first press of play,
+             so nothing is downloaded while the app starts.
+        ===================================================== */
+        const QP_COUNT = 53;
+        const QP_COOLDOWN = 18;
+        const QP_DIR = 'quotes/', QP_PREFIX = 'quote', QP_EXT = '.mp3';
+        const QP_STATE_KEY = 'qp_state';
+
+        let qpAudio = null;
+        let qpOn = false;
+        let qpUnheard = [];          // quote numbers not played since the last refill
+        let qpRecent = [];           // last QP_COOLDOWN quotes played, oldest first
+        let qpMissing = new Set();   // numbers whose file failed to load (skipped from now on)
+        let qpFailRun = 0;           // consecutive load failures, stops endless skipping
+
+        function qpSaveState() {
+            try { sessionStorage.setItem(QP_STATE_KEY, JSON.stringify({ u: qpUnheard, r: qpRecent, m: Array.from(qpMissing) })); } catch (e) { }
         }
+        function qpLoadState() {
+            try {
+                const s = JSON.parse(sessionStorage.getItem(QP_STATE_KEY) || 'null');
+                if (!s) return;
+                const ok = n => Number.isInteger(n) && n >= 1 && n <= QP_COUNT;
+                qpUnheard = (s.u || []).filter(ok);
+                qpRecent = (s.r || []).filter(ok).slice(-QP_COOLDOWN);
+                qpMissing = new Set((s.m || []).filter(ok));
+            } catch (e) { }
+        }
+        qpLoadState();
+
+        function qpRefill() {
+            qpUnheard = [];
+            for (let n = 1; n <= QP_COUNT; n++) if (!qpMissing.has(n)) qpUnheard.push(n);
+        }
+        function qpAvailable() { return QP_COUNT - qpMissing.size; }
+
+        // pick one quote: unheard first, never inside the cooldown window
+        function qpPick() {
+            // the cooldown can never be larger than what is actually available
+            const cool = Math.min(QP_COOLDOWN, Math.max(0, qpAvailable() - 1));
+            const recent = new Set(qpRecent.slice(-cool));
+            if (!qpUnheard.length) qpRefill();
+            let pool = qpUnheard.filter(n => !recent.has(n) && !qpMissing.has(n));
+            if (!pool.length) {
+                qpRefill();
+                pool = qpUnheard.filter(n => !recent.has(n));
+            }
+            if (!pool.length) pool = qpUnheard.slice();          // tiny library: nothing else to do
+            const n = pool[Math.floor(Math.random() * pool.length)];
+            qpMarkPlayed(n);
+            return n;
+        }
+        function qpMarkPlayed(n) {
+            qpUnheard = qpUnheard.filter(x => x !== n);
+            qpRecent = qpRecent.filter(x => x !== n);
+            qpRecent.push(n);
+            while (qpRecent.length > QP_COOLDOWN) qpRecent.shift();
+            qpSaveState();
+        }
+
+        function qpEnsureAudio() {
+            if (qpAudio) return qpAudio;
+            qpAudio = new Audio();
+            qpAudio.preload = 'none';
+            qpAudio.volume = qpGetVolume() / 100;
+            qpAudio.addEventListener('ended', () => { if (qpOn) qpLoad(); });
+            qpAudio.addEventListener('timeupdate', () => {
+                if (qpAudio.duration) $("qp-fill").style.width = (qpAudio.currentTime / qpAudio.duration * 100) + '%';
+            });
+            qpAudio.addEventListener('playing', () => { qpFailRun = 0; qotdSyncPlayBtn(); });
+            qpAudio.addEventListener('pause', () => qotdSyncPlayBtn());
+            qpAudio.addEventListener('error', qpOnError);
+            qpMediaSession();
+            return qpAudio;
+        }
+
+        function qpOnError() {
+            if (!qpOn || !qpAudio || !qpAudio.getAttribute('src')) return;
+            const m = /(\d+)\.mp3/.exec(qpAudio.getAttribute('src') || '');
+            if (m) qpMissing.add(parseInt(m[1], 10));
+            qpSaveState();
+            qpFailRun++;
+            if (qpFailRun <= 3 && qpAvailable() > 0) { qpLoad(); return; }   // quietly try another one
+            qpOn = false;
+            qpUi(false, 'Could not load the quotes - check the quotes folder');
+        }
+
+        function qpMediaSession() {
+            if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+            try {
+                navigator.mediaSession.metadata = new MediaMetadata({ title: 'Discipline quote', artist: 'Stark Discipline System' });
+                navigator.mediaSession.setActionHandler('play', () => qpToggle());
+                navigator.mediaSession.setActionHandler('pause', () => qpToggle());
+                navigator.mediaSession.setActionHandler('nexttrack', () => qpNext());
+                navigator.mediaSession.setActionHandler('stop', () => qpStop());
+            } catch (e) { }
+        }
+
+        /* ---------- volume (remembered on this device only) ---------- */
+        const QP_VOL_KEY = 'qp_volume';
+        function qpGetVolume() {
+            try { const v = parseInt(localStorage.getItem(QP_VOL_KEY), 10); if (v >= 0 && v <= 100) return v; } catch (e) { }
+            return 100;
+        }
+        function qpSetVolume(v) {
+            v = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
+            if (qpAudio) qpAudio.volume = v / 100;
+            try { localStorage.setItem(QP_VOL_KEY, String(v)); } catch (e) { }
+        }
+        function qpApplyVolume() {
+            const v = qpGetVolume(), el = $("qp-vol");
+            if (el) el.value = v;
+            if (qpAudio) qpAudio.volume = v / 100;
+        }
+
         function qpUi(playing, msg) {
             $("qp").classList.toggle('playing', playing);
             $("qp-play").textContent = playing ? '❚❚' : '▶';
             if (msg !== undefined) $("qp-status").textContent = msg;
         }
-        function qpLoad() {
-            const n = qpPick();
-            qpAudio.src = 'quotes/quote' + n + '.mp3';
+
+        // load + play one quote (a number, or a random one when n is omitted)
+        function qpLoad(n) {
+            const a = qpEnsureAudio();
+            if (n === undefined) n = qpPick(); else qpMarkPlayed(n);
+            a.src = QP_DIR + QP_PREFIX + n + QP_EXT;
             $("qp-fill").style.width = '0%';
-            qpUi(true, 'Quote ' + n + ' of ' + QP_COUNT);
-            qpAudio.play().catch(e => { console.warn('audio', e); qpUi(false, 'Could not play - tap Next'); });
+            qpUi(true, 'Playing…');
+            a.play().catch(e => {
+                if (e && e.name === 'AbortError') return;       // a newer load replaced this one
+                console.warn('audio', e);
+                qpUi(false, 'Tap play to start');
+            });
         }
         function qpToggle() {
             if (!qpOn) { qpOn = true; qpLoad(); return; }
-            if (qpAudio.paused) { qpAudio.play(); qpUi(true); } else { qpAudio.pause(); qpUi(false, 'Paused'); }
+            if (qpAudio.paused) { qpAudio.play().catch(() => { }); qpUi(true, 'Playing…'); }
+            else { qpAudio.pause(); qpUi(false, 'Paused'); }
         }
         function qpNext() { qpOn = true; qpLoad(); }
-        function qpStop() { qpOn = false; qpAudio.pause(); qpAudio.removeAttribute('src'); qpAudio.load(); $("qp-fill").style.width = '0%'; qpUi(false, 'Stopped - press play for a random quote'); }
-        qpAudio.addEventListener('ended', () => { if (qpOn) qpLoad(); });
-        qpAudio.addEventListener('timeupdate', () => { if (qpAudio.duration) $("qp-fill").style.width = (qpAudio.currentTime / qpAudio.duration * 100) + '%'; });
-        qpAudio.addEventListener('error', () => { if (qpOn && qpAudio.getAttribute('src')) qpUi(false, 'File missing - tap Next'); });
+        function qpStop() {
+            qpOn = false;
+            if (qpAudio) { qpAudio.pause(); qpAudio.removeAttribute('src'); qpAudio.load(); }
+            $("qp-fill").style.width = '0%';
+            qpUi(false, 'Stopped - press play for a random quote');
+            qotdSyncPlayBtn();
+        }
         document.addEventListener('click', e => {
             const sk = e.target.closest && e.target.closest('#qp-seek');
-            if (sk && qpOn && qpAudio.duration) { const r = sk.getBoundingClientRect(); qpAudio.currentTime = (e.clientX - r.left) / r.width * qpAudio.duration; }
+            if (sk && qpOn && qpAudio && qpAudio.duration) {
+                const r = sk.getBoundingClientRect();
+                qpAudio.currentTime = (e.clientX - r.left) / r.width * qpAudio.duration;
+            }
         });
+
+        /* =====================================================
+           QUOTE OF THE DAY (popup on Home, once per day)
+           Same quote all day, a new one tomorrow. Pick is based on the date,
+           so every device shows the same one. The popup has a close button
+           at the top left, closes on Esc or a tap outside, and the day's audio
+           quote can be played from it (drawn from the quotes folder).
+        ===================================================== */
+        const QOTD_SEEN_KEY = 'qotd_seen';
+        const QOTD_MAX_BACK = 30;          // how many days back "Earlier" can go
+        let qotdOffset = 0;                // 0 = today, -1 = yesterday ...
+        let qotdShownThisLoad = false;
+        let qotdLastFocus = null;
+        let qotdAudioN = 0;                // quote number currently loaded from the popup
+
+        function qotdIso(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+        function qotdHash(str) {            // small stable string hash (FNV-1a)
+            let h = 2166136261;
+            for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+            return h >>> 0;
+        }
+        function qotdFor(date) {
+            const iso = qotdIso(date);
+            const q = MASTER_QUOTES[qotdHash('t' + iso) % MASTER_QUOTES.length];
+            const cut = q.lastIndexOf(' — ');
+            return {
+                iso,
+                text: cut > -1 ? q.slice(0, cut) : q,
+                author: cut > -1 ? q.slice(cut + 3) : '',
+                audio: (qotdHash('a' + iso) % QP_COUNT) + 1
+            };
+        }
+        function qotdDateFor(offset) { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + offset); return d; }
+
+        function qotdRender(animate) {
+            const d = qotdDateFor(qotdOffset), q = qotdFor(d), card = $("qotd-card");
+            const apply = () => {
+                $("qotd-label").textContent = qotdOffset === 0 ? 'Quote of the day' : (qotdOffset === -1 ? 'Yesterday\u2019s quote' : 'Earlier quote');
+                $("qotd-date").textContent = DAY_NAMES[d.getDay()] + ', ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+                $("qotd-text").textContent = q.text;
+                $("qotd-author").textContent = q.author;
+                $("qotd-prev").disabled = qotdOffset <= -QOTD_MAX_BACK;
+                $("qotd-next").disabled = qotdOffset >= 0;
+                qotdAudioN = q.audio;
+                qotdSyncPlayBtn();
+                card.classList.remove('swap');
+            };
+            if (!animate) { apply(); return; }
+            card.classList.add('swap');
+            setTimeout(apply, 180);
+        }
+        function qotdStep(delta) {
+            const next = Math.max(-QOTD_MAX_BACK, Math.min(0, qotdOffset + delta));
+            if (next === qotdOffset) return;
+            qotdOffset = next;
+            qotdRender(true);
+        }
+
+        function qotdSyncPlayBtn() {
+            const b = $("qotd-play"); if (!b) return;
+            const mine = !!(qpAudio && qpOn && !qpAudio.paused && qpAudio.getAttribute('src') === QP_DIR + QP_PREFIX + qotdAudioN + QP_EXT);
+            b.classList.toggle('on', mine);
+            $("qotd-play-ic").textContent = mine ? '❚❚' : '▶';
+            $("qotd-play-tx").textContent = mine ? 'Pause' : "Hear a quote";
+        }
+        function qotdPlay() {
+            const src = QP_DIR + QP_PREFIX + qotdAudioN + QP_EXT;
+            if (qpAudio && qpOn && qpAudio.getAttribute('src') === src) {     // already loaded: toggle
+                if (qpAudio.paused) { qpAudio.play().catch(() => { }); qpUi(true, 'Playing…'); }
+                else { qpAudio.pause(); qpUi(false, 'Paused'); }
+                qotdSyncPlayBtn();
+                return;
+            }
+            qpOn = true;
+            qpFailRun = 0;
+            qpLoad(qotdAudioN);
+        }
+
+        // copy the quote text to the clipboard (falls back to a hidden textarea)
+        function qotdCopy() {
+            const q = qotdFor(qotdDateFor(qotdOffset));
+            const txt = '\u201C' + q.text + '\u201D' + (q.author ? ' \u2014 ' + q.author : '');
+            const done = () => { const b = $("qotd-copy"); if (!b) return; b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1400); };
+            if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).then(done).catch(() => { }); return; }
+            const ta = document.createElement('textarea');
+            ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); done(); } catch (e) { }
+            document.body.removeChild(ta);
+        }
+
+        function qotdOpen(manual) {
+            const ov = $("qotd-overlay"); if (!ov || ov.classList.contains('show')) return;
+            if (manual !== true && document.querySelector('.modal-overlay.show')) return;
+            qotdOffset = 0;
+            qotdRender(false);
+            qotdLastFocus = document.activeElement;
+            ov.classList.remove('closing');
+            ov.classList.add('show');
+            ov.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('qotd-open');
+            setTimeout(() => { const c = $("qotd-close"); if (c) c.focus({ preventScroll: true }); }, 60);
+        }
+        function qotdClose() {
+            const ov = $("qotd-overlay"); if (!ov || !ov.classList.contains('show')) return;
+            try { localStorage.setItem(QOTD_SEEN_KEY, qotdIso(new Date())); } catch (e) { }
+            ov.classList.add('closing');
+            setTimeout(() => {
+                ov.classList.remove('show', 'closing');
+                ov.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('qotd-open');
+                if (qotdLastFocus && qotdLastFocus.focus) { try { qotdLastFocus.focus({ preventScroll: true }); } catch (e) { } }
+            }, 200);
+        }
+        document.addEventListener('keydown', e => {
+            const ov = $("qotd-overlay");
+            if (!ov || !ov.classList.contains('show')) return;
+            if (e.key === 'Escape') { e.preventDefault(); qotdClose(); return; }
+            if (e.key === 'ArrowLeft') qotdStep(-1);
+            if (e.key === 'ArrowRight') qotdStep(1);
+            if (e.key === 'Tab') {                       // keep focus inside the popup
+                const f = Array.from(ov.querySelectorAll('button:not([disabled])'));
+                if (!f.length) return;
+                const first = f[0], last = f[f.length - 1];
+                if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+            }
+        });
+        document.addEventListener('click', e => { if (e.target && e.target.id === 'qotd-overlay') qotdClose(); });
+
+        // show once per day, after the login and the boot animation are gone
+        function qotdAutoShow() {
+            if (qotdShownThisLoad) return;
+            let seen = null;
+            try { seen = localStorage.getItem(QOTD_SEEN_KEY); } catch (e) { }
+            if (seen === qotdIso(new Date())) { qotdShownThisLoad = true; return; }
+            qotdShownThisLoad = true;
+            let tries = 0;
+            const wait = setInterval(() => {
+                tries++;
+                const login = $("login-screen");
+                const locked = login && login.style.display !== 'none';
+                const booting = document.documentElement.classList.contains('booting');
+                const home = $("tab-home") && $("tab-home").classList.contains('active');
+                if (!locked && !booting && home) { clearInterval(wait); setTimeout(() => { if ($("tab-home").classList.contains('active')) qotdOpen(false); }, 700); }
+                else if (tries > 80) clearInterval(wait);
+            }, 400);
+        }
+
+        /* ---------- player keyboard shortcuts (ignored while typing) ----------
+           N = next quote, K = play / pause, S = stop. Only on the Home tab. */
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const t = e.target, tag = t && t.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+            const ov = $("qotd-overlay");
+            if (ov && ov.classList.contains('show')) return;
+            const home = $("tab-home");
+            if (!home || !home.classList.contains('active') || !$("qp")) return;
+            const k = (e.key || '').toLowerCase();
+            if (k === 'n') qpNext();
+            else if (k === 'k') qpToggle();
+            else if (k === 's' && qpOn) qpStop();
+        });
+
+        /* ---------- debug helpers (browser console) ----------
+           qpHistory()      -> the last quotes played, oldest first
+           qpSelfTest(2000) -> simulates N plays and reports the smallest gap
+                               between two plays of the same quote, plus whether
+                               every quote was heard. The gap must be >= QP_COOLDOWN. */
+        function qpHistory() { return qpRecent.slice(); }
+        function qpSelfTest(plays) {
+            plays = plays || 2000;
+            const saved = { u: qpUnheard, r: qpRecent, m: qpMissing, save: qpSaveState };
+            qpSaveState = function () { };                 // do not touch the real session state
+            qpUnheard = []; qpRecent = []; qpMissing = new Set();
+            const lastAt = {}, heard = new Set();
+            let minGap = Infinity, repeatsInside = 0;
+            for (let i = 0; i < plays; i++) {
+                const n = qpPick();
+                if (lastAt[n] !== undefined) {
+                    const gap = i - lastAt[n];
+                    if (gap < minGap) minGap = gap;
+                    if (gap <= QP_COOLDOWN) repeatsInside++;
+                }
+                lastAt[n] = i;
+                heard.add(n);
+            }
+            qpUnheard = saved.u; qpRecent = saved.r; qpMissing = saved.m; qpSaveState = saved.save;
+            const res = { plays, quotes: QP_COUNT, cooldown: QP_COOLDOWN, minGapBetweenRepeats: minGap, repeatsInsideCooldown: repeatsInside, allHeard: heard.size === QP_COUNT };
+            console.table(res);
+            return res;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { try { qpApplyVolume(); } catch (e) { } });
 
         let lastQuoteIdx = -1;
         function generateHomeQuote(instant) {
