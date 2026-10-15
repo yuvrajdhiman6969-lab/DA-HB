@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Oswald:wght@500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Oswald:wght@500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
-    <script src="jarvis/perf.js?v=1"></script>
+    <script src="jarvis/perf.js?v=2"></script>
     <!-- Cloud sync: only used if you set a sync code with the "Sync" button -->
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -143,11 +143,11 @@
         .qp-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
         .qp-status { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .qp-eq { display: flex; align-items: flex-end; gap: 3px; height: 26px; width: 34px; flex-shrink: 0; }
-        .qp-eq i { flex: 1; height: 18%; background: var(--primary); border-radius: 2px; transition: height .3s; }
+        .qp-eq i { flex: 1; height: 100%; transform: scaleY(.18); transform-origin: 50% 100%; will-change: transform; background: var(--primary); border-radius: 2px; transition: transform .3s; }
         .qp.playing .qp-eq i { animation: qpEq .9s ease-in-out infinite; }
         .qp-eq i:nth-child(2) { animation-delay: -.2s; } .qp-eq i:nth-child(3) { animation-delay: -.45s; } .qp-eq i:nth-child(4) { animation-delay: -.1s; }
         .qp-eq i:nth-child(5) { animation-delay: -.6s; } .qp-eq i:nth-child(6) { animation-delay: -.3s; } .qp-eq i:nth-child(7) { animation-delay: -.75s; }
-        @keyframes qpEq { 0%,100% { height: 15%; } 50% { height: 100%; } }
+        @keyframes qpEq { 0%,100% { transform: scaleY(.15); } 50% { transform: scaleY(1); } }
         .qp-seek { height: 8px; background: var(--track); border-radius: 99px; cursor: pointer; overflow: hidden; }
         .qp-fill { height: 100%; width: 0; background: var(--grad); border-radius: 99px; }
         .qp-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
@@ -533,7 +533,11 @@
         /* ============ TIMER ============ */
         .timer-card { background: var(--panel); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow); padding: 36px 30px; text-align: center; max-width: 620px; margin: 0 auto; transition: box-shadow .4s, border-color .4s; }
         .timer-card.running { border-color: var(--primary); animation: glow 2.6s ease-in-out infinite; }
-        @keyframes glow { 0%,100% { box-shadow: 0 0 0 0 var(--primary-soft), var(--shadow); } 50% { box-shadow: 0 0 0 14px var(--primary-soft), var(--shadow); } }
+        /* v12: static ring on touch screens (the pulse above is transform-only) */
+        @media (hover: none), (pointer: coarse) { .timer-card.running { box-shadow: 0 0 0 7px var(--primary-soft), var(--shadow); } }
+        /* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes glow { 0%,100% { transform: scale(1); } 50% { transform: scale(1.012); } }
+        @media (hover: hover) and (pointer: fine) { @keyframes glow { 0%,100% { box-shadow: 0 0 0 0 var(--primary-soft), var(--shadow); } 50% { box-shadow: 0 0 0 14px var(--primary-soft), var(--shadow); } } }
         .timer-tag { background: var(--primary-soft); color: var(--primary); padding: 5px 12px; font-weight: 600; font-size: 13px; border-radius: 99px; }
         .timer-card h2 { font-size: 30px; margin-top: 12px; }
         .timer-ring-wrap { position: relative; width: 250px; height: 250px; margin: 22px auto; }
@@ -563,7 +567,9 @@
         .ach-badge { background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px; padding: 18px; text-align: center; opacity: .55; filter: grayscale(1); transition: .3s; }
         .ach-badge.unlocked { opacity: 1; filter: none; border-color: var(--primary); background: var(--primary-soft); }
         .ach-badge.just-unlocked { animation: unlock 1s cubic-bezier(.2,.9,.3,1.3); }
-        @keyframes unlock { 0% { transform: scale(.85); box-shadow: 0 0 0 0 var(--primary); } 50% { transform: scale(1.06); } 100% { transform: scale(1); box-shadow: 0 0 0 16px transparent; } }
+        /* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes unlock { 0% { transform: scale(.85); opacity: .6; } 50% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+        @media (hover: hover) and (pointer: fine) { @keyframes unlock { 0% { transform: scale(.85); box-shadow: 0 0 0 0 var(--primary); } 50% { transform: scale(1.06); } 100% { transform: scale(1); box-shadow: 0 0 0 16px transparent; } } }
         .ach-icon { font-size: 34px; margin-bottom: 8px; }
         .ach-title { font-family: var(--font-display); font-weight: 500; font-size: 18px; margin-bottom: 4px; }
         .ach-desc { font-size: 12.5px; color: var(--muted); }
@@ -1054,10 +1060,14 @@ html[data-theme] .sys-strip::after { content: ""; position: absolute; top: 0; bo
 #boot.ib .ib-eye::before { content: ""; position: absolute; left: 6%; right: 6%; bottom: 100%; height: 36vh; background: linear-gradient(0deg, rgba(190,230,255,.7), transparent); filter: blur(4px); transition: opacity .3s; }
 #boot.ib.eland .ib-eye::before { opacity: 0; }
 #boot.ib.e1 .ib-eyes { animation: ibEyeDrop .9s linear forwards; }
-@keyframes ibEyeDrop { 0% { transform: translateY(-140vh) scale(.9,2.6); filter: blur(8px); animation-timing-function: cubic-bezier(.55,0,.85,.55); } 62% { transform: translateY(1.8vh) scale(1.06,.86); filter: blur(0); animation-timing-function: cubic-bezier(.2,.7,.3,1); } 80% { transform: translateY(-1.4vh) scale(.99,1.04); animation-timing-function: ease-in-out; } 100% { transform: none; filter: none; } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibEyeDrop { 0% { opacity: .35; transform: translateY(-140vh) scale(.9,2.6);  animation-timing-function: cubic-bezier(.55,0,.85,.55); } 62% { opacity: 1; transform: translateY(1.8vh) scale(1.06,.86);  animation-timing-function: cubic-bezier(.2,.7,.3,1); } 80% { transform: translateY(-1.4vh) scale(.99,1.04); animation-timing-function: ease-in-out; } 100% { transform: none;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes ibEyeDrop { 0% { transform: translateY(-140vh) scale(.9,2.6); filter: blur(8px); animation-timing-function: cubic-bezier(.55,0,.85,.55); } 62% { transform: translateY(1.8vh) scale(1.06,.86); filter: blur(0); animation-timing-function: cubic-bezier(.2,.7,.3,1); } 80% { transform: translateY(-1.4vh) scale(.99,1.04); animation-timing-function: ease-in-out; } 100% { transform: none; filter: none; } } }
 #boot.ib.e2 .ib-eyes { animation: none; transform: none; }
 #boot.ib.e2 .ib-eyew { animation: ibPower .55s ease-out; }
-@keyframes ibPower { 0% { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 20px rgba(140,210,255,.95)) drop-shadow(0 0 60px rgba(30,144,255,.85)) brightness(1); } 15% { opacity: .25; } 30% { opacity: 1; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 120px #1e90ff) brightness(2); } 45% { opacity: .55; } 65% { opacity: 1; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 110px #1e90ff) brightness(1.8); } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibPower { 0% {  } 15% { opacity: .25; } 30% { opacity: 1;  } 45% { opacity: .55; } 65% { opacity: 1;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes ibPower { 0% { filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 20px rgba(140,210,255,.95)) drop-shadow(0 0 60px rgba(30,144,255,.85)) brightness(1); } 15% { opacity: .25; } 30% { opacity: 1; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 120px #1e90ff) brightness(2); } 45% { opacity: .55; } 65% { opacity: 1; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 110px #1e90ff) brightness(1.8); } } }
 /* flicker phase: eyes + LED slabs stutter, whole helmet blinks */
 #boot.ib.fk .ib-eyes { animation: ibEyeFlick .9s linear forwards; transform: none; }
 #boot.ib.fk .ib-eyew { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 40px #8fd0ff) drop-shadow(0 0 110px #1e90ff) brightness(1.7); }
@@ -1103,10 +1113,18 @@ html[data-theme] .sys-strip::after { content: ""; position: absolute; top: 0; bo
 #boot.ib.h .sl-t { animation: ibSlT .75s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
 #boot.ib.h .sl-b { animation: ibSlB .75s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
 #boot.ib.h .sl-p { animation: ibPop .7s var(--d, 0s) cubic-bezier(.2,.8,.2,1) forwards; }
-@keyframes ibSlL { 0% { opacity: 0; transform: translateX(-280px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
-@keyframes ibSlR { 0% { opacity: 0; transform: translateX(280px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
-@keyframes ibSlT { 0% { opacity: 0; transform: translateY(-140px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
-@keyframes ibSlB { 0% { opacity: 0; transform: translateY(140px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibSlL { 0% { opacity: 0; transform: translateX(-280px);  } 30% { opacity: 1;  } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1;  } 78% { transform: none; } 100% { opacity: 1; transform: none;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes ibSlL { 0% { opacity: 0; transform: translateX(-280px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibSlR { 0% { opacity: 0; transform: translateX(280px);  } 30% { opacity: 1;  } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1;  } 78% { transform: none; } 100% { opacity: 1; transform: none;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes ibSlR { 0% { opacity: 0; transform: translateX(280px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibSlT { 0% { opacity: 0; transform: translateY(-140px);  } 30% { opacity: 1;  } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1;  } 78% { transform: none; } 100% { opacity: 1; transform: none;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes ibSlT { 0% { opacity: 0; transform: translateY(-140px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibSlB { 0% { opacity: 0; transform: translateY(140px);  } 30% { opacity: 1;  } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1;  } 78% { transform: none; } 100% { opacity: 1; transform: none;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes ibSlB { 0% { opacity: 0; transform: translateY(140px); filter: brightness(2.5); } 30% { opacity: 1; filter: brightness(1.8); } 38% { opacity: .15; } 46% { opacity: 1; } 54% { opacity: .35; } 62% { opacity: 1; filter: brightness(1.3); } 78% { transform: none; } 100% { opacity: 1; transform: none; filter: none; } } }
 @keyframes ibPop { 0% { opacity: 0; transform: scale(.55); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
 
 .ib-cor { position: absolute; width: 34px; height: 34px; border: 2px solid var(--ib2); }
@@ -1226,7 +1244,9 @@ html[data-theme] .sys-strip::after { content: ""; position: absolute; top: 0; bo
 #boot.ib.lp .ib-flame { animation: ibFlame .1s linear infinite alternate, ibFadeIn .15s forwards; }
 @keyframes ibFlame { from { transform: scaleY(.85) scaleX(.95); } to { transform: scaleY(1.15) scaleX(1.05); } }
 #boot.ib.lp .ib-hud { animation: ibHudCharge .25s ease-out forwards; }
-@keyframes ibHudCharge { to { opacity: 1; filter: brightness(1.7); } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibHudCharge { to { opacity: 1;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes ibHudCharge { to { opacity: 1; filter: brightness(1.7); } } }
 @media (prefers-reduced-motion: reduce) { #boot.ib * { animation-duration: .01s !important; } }
 
 /* ---------- Lite / reduce-motion / tab hidden ---------- */
@@ -1295,7 +1315,9 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
 @keyframes ibEyeOut{0%{opacity:1}12%{opacity:.15}22%{opacity:1}36%{opacity:.3}46%{opacity:.9}62%{opacity:.1}74%{opacity:.5}100%{opacity:0}}
 @keyframes ibFrameOut{0%{opacity:1;transform:none}30%{opacity:.5;transform:none}45%{opacity:.9;transform:none}100%{opacity:0;transform:none}}
 #boot.ib.h .ib-hud{animation:ibHudBoot 1s ease-out forwards,ibHudFlk 3.2s 1.8s steps(1) infinite}
-@keyframes ibHudBoot{0%{opacity:0;filter:brightness(2.2)}8%{opacity:.7}14%{opacity:.05}24%{opacity:.9;filter:brightness(1.8)}30%{opacity:.15}42%{opacity:.8}50%{opacity:.3}60%{opacity:1;filter:brightness(1.3)}68%{opacity:.6}78%{opacity:1}100%{opacity:1;filter:none}}
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibHudBoot{0%{opacity:0;}8%{opacity:.7}14%{opacity:.05}24%{opacity:.9;}30%{opacity:.15}42%{opacity:.8}50%{opacity:.3}60%{opacity:1;}68%{opacity:.6}78%{opacity:1}100%{opacity:1;}}
+        @media (hover: hover) and (pointer: fine) { @keyframes ibHudBoot{0%{opacity:0;filter:brightness(2.2)}8%{opacity:.7}14%{opacity:.05}24%{opacity:.9;filter:brightness(1.8)}30%{opacity:.15}42%{opacity:.8}50%{opacity:.3}60%{opacity:1;filter:brightness(1.3)}68%{opacity:.6}78%{opacity:1}100%{opacity:1;filter:none}} }
 
 /* ===== BOOT v4: two big black+blue eyes. drop -> glow in the centre -> flicker ===== */
 #boot.ib .ib-stage { background: radial-gradient(ellipse 85% 70% at 50% 42%, #05142e 0, #02060f 55%, #000 100%); }
@@ -1317,12 +1339,19 @@ html[data-theme] #login-screen .pin-container p{text-align:center;font:10px ui-m
 @keyframes ibLightOn { 0% { opacity: 0; } 25% { opacity: .5; } 42% { opacity: .2; } 72% { opacity: .95; } 100% { opacity: 1; } }
 #boot.ib.e1 .ib-eyes { animation: ibRigDrop .95s linear forwards; transform: translateY(-140vh) rotateX(55deg); }
 #boot.ib.eland .ib-eyes, #boot.ib.e2 .ib-eyes, #boot.ib.fk .ib-eyes { animation: none; transform: none; }
-@keyframes ibRigDrop {
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes ibRigDrop {
+  0%   { opacity: .35; transform: translateY(-140vh) rotateX(55deg) scale(.95);  animation-timing-function: cubic-bezier(.5,0,.85,.5); }
+  60%  { opacity: 1; transform: translateY(2vh) rotateX(-7deg) scale(1.02,.97);  animation-timing-function: cubic-bezier(.2,.7,.3,1); }
+  78%  { transform: translateY(-1.2vh) rotateX(2.5deg) scale(1); animation-timing-function: ease-in-out; }
+  100% { transform: none;  }
+}
+        @media (hover: hover) and (pointer: fine) { @keyframes ibRigDrop {
   0%   { transform: translateY(-140vh) rotateX(55deg) scale(.95); filter: blur(7px); animation-timing-function: cubic-bezier(.5,0,.85,.5); }
   60%  { transform: translateY(2vh) rotateX(-7deg) scale(1.02,.97); filter: blur(0); animation-timing-function: cubic-bezier(.2,.7,.3,1); }
   78%  { transform: translateY(-1.2vh) rotateX(2.5deg) scale(1); animation-timing-function: ease-in-out; }
   100% { transform: none; filter: none; }
-}
+} }
 
 /* ===== BOOT v5: helmet-interior eye scene (canvas) ===== */
 .hm-cv{position:absolute;inset:0;width:100%;height:100%;z-index:6;pointer-events:none;display:block}
@@ -1618,7 +1647,9 @@ html[data-theme] .pin-input:focus, html[data-theme] .form-group input:focus { bo
 @keyframes vzFlick { 0% { opacity: 0; } 10% { opacity: .9; } 16% { opacity: .1; } 28% { opacity: 1; } 34% { opacity: .35; } 52% { opacity: 1; } 60% { opacity: .6; } 100% { opacity: 1; } }
 html[data-theme] .home-stat-value, html[data-theme] .today-date-display { text-shadow: 0 0 14px rgba(var(--fx-rgb), .45); }
 .vz-glitch { animation: vzGlitch .32s steps(2) 1; }
-@keyframes vzGlitch { 0% { transform: translateX(-2px); filter: drop-shadow(2px 0 rgba(var(--fx-rgb2), .8)) drop-shadow(-2px 0 rgba(var(--fx-rgb), .8)); } 50% { transform: translateX(2px); } 100% { transform: none; filter: none; } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes vzGlitch { 0% { transform: translateX(-2px);  } 50% { transform: translateX(2px); } 100% { transform: none;  } }
+        @media (hover: hover) and (pointer: fine) { @keyframes vzGlitch { 0% { transform: translateX(-2px); filter: drop-shadow(2px 0 rgba(var(--fx-rgb2), .8)) drop-shadow(-2px 0 rgba(var(--fx-rgb), .8)); } 50% { transform: translateX(2px); } 100% { transform: none; filter: none; } } }
 
 /* ---------- reticle on the streak reactor ---------- */
 .vz-reticle { position: absolute; inset: -6%; z-index: 2; pointer-events: none; }
@@ -1803,7 +1834,9 @@ html[data-theme="mark7"] .toast.quote { font-style: normal; }
 
 /* ---------- live value flash + sparkline ---------- */
 .m7x-flash { animation: m7xFlash .8s ease-out; }
-@keyframes m7xFlash { 0% { text-shadow: 0 0 2px #fff, 0 0 26px rgb(var(--m7x-cy)); color: #fff; } 100% { } }
+/* v12: compositor-only version (transform/opacity) for touch screens; the full original look is kept below for desktop */
+        @keyframes m7xFlash { 0% { opacity: .4; } 100% { opacity: 1; } }
+        @media (hover: hover) and (pointer: fine) { @keyframes m7xFlash { 0% { text-shadow: 0 0 2px #fff, 0 0 26px rgb(var(--m7x-cy)); color: #fff; } 100% { } } }
 .m7x-spark { display: block; width: 100%; height: 26px; margin-top: 10px; overflow: visible; }
 .m7x-spark path { fill: none; stroke: rgb(var(--m7x-cy)); stroke-width: 1.4; filter: drop-shadow(0 0 3px rgba(var(--m7x-cy), .9)); }
 .m7x-spark .ar { fill: url(#m7xSparkG); stroke: none; filter: none; }
@@ -1920,7 +1953,7 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
 @media print { :is(#m7x-ret, #m7x-field, #m7x-fab, #m7x-rail, #m7x-call, #m7x-console, #m7x-pal) { display: none !important; } }
 </style>
 
-<link rel="stylesheet" href="jarvis/jarvis.css?v=9">
+<link rel="stylesheet" href="jarvis/jarvis.css?v=12">
 </head>
 <body>
     <div id="login-screen">
@@ -8503,7 +8536,7 @@ function ib2Build(el) {
 </script>
 
 
-<script src="jarvis/jarvis.js?v=9" defer></script>
+<script src="jarvis/jarvis.js?v=12" defer></script>
 
 </body>
 </html>
