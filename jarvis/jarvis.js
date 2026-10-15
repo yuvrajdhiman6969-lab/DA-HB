@@ -39,14 +39,16 @@ const pick = a => a[Math.floor(Math.random() * a.length)];
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
 const list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+const cap = x => x ? x[0].toUpperCase() + x.slice(1) : x;
 const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 const today = () => new Date();
 const curTab = () => { const s = document.querySelector('.section.active'); return s ? s.id.replace('tab-', '') : 'home'; };
 const idle = (fn, ms) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: ms || 3000 }) : setTimeout(fn, 60));
 const HN = ['sleep', 'classes', 'self study', 'project work', 'gym', 'scrolling control', 'morning phone rule', 'night phone rule', 'water', 'skin care', 'reading', 'fruit'];
-try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); SYNC_LOCAL_ONLY.add('jv_ai'); SYNC_LOCAL_ONLY.add('jv_model'); } catch (e) { }
+try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); SYNC_LOCAL_ONLY.add('jv_ai'); SYNC_LOCAL_ONLY.add('jv_model'); ['jv_voice', 'jv_rate', 'jv_vmode', 'jv_meter', 'jv_focus', 'jv_flast'].forEach(k => SYNC_LOCAL_ONLY.add(k)); } catch (e) { }
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const TOUCH = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
 const S = { wake: lsGet('jv_wake') === '1', active: false };
 let muted = lsGet('jv_mute') === '1';
 let locked = true, speaking = false, guardUntil = 0, touched = false, needUnlock = false, welcomed = false;
@@ -55,6 +57,10 @@ let root, el = {};
 /* local AI state (WebLLM, runs on this device) */
 let aiOn = lsGet('jv_ai') === '1', aiSmart = lsGet('jv_model') === 'smart';
 let aiEngine = null, aiLoading = null, aiBusy = false, aiErr = '', aiHist = [], pendingAct = '', ttsU = null;
+/* v7: speech engine state + live visualiser */
+const synth = window.speechSynthesis;
+const TTS = { q: [], cur: null, open: false, t: 0, rate: parseFloat(lsGet('jv_rate')) || 1, voice: lsGet('jv_voice') || '', full: lsGet('jv_vmode') !== 'clips' };
+let env = 0, vizRaf = 0, bars = [];
 
 /* =====================================================================
    UI
@@ -72,6 +78,7 @@ function build() {
         '<button class="jv-ico" id="jv-sound" aria-label="Mute Jarvis" title="Voice on/off">&#128266;</button>' +
         '<button class="jv-ico" id="jv-close" aria-label="Close Jarvis">&#10005;</button></div>' +
       '<div class="jv-sub"><span>DISCIPLINE CORE // ONLINE</span><span id="jv-clock">--:--:--</span></div>' +
+      '<div class="jv-meter" aria-hidden="true"><i id="jv-lv"></i></div>' +
       '<div class="jv-tele" id="jv-tele" data-lv="lo" aria-hidden="true">' +
         '<div class="jv-ringbox"><svg viewBox="0 0 56 56"><circle class="tk" cx="28" cy="28" r="26"/><circle class="bg" cx="28" cy="28" r="22"/>' +
           '<circle class="fg" id="jv-ring" cx="28" cy="28" r="22" transform="rotate(-90 28 28)"/></svg>' +
@@ -82,13 +89,14 @@ function build() {
           '<div><small>MONTH</small><b id="jv-month">0%</b></div>' +
           '<div class="wide"><small>NEXT BLOCK</small><b id="jv-next">—</b></div></div></div>' +
       '<div id="jv-heard"></div><div id="jv-reply">At your service, sir.</div>' +
-      '<div class="jv-ai"><button type="button" id="jv-ai" title="Free AI that runs on this device"></button><button type="button" id="jv-model" title="FAST = small model, SMART = bigger model (slower, better Hindi)"></button><span id="jv-aist"></span></div>' +
+      '<div class="jv-ai"><button type="button" id="jv-ai" title="Free AI that runs on this device"></button><button type="button" id="jv-model" title="FAST = small model, SMART = bigger model (slower, better Hindi)"></button><button type="button" id="jv-voice" title="Change the Jarvis voice"></button><button type="button" id="jv-rate" title="Speaking speed"></button><button type="button" id="jv-meter" title="Live mic level + talk-over-him interrupt"></button><button type="button" id="jv-vmode" title="FULL = he speaks every answer, CLIPS = short film lines only"></button><span id="jv-aist"></span></div>' +
       '<div class="jv-aibar"><i id="jv-aibar"></i></div>' +
-      '<div class="jv-chips">' +
+      '<div class="jv-chips"><button type="button" id="jv-c0" data-c="brief me">Briefing</button>' +
         '<button type="button" data-c="what is left today">What’s left</button>' +
         '<button type="button" data-c="how am i doing">How am I doing</button>' +
         '<button type="button" data-c="next class">Next class</button>' +
         '<button type="button" data-c="start soul timer">Start timer</button>' +
+        '<button type="button" data-c="focus for 45 minutes">Focus 45</button>' +
         '<button type="button" data-c="give me advice to improve today">Advice</button></div>' +
       '<form id="jv-form" autocomplete="off"><input id="jv-in" placeholder="Type a command…" enterkeyhint="send"><button id="jv-go" type="submit">Go</button></form>' +
       '<div class="jv-hint">Say “Jarvis”, then: “tick gym and study”, “open reports”, “attended DAA”, “help”. Keep this tab open and in front. Turn on AI BRAIN for free-form questions, advice and Hinglish.</div>' +
@@ -97,11 +105,12 @@ function build() {
       '<button class="jv-orb" id="jv-mic" aria-label="Talk to Jarvis" title="Tap to talk"><svg viewBox="0 0 64 64" aria-hidden="true">' +
         '<circle class="r3" cx="32" cy="32" r="30"/><circle class="r1" cx="32" cy="32" r="26"/>' +
         '<circle class="r2" cx="32" cy="32" r="20"/><circle class="r4" cx="32" cy="32" r="14.5"/>' +
-        '<polygon class="tri" points="32,22.5 40.4,37 23.6,37"/><circle class="core" cx="32" cy="32" r="5"/></svg></button>' +
-      '<button class="jv-wake" id="jv-wake" title="Always listen for the wake word “Jarvis”"><i></i>JARVIS</button>' +
+        '<polygon class="tri" points="32,22.5 40.4,37 23.6,37"/><circle class="core" cx="32" cy="32" r="5"/></svg><i class="jv-rip"></i></button>' +
+      '<button class="jv-wake" id="jv-wake" title="Always listen for the wake word “Jarvis”"><i></i>JARVIS</button><button class="jv-fchip" id="jv-fchip" hidden title="Focus timer — tap for time left"></button>' +
     '</div>';
   document.body.appendChild(root);
-  ['pop', 'panel', 'state', 'heard', 'reply', 'dock', 'mic', 'wake', 'sound', 'close', 'form', 'in', 'clock', 'tele', 'ring', 'pct', 'today', 'streak', 'month', 'next', 'ai', 'model', 'aist', 'aibar'].forEach(k => el[k] = $('jv-' + k));
+  ['pop', 'panel', 'state', 'heard', 'reply', 'dock', 'mic', 'wake', 'sound', 'close', 'form', 'in', 'clock', 'tele', 'ring', 'pct', 'today', 'streak', 'month', 'next', 'ai', 'model', 'aist', 'aibar', 'voice', 'rate', 'vmode', 'c0', 'lv', 'meter', 'fchip'].forEach(k => el[k] = $('jv-' + k));
+  bars = [].slice.call(root.querySelectorAll('.jv-bars i')); root.classList.add('viz');
 }
 
 const LABEL = { off: 'STANDBY', wake: 'SAY “JARVIS”', listen: 'LISTENING…', speak: 'SPEAKING', think: 'THINKING…' };
@@ -111,7 +120,7 @@ function setState() {
   el.state.textContent = SR ? LABEL[s] : 'TYPE A COMMAND';
   el.wake.classList.toggle('on', S.wake);
   el.sound.classList.toggle('off', muted);
-  setAi();
+  setAi(); if (s !== 'off' && s !== 'wake') kick(.1);
 }
 let heardRaf = 0, heardTxt = '';
 function showHeard(t) { heardTxt = t; if (!heardRaf) heardRaf = requestAnimationFrame(() => { heardRaf = 0; el.heard.textContent = heardTxt; }); }
@@ -128,7 +137,9 @@ function showReply(t) {                  // typed-out reveal (instant in Lite mo
 let clockT = 0;
 const p2 = n => (n < 10 ? '0' : '') + n;
 function tickClock() { const d = new Date(); el.clock.textContent = p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds()); }
-function updateHud() {                   // live telemetry strip — read-only, never throws
+let hudT = 0;
+function updateHud() { if (hudT || el.panel.hidden) return; hudT = setTimeout(() => { hudT = 0; hudNow(); }, 120); }   // coalesced, skipped while closed
+function hudNow() {                      // live telemetry strip — read-only, never throws
   try {
     const { t, tot, p, s } = summary();
     el.pct.textContent = p; el.ring.style.strokeDashoffset = (138.2 * (1 - Math.min(100, p) / 100)).toFixed(1);
@@ -138,6 +149,7 @@ function updateHud() {                   // live telemetry strip — read-only, 
     el.month.textContent = (s.hasData ? s.hPct : 0) + '%';
     const nx = ttToday().find(x => !x.over);
     el.next.textContent = nx ? nx.at + ' · ' + nx.name : 'ALL CLEAR';
+    if (t.left.length) { el.c0.dataset.c = 'tick ' + HN[t.left[0]]; el.c0.textContent = 'Tick ' + cap(HN[t.left[0]]); } else { el.c0.dataset.c = 'brief me'; el.c0.textContent = 'Briefing'; }
   } catch (e) { }
 }
 function openPanel() {
@@ -149,7 +161,7 @@ function armIdle(ms) { clearTimeout(idleT); idleT = setTimeout(sleep, ms); }
 function sleep() {                       // back to wake-word mode (or fully off)
   clearTimeout(idleT); clearTimeout(ackT);
   S.active = false; closePanel(); root.dataset.tone = ''; setState();
-  if (!want()) stopRec();
+  if (!want()) { stopRec(); micClose(); }
 }
 
 /* =====================================================================
@@ -158,12 +170,17 @@ function sleep() {                       // back to wake-word mode (or fully off
 const cache = {};
 let cur = null, playTok = 0;
 function clip(n) { return cache[n] || (cache[n] = Object.assign(new Audio(BASE + n + '.mp3'), { preload: 'auto' })); }
-function preload() { Object.keys(CLIPS).forEach(k => CLIPS[k].forEach(clip)); }
+let preloaded = false;
+function preload() {                     // same clips, loaded one at a time so the phone never stalls on startup
+  if (preloaded) return; preloaded = true;
+  const all = []; Object.keys(CLIPS).forEach(k => CLIPS[k].forEach(n => { if (all.indexOf(n) < 0) all.push(n); }));
+  let i = 0; const next = () => { if (i < all.length) { clip(all[i++]); setTimeout(() => idle(next, 1500), 200); } }; next();
+}
 function stopVoice() {
   playTok++;
   if (cur) { try { cur.pause(); } catch (e) { } clearTimeout(cur._t); cur = null; }
-  ttsU = null; try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { }
-  speaking = false;
+  TTS.q = []; TTS.cur = null; TTS.open = false; clearTimeout(TTS.t); ttsU = null; try { if (synth) synth.cancel(); } catch (e) { }
+  speaking = false; guardUntil = Date.now() + 200;
 }
 function say(kind) {
   if (muted || !CLIPS[kind]) return;
@@ -189,6 +206,7 @@ const want = () => !!SR && !document.hidden && !locked && (S.wake || S.active);
 const ignored = new Set(), woke = new Set();
 function start() {
   clearTimeout(restartT);
+  if (want()) micOpen();
   if (rec || !want()) return;
   const r = rec = new SR();
   r.lang = LANG; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
@@ -209,7 +227,9 @@ function onError(e) {
     S.wake = false; S.active = false; lsSet('jv_wake', '0'); stopRec(); setState(); openPanel();
     showReply('The microphone is blocked, sir. Allow mic access for this site in the browser, or type a command below.');
   } else if (m === 'audio-capture') {
-    openPanel(); showReply('No microphone found, sir.');
+    openPanel();
+    if (mic) { meterEnabled = false; lsSet('jv_meter', '0'); micClose(); setAi(); showReply('The mic meter clashed with voice recognition on this device, so I switched it off, sir.'); }
+    else showReply('No microphone found, sir.');
   } else if (m === 'network' && Date.now() - netMsgAt > 60000) {
     netMsgAt = Date.now(); openPanel(); showReply('Voice recognition needs an internet connection, sir.');
   }
@@ -232,9 +252,13 @@ function onResult(e) {
   const now = Date.now();
   for (let i = e.resultIndex; i < e.results.length; i++) {
     const res = e.results[i];
+    if (speaking && wakeHit(res) && /\b(stop|quiet|enough|shut up|chup|bas)\b/.test(norm(res[0].transcript))) {   // voice barge-in: "Jarvis, stop"
+      stopVoice(); S.active = true; openPanel(); showHeard('Go ahead, sir…'); setState(); armIdle(14000); ignored.add(i); continue;
+    }
     if (ignored.has(i)) { if (res.isFinal) ignored.delete(i); continue; }
     if (now < guardUntil) { if (!res.isFinal) ignored.add(i); continue; }      // that is Jarvis's own voice
     const txt = res[0].transcript.trim(); if (!txt) continue;
+    kick(.9);
     if (!S.active) {                                                         // waiting for the wake word
       if (!wakeHit(res)) { continue; }
       if (!woke.has(i)) { woke.add(i); activate(); }
@@ -340,11 +364,32 @@ const TNAME = { 'hard-truth': 'Hard Truth', soul: 'Soul Timer', tick: 'Daily Gri
    THE BRAIN — short, film-style answers.  R(text, clipKind)
    ===================================================================== */
 const R = (t, c) => ({ t, c: c === undefined ? 'ok' : c });
+function briefing() {
+  const d = today(), h = d.getHours(), { t, tot, p, s } = summary(), up = ttToday().filter(x => !x.over)[0];
+  const a = [`${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, sir.`, `${t.done.length} of ${tot} habits done, ${p} percent.`];
+  if (s.streak > 0) a.push(`Streak at ${plural(s.streak, 'day')}.`);
+  if (t.left.length) a.push(`Still pending: ${list(t.left.slice(0, 4).map(i => HN[i]))}.`);
+  if (up) a.push(`Next up, ${up.name} at ${up.at}.`);
+  if (s.activePenalties) a.push(`${plural(s.activePenalties, 'penalty')} waiting to be served.`);
+  return R(a.join(' '), p >= 70 ? 'cheer' : p >= 40 ? 'ok' : 'warn');
+}
 function exec(n) {
   let m;
   if (/^(stop|quit jarvis|exit|close|cancel|goodbye|bye|go to sleep|thats all|dismiss|never ?mind|im done|thank(s| you)( jarvis)?)$/.test(n)) return Object.assign(R('Very good, sir.'), { close: true });
+  if (/\b(brief me|briefing|catch me up|sitrep|status report)\b|^good (morning|afternoon|evening)( jarvis)?$/.test(n)) return briefing();
+  if (/\b(focus|break)\b/.test(n) && (/\b(start|begin|for|mode|set|take|run|on|stop|cancel|end|quit|off|left|remaining|status|how)\b/.test(n) || /\d/.test(n))) {
+    const kind = /\bbreak\b/.test(n) && !/\bfocus\b/.test(n) ? 'break' : 'focus';
+    if (/\b(stop|cancel|end|quit|abort|off)\b/.test(n)) { if (!FOCUS.end) return R('No focus session is running, sir.', 'err'); const k = FOCUS.kind; focusStop(); return R(k === 'focus' ? 'Focus mode ended. Alerts are back on, sir.' : 'Break cancelled, sir.'); }
+    if (/\b(left|remaining|status|how long|how much)\b/.test(n)) return FOCUS.end > Date.now() ? R(`${fmt(FOCUS.end - Date.now())} remaining on your ${FOCUS.kind}, sir.`) : R('No focus session is running, sir.', 'err');
+    let min = 0, m = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|ghante|ghanta)/.exec(n);
+    if (m) min = parseFloat(m[1]) * 60; else if (m = /(\d+)/.exec(n)) min = +m[1]; else if (/\ban hour\b/.test(n)) min = 60;
+    if (!min) min = kind === 'break' ? 5 : +(lsGet('jv_flast') || 25);
+    min = Math.max(1, Math.min(180, Math.round(min))); if (kind === 'focus') lsSet('jv_flast', String(min));
+    focusStart(min, kind);
+    return R(kind === 'focus' ? `Focus engaged, sir. ${plural(min, 'minute')}. Alerts are muted. I will check in when it ends.` : `Break started, ${plural(min, 'minute')}. Rest properly, sir.`);
+  }
   if (/\b(help|what can you do|commands)\b/.test(n)) return R('Tick or untick habits (“tick gym and study”), mark classes (“attended DAA”), open any tab (“open reports”), run the Soul Timer. Ask me: what’s left, how am I doing, my streak, attendance, weakest habit, next class, penalties.');
-  if (/^(hi|hello|hey|yo|good (morning|afternoon|evening)|are you there|you there|you up)$/.test(n)) return R('For you, sir, always.', 'wake');
+  if (/^(hi|hello|hey|yo|are you there|you there|you up)$/.test(n)) return R('For you, sir, always.', 'wake');
   // soul timer
   if (/\b(timer|soul|session|deep work)\b/.test(n) && !/^(open|go to|show|take me)/.test(n)) {
     if (/\b(quit|give up|abort|cancel)\b/.test(n)) { if (!timerStarted) return R('No session is running, sir.', 'err'); quitTimerWithGoggins(); return R('Session abandoned. A penalty has been assigned.', 'err'); }
@@ -434,13 +479,19 @@ function exec(n) {
   return R('I did not quite catch that, sir. Say “help” for what I can do.', 'huh');
 }
 function present(res) {
-  const txt = res.map(r => r.t).join('\n'); showReply(txt);
-  const kinds = res.map(r => r.c), sp = res.find(r => r.speak);
-  if (sp) speakText(sp.speak); else say(kinds.includes('err') ? 'err' : kinds[0] || 'ok');
+  const txt = res.map(r => cap(r.t)).join('\n'), kinds = res.map(r => r.c), str = res.some(r => r.streamed);
+  if (!str) {
+    showReply(txt);
+    if (TTS.full && synth && !muted) {
+      const act = !kinds.includes('err') && /ticked|unticked|marked|running|paused|opening|locking|switched|set to/i.test(txt);
+      speakText((act && Math.random() < .5 ? pick(['Done, sir. ', 'Right away, sir. ', 'Certainly, sir. ']) : '') + txt);
+    } else say(kinds.includes('err') ? 'err' : kinds[0] || 'ok');
+  }
+  try { if (navigator.vibrate) navigator.vibrate(kinds.includes('err') ? [40, 40, 40] : 15); } catch (e) { }
   root.dataset.tone = kinds.some(k => k === 'err' || k === 'warn' || k === 'huh') ? 'bad' : '';
-  updateHud(); setTimeout(updateHud, 450);       // after the deferred re-render has saved the tick
+  updateHud(); setTimeout(updateHud, 450);
   if (res.some(r => r.close)) { setTimeout(sleep, 1200); return; }
-  armIdle(9000 + Math.min(12000, txt.length * 60));
+  armIdle(speaking ? 45000 : 9000 + Math.min(12000, txt.length * 60));      // ttsDone() re-arms a 14 s follow-up window
 }
 function viaAI(text) { askAI(text).then(r => present([r])).catch(() => present([R('Something went wrong, sir.', 'err')])); }
 function run(n, raw) {
@@ -500,6 +551,8 @@ function setAi() {
   el.ai.textContent = 'AI BRAIN: ' + (aiLoading ? 'LOADING' : aiOn ? (aiEngine ? 'ON' : 'READY') : 'OFF');
   el.ai.classList.toggle('on', aiOn);
   el.model.textContent = aiSmart ? 'SMART' : 'FAST';
+  const pv = pickVoice(); el.voice.textContent = 'VOICE: ' + (pv ? pv.name.replace(/^(Microsoft|Google)\s+/i, '').split(/[\s-]/)[0].toUpperCase() : 'DEFAULT');
+  el.rate.textContent = TTS.rate + '×'; el.vmode.textContent = TTS.full ? 'SPEAK: FULL' : 'SPEAK: CLIPS'; el.meter.textContent = 'MIC: ' + (meterEnabled ? 'ON' : 'OFF');
 }
 function ensureAI() {
   if (aiEngine) return Promise.resolve(true);
@@ -573,52 +626,145 @@ async function askAI(text) {
     armIdle(90000);
     if (!await ensureAI()) return R('My local brain is unavailable, sir: ' + aiErr + ' Command mode still works.', 'err');
     const stream = await aiEngine.chat.completions.create({ messages: [{ role: 'system', content: sysPrompt() }, ...aiHist.slice(-6), { role: 'user', content: text }], temperature: 0.3, max_tokens: 160, stream: true });
-    let raw = '';
+    let raw = '', said = 0, started = false, talk = false;
+    const begin = () => { if (!started) { started = true; talk = speakBegin(); } };
     el.reply.classList.remove('typing');
     for await (const ch of stream) {                       // words appear as they are generated
       raw += (ch.choices && ch.choices[0] && ch.choices[0].delta && ch.choices[0].delta.content) || '';
-      const part = splitReply(raw).reply; if (part) el.reply.textContent = part;
+      kick(.8); const part = splitReply(raw).reply; if (part) el.reply.textContent = part;
+      const seg = part.slice(said), k = Math.max(seg.lastIndexOf('. '), seg.lastIndexOf('! '), seg.lastIndexOf('? '));
+      if (k > -1) { begin(); if (talk) speakPush(seg.slice(0, k + 1)); said += k + 2; }      // he starts talking before the model finishes
       armIdle(30000);
     }
     const sp = splitReply(raw), acts = sp.acts, reply = sp.reply || 'Understood, sir.';
     aiHist.push({ role: 'user', content: text }, { role: 'assistant', content: reply }); if (aiHist.length > 8) aiHist.splice(0, aiHist.length - 8);
-    const done = runActs(acts);
-    return Object.assign(R(reply + (done.length ? '\n' + done.join(' ') : ''), 'ok'), { speak: reply + (done.length && !pendingAct ? ' Done.' : done.length ? ' ' + done[done.length - 1] : '') });
+    const done = runActs(acts); begin();
+    if (talk) { speakPush(reply.slice(said)); if (done.length) speakPush(pendingAct ? done[done.length - 1] : 'Done.'); speakEnd(); }
+    return Object.assign(R(reply + (done.length ? '\n' + done.join(' ') : ''), 'ok'), { streamed: talk });
   } catch (e) {
     console.warn('Jarvis AI', e);
     return R('My local brain hit an error, sir. Try again.', 'err');
   } finally { aiBusy = false; setState(); }
 }
-function pickVoice() {
-  const v = (window.speechSynthesis && speechSynthesis.getVoices()) || [], en = v.filter(x => /^en/i.test(x.lang));
-  return en.find(x => /daniel|google uk english male|ryan|george|ravi|prabhat|rishi|male/i.test(x.name) && !/female/i.test(x.name)) || en.find(x => /^en-(GB|IN)/i.test(x.lang)) || en[0] || null;
+/* ---------- v7 speech engine: sentence-chunked, natural-sounding, never cuts off ---------- */
+const VM = /daniel|arthur|george|ryan|ravi|prabhat|rishi|james|oliver|thomas|hemant|male/i, VF = /female|zira|susan|hazel|samantha|karen|moira|tessa|fiona|heera|neerja|aria|jenny|libby|sonia|swara|google us english/i;
+function voiceList() {
+  const sc = x => (VM.test(x.name) && !/female/i.test(x.name) ? 10 : 0) - (VF.test(x.name) ? 20 : 0) + (/natural|neural|online/i.test(x.name) ? 4 : 0) + (/^en-GB/i.test(x.lang) ? 6 : /^en-IN/i.test(x.lang) ? 4 : 1);
+  return ((synth && synth.getVoices()) || []).filter(x => /^en/i.test(x.lang)).sort((a, b) => sc(b) - sc(a)).slice(0, 6);
 }
-function speakText(t) {                  // browser voice, used only for free-form AI answers
-  if (muted || !window.speechSynthesis || !t) return;
-  stopVoice();
-  const u = new SpeechSynthesisUtterance(t), v = pickVoice();
-  if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-GB';
-  u.rate = .97; u.pitch = .8; ttsU = u; speaking = true; guardUntil = Infinity; setState();
-  const fin = () => { if (ttsU !== u) return; ttsU = null; speaking = false; guardUntil = Date.now() + 500; setState(); };
-  u.onend = u.onerror = fin; setTimeout(fin, t.length * 90 + 3000);
-  speechSynthesis.speak(u);
+function pickVoice(hi) {
+  if (hi) return ((synth && synth.getVoices()) || []).find(x => /^hi/i.test(x.lang)) || null;
+  const l = voiceList(); return l.find(x => x.name === TTS.voice) || l[0] || null;
 }
+function speechify(t) {                  // make written text sound right when spoken
+  return t.replace(/\b(\d{1,2}):(\d{2})\b/g, (m, h, mi) => { h = +h; const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + (mi === '00' ? '' : mi[0] === '0' ? ' oh ' + mi[1] : ' ' + mi) + ' ' + ap; })
+    .replace(/(\d+)\s?%/g, '$1 percent').replace(/\b(COA|DAA|DCN|OS|AAR|1RM)\b/g, m => m.split('').join(' '))
+    .replace(/[“”]/g, '').replace(/[·—–]/g, ', ').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/\s*\n+\s*/g, '. ').replace(/\.\s*\./g, '.').replace(/\s+/g, ' ').trim();
+}
+function chunks(t) {
+  const o = []; (t.match(/.+?(?:[.!?]+(?=\s|$)|$)/g) || []).forEach(x => { x = x.trim(); if (!x) return; if (o.length && o[o.length - 1].length < 24) o[o.length - 1] += ' ' + x; else o.push(x); });
+  return o;
+}
+function ttsNext() {
+  if (TTS.cur) return;
+  const x = TTS.q.shift();
+  if (!x) { if (!TTS.open && speaking) ttsDone(); return; }
+  const u = new SpeechSynthesisUtterance(x), hi = /[\u0900-\u097F]/.test(x), v = pickVoice(hi), tok = playTok;
+  if (v) { u.voice = v; u.lang = v.lang; } else u.lang = hi ? 'hi-IN' : 'en-GB';
+  u.rate = TTS.rate; u.pitch = v && /natural|neural|online/i.test(v.name) ? 1 : .88;
+  TTS.cur = u;
+  const nxt = () => { if (TTS.cur !== u || tok !== playTok) return; clearTimeout(TTS.t); TTS.cur = null; ttsNext(); };
+  u.onend = u.onerror = nxt; u.onboundary = () => kick(1);          // every word pulses the orb and bars
+  TTS.t = setTimeout(nxt, x.length * 110 / TTS.rate + 2500);
+  try { synth.speak(u); } catch (e) { nxt(); }
+}
+function ttsDone() {
+  speaking = false; guardUntil = Date.now() + 500;
+  if (ignored.size && want()) { stopRec(); restartT = setTimeout(start, 150); }   // drop stale echo results
+  setState(); if (S.active) { armIdle(14000); showHeard('Go ahead, sir…'); }       // conversation mode: stay listening for a follow-up
+}
+function speakBegin() { if (muted || !synth) return false; stopVoice(); TTS.open = true; speaking = true; guardUntil = Infinity; setState(); return true; }
+function speakPush(t) { if (!speaking) return; chunks(speechify(t)).forEach(c => TTS.q.push(c)); ttsNext(); }
+function speakEnd() { TTS.open = false; if (speaking && !TTS.cur && !TTS.q.length) ttsDone(); }
+function speakText(t) { if (speakBegin()) { speakPush(t); speakEnd(); } }
+function kick(a) { env = Math.max(env, a || 1); if (!vizRaf && !document.hidden && !document.documentElement.classList.contains('fx-lite')) vizRaf = requestAnimationFrame(vizTick); }
+const bg = { base: 0, n: 0, t: 0, was: '' };
+function vizTick(t) {                    // bars + orb follow real mic / speech level; also watches for talk-over (barge-in)
+  vizRaf = 0; const st = root.dataset.state;
+  if (st === 'off' || st === 'wake' || document.hidden) { el.mic.style.removeProperty('--lvl'); el.lv.style.transform = ''; bars.forEach(b => b.style.transform = ''); bg.n = 0; bg.was = st; return; }
+  if (TOUCH && t - (bg.last || 0) < 30) { vizRaf = requestAnimationFrame(vizTick); return; } bg.last = t;     // ~30 fps on phones
+  const l = mic ? micLevel() : 0;
+  if (st === 'listen' && mic) env = Math.max(env, Math.min(1, l * 3.2));
+  if (st === 'speak' && mic) {
+    if (bg.was !== 'speak') { bg.base = l; bg.n = 0; bg.t = t; }
+    if (t - bg.t < 600) bg.base = Math.max(bg.base, l);                       // learn his own echo level first
+    else { bg.base = bg.base * .985 + l * .015; if (l > bg.base * 2 + .14) bg.n++; else bg.n = Math.max(0, bg.n - 2); if (bg.n > (TOUCH ? 7 : 12)) { bg.n = 0; bargeIn(); } }
+  }
+  bg.was = st;
+  el.lv.style.transform = 'scaleX(' + Math.min(1, l * 3).toFixed(2) + ')';
+  env *= .9; const base = st === 'think' ? .25 : st === 'speak' ? .3 : .18;
+  bars.forEach((b, i) => b.style.transform = 'scaleY(' + Math.min(1, base + env * (.55 + .45 * Math.sin(t / 110 + i * 1.4))).toFixed(2) + ')');
+  el.mic.style.setProperty('--lvl', (.85 + Math.min(env, 1) * .6).toFixed(2));
+  vizRaf = requestAnimationFrame(vizTick);
+}
+function bargeIn() { stopVoice(); S.active = true; openPanel(); showHeard('Go ahead, sir…'); setState(); armIdle(14000); stopRec(); start(); try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) { } }
+
+/* ---------- real microphone level meter (also powers voice barge-in) ---------- */
+let mic = null, micBusy = false, meterEnabled = lsGet('jv_meter') ? lsGet('jv_meter') === '1' : !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+async function micOpen() {
+  if (mic || micBusy || !meterEnabled || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return; micBusy = true;
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }), AC = window.AudioContext || window.webkitAudioContext, ctx = new AC(), an = ctx.createAnalyser();
+    an.fftSize = 512; ctx.createMediaStreamSource(st).connect(an); mic = { st, ctx, an, buf: new Uint8Array(512), lvl: 0 };
+    if (!want()) micClose(); else kick(.1);
+  } catch (e) { meterEnabled = false; setAi(); } finally { micBusy = false; }
+}
+function micClose() { if (!mic) return; const m = mic; mic = null; try { m.st.getTracks().forEach(x => x.stop()); m.ctx.close(); } catch (e) { } }
+function micLevel() { mic.an.getByteTimeDomainData(mic.buf); let pk = 0; for (let k = 0; k < mic.buf.length; k++) { const d = Math.abs(mic.buf[k] - 128) / 128; if (d > pk) pk = d; } return mic.lvl = Math.max(pk, mic.lvl * .75); }
+
+/* ---------- focus mode: timer + muted alerts + spoken check-in ---------- */
+const FOCUS = { end: 0, min: 0, kind: '', iv: 0 };
+const focusOn = () => FOCUS.kind === 'focus' && FOCUS.end > Date.now();
+const fmt = ms => { const q = Math.max(0, Math.ceil(ms / 1000)); return p2(Math.floor(q / 60)) + ':' + p2(q % 60); };
+function focusStart(min, kind) {
+  clearInterval(FOCUS.iv); pendingAct = '';
+  Object.assign(FOCUS, { end: Date.now() + min * 60000, min, kind: kind || 'focus' });
+  lsSet('jv_focus', JSON.stringify({ end: FOCUS.end, min, kind: FOCUS.kind }));
+  FOCUS.iv = setInterval(focusTick, 1000); focusTick();
+}
+function focusStop() { clearInterval(FOCUS.iv); FOCUS.end = 0; FOCUS.kind = ''; lsSet('jv_focus', ''); el.fchip.hidden = true; root.dataset.focus = ''; }
+function focusTick() {
+  const left = FOCUS.end - Date.now(); if (left <= 0) { focusEnd(); return; }
+  if (document.hidden) return;
+  el.fchip.hidden = false; el.fchip.textContent = (FOCUS.kind === 'focus' ? 'FOCUS ' : 'BREAK ') + fmt(left); root.dataset.focus = FOCUS.kind === 'focus' ? '1' : '';
+}
+function focusEnd() {
+  const { min, kind } = FOCUS; focusStop();
+  const msg = kind === 'focus' ? `Focus session complete, sir. ${plural(min, 'minute')} of deep work. Take a 5 minute break. Shall I start one?` : 'Break is over, sir. Ready for another focus session?';
+  pendingAct = kind === 'focus' ? 'start break 5' : 'start focus ' + (lsGet('jv_flast') || 25);
+  openPanel(); root.dataset.tone = ''; showReply(msg); speakText(msg);
+  if (SR && !locked) { S.active = true; setState(); start(); armIdle(25000); }       // listening for "yes"
+  schedEval(5000);
+}
+
 
 /* =====================================================================
    ACHIEVEMENT & WARNING POPUPS — event-driven, run only when idle
    ===================================================================== */
 function popup(kind, icon, title, body) {
-  if (el.pop.children.length >= 3) return;
+  if (el.pop.children.length >= 3 || focusOn()) return;
   const c = document.createElement('div'); c.className = 'jv-card' + (kind === 'bad' ? ' bad' : '');
   c.innerHTML = '<div class="ic"></div><div><b></b><span></span><small>TAP TO HEAR JARVIS</small></div><button class="cx" aria-label="Dismiss">&#10005;</button><i class="pg"></i>';
   c.querySelector('.ic').textContent = icon; c.querySelector('b').textContent = title; c.querySelector('span').textContent = body;
   el.pop.appendChild(c);
   const kill = () => c.remove(); setTimeout(kill, 40000);
   c.querySelector('.cx').onclick = ev => { ev.stopPropagation(); kill(); };
-  c.onclick = () => { kill(); say(kind === 'bad' ? 'warn' : 'cheer'); };
+  c.onclick = () => { kill(); if (TTS.full && synth && !muted) speakText(title + '. ' + body); else say(kind === 'bad' ? 'warn' : 'cheer'); };
 }
 function evaluate() {
   if (locked || document.hidden) return;
+  if (focusOn()) { schedEval(60000); return; }
   if (speaking || S.active) { schedEval(20000); return; }
   let seen; try { seen = JSON.parse(lsGet('jv_seen') || 'null'); } catch (e) { }
   const first = !seen; seen = seen || {}; const out = [], d = today(), iso = isoDate(d), ym = iso.slice(0, 7), hr = d.getHours();
@@ -650,6 +796,7 @@ function schedEval(ms) { clearTimeout(evalT); evalT = setTimeout(() => idle(eval
 function wire() {
   el.mic.onclick = () => {
     if (!SR) { openPanel(); showReply('This browser has no speech recognition (use Chrome or Edge). You can still type or tap a command below.'); setState(); return; }
+    if (speaking) { stopVoice(); S.active = true; openPanel(); showHeard('Go ahead, sir…'); setState(); armIdle(14000); start(); return; }   // tap = interrupt him and talk
     if (S.active && !el.panel.hidden) { sleep(); return; }
     S.active = true; openPanel(); showHeard(''); showReply('Listening, sir…'); setState();
     clearTimeout(ackT); say(welcomed ? 'wake' : 'hi'); welcomed = true; armIdle(12000); start(); warmAI();
@@ -679,6 +826,12 @@ function wire() {
     showReply(aiSmart ? 'Smart model selected, sir. Bigger download, slower, better at Hindi.' : 'Fast model selected, sir.');
     if (aiOn) ensureAI();
   };
+  el.voice.onclick = () => { const l = voiceList(); if (!l.length) { openPanel(); showReply('No voices found on this device, sir.'); return; } const cv = pickVoice(), i = l.findIndex(x => cv && x.name === cv.name); TTS.voice = l[(i + 1) % l.length].name; lsSet('jv_voice', TTS.voice); setAi(); speakText('At your service, sir.'); };
+  el.rate.onclick = () => { const r = [.9, 1, 1.1, 1.25]; TTS.rate = r[(r.indexOf(TTS.rate) + 1) % r.length]; lsSet('jv_rate', TTS.rate); setAi(); speakText('This is how fast I speak, sir.'); };
+  el.vmode.onclick = () => { TTS.full = !TTS.full; lsSet('jv_vmode', TTS.full ? 'full' : 'clips'); setAi(); showReply(TTS.full ? 'I will speak my full answers, sir.' : 'Short film-style clips only, sir.'); };
+  if (synth) synth.addEventListener('voiceschanged', setAi);
+  el.meter.onclick = () => { meterEnabled = !meterEnabled; lsSet('jv_meter', meterEnabled ? '1' : '0'); if (meterEnabled) { if (want()) micOpen(); } else micClose(); setAi(); openPanel(); showReply(meterEnabled ? 'Mic meter and talk-over interrupt are on, sir.' : 'Mic meter off, sir. Tap the orb or say Jarvis stop to interrupt me.'); };
+  el.fchip.onclick = () => run('focus status', 'Focus status');
   el.sound.onclick = () => { muted = !muted; lsSet('jv_mute', muted ? '1' : '0'); if (muted) stopVoice(); setState(); };
   el.form.onsubmit = e => { e.preventDefault(); const v = el['in'].value.trim(); if (!v) return; el['in'].value = ''; run(stripWake(norm(v)) || norm(v), v); };
   el['in'].addEventListener('input', () => armIdle(30000));
@@ -688,7 +841,8 @@ function wire() {
   addEventListener('pointerdown', touch, { once: true, passive: true });
   addEventListener('keydown', touch, { once: true });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { stopRec(); stopVoice(); setState(); }
+    root.classList.toggle('jv-paused', document.hidden);
+    if (document.hidden) { stopRec(); micClose(); stopVoice(); setState(); }
     else { start(); schedEval(1500); }
   });
 }
@@ -700,7 +854,7 @@ function checkLock() {
   const now = !!l && l.isConnected && l.style.display !== 'none' && getComputedStyle(l).display !== 'none';
   if (now === locked) return;
   locked = now; el.dock.hidden = locked;
-  if (locked) { stopRec(); return; }
+  if (locked) { stopRec(); micClose(); return; }
   clearInterval(lockPoll);
   if (S.wake) { start(); }
   idle(preload, 4000); schedEval(4000);
@@ -709,6 +863,7 @@ let lockPoll = 0;
 
 function init() {
   build(); wire();
+  try { const f = JSON.parse(lsGet('jv_focus') || 'null'); if (f && f.end > Date.now()) { Object.assign(FOCUS, f); FOCUS.iv = setInterval(focusTick, 1000); focusTick(); } } catch (e) { }
   el.dock.hidden = true; setState();
   checkLock();
   if (locked) { lockPoll = setInterval(checkLock, 1500); }
