@@ -1953,7 +1953,55 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
 @media print { :is(#m7x-ret, #m7x-field, #m7x-fab, #m7x-rail, #m7x-call, #m7x-console, #m7x-pal) { display: none !important; } }
 </style>
 
-<link rel="stylesheet" href="jarvis/jarvis.css?v=12">
+<style id="drawer-v2">
+/* ===== Side menu v2 — grouped, icon chips, live badges, Jarvis shortcut (additive; ids/data-tab/onclick unchanged) ===== */
+#drawer { background: linear-gradient(180deg, rgba(var(--fx-rgb, 79, 216, 255), .07), transparent 240px), var(--bg); }
+.dr-status { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 8px; padding: 12px 12px 2px; }
+.dr-stat { position: relative; min-width: 0; padding: 9px 10px 8px; border: 1px solid var(--border); background: var(--panel); border-radius: 10px; overflow: hidden; }
+.dr-stat small { display: block; margin-bottom: 5px; font: 600 9px/1 ui-monospace, Menlo, monospace; letter-spacing: .16em; color: var(--muted); }
+.dr-stat b { display: block; font-size: 16px; line-height: 1.15; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dr-stat .bar { display: block; height: 3px; margin-top: 7px; border-radius: 2px; background: color-mix(in srgb, var(--text) 10%, transparent); overflow: hidden; }
+.dr-stat .bar u { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--primary), rgb(var(--fx-rgb2, 227, 43, 37))); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.dr-stat[data-lv="bad"] { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+.dr-stat[data-lv="bad"] b { color: var(--danger); }
+.dr-stat[data-lv="ok"] b { color: var(--ok, #3DF0C8); font-size: 13px; line-height: 1.5; }
+.dr-jarvis { display: flex; align-items: center; gap: 12px; width: calc(100% - 24px); margin: 8px 12px 2px; padding: 10px 12px; text-align: left; cursor: pointer; color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent); border-radius: 12px; font: inherit;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 16%, transparent), transparent 72%); }
+.dr-jarvis:active { transform: scale(.985); }
+.dr-orb { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--primary); box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 55%, transparent); }
+.dr-orb::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--primary); }
+.dr-jarvis b { display: block; font-size: 14px; letter-spacing: .02em; }
+.dr-jarvis small { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.3; color: var(--muted); }
+
+.dr-group { display: flex; align-items: center; gap: 8px; margin: 14px 6px 4px; font: 600 10px/1 ui-monospace, Menlo, monospace; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+.dr-group::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent); }
+#drawer .drawer-links { gap: 2px; padding: 4px 12px 20px; }
+#drawer .drawer-links .nav-btn { justify-content: flex-start; gap: 12px; min-height: 48px; padding: 7px 12px 7px 8px; border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--muted); }
+#drawer .drawer-links .nav-btn::before { content: attr(data-ic); flex: none; display: grid; place-items: center; width: 34px; height: 34px; font-size: 17px; line-height: 1; border-radius: 10px; background: var(--panel); border: 1px solid var(--border); transition: border-color .2s, background .2s, box-shadow .2s; }
+#drawer .drawer-links .nav-btn:hover { color: var(--text); background: var(--panel-2); }
+#drawer .drawer-links .nav-btn:hover::before { border-color: var(--border-strong); }
+#drawer .drawer-links .nav-btn.active { color: var(--text); text-shadow: none; clip-path: none; box-shadow: inset 3px 0 0 var(--primary);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 20%, transparent), color-mix(in srgb, var(--primary) 3%, transparent)); }
+#drawer .drawer-links .nav-btn.active::before { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 22%, var(--panel)); box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 50%, transparent); }
+/* the old glowing underline becomes a small "you are here" dot */
+#drawer .drawer-links .nav-btn.active::after { left: auto; right: 14px; bottom: auto; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 10px var(--primary); animation: none; }
+#drawer .drawer-links .nav-btn.punish-active-btn { color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, transparent); }
+#drawer .drawer-links .nav-btn.punish-active-btn::before { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+#drawer .drawer-links .nav-btn.active.punish-active-btn { color: var(--danger); box-shadow: inset 3px 0 0 var(--danger); background: linear-gradient(90deg, color-mix(in srgb, var(--danger) 28%, transparent), transparent); }
+#drawer .drawer-links .nav-btn.active.punish-active-btn::after { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+.dr-bdg { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--danger); color: #fff; font: 700 11px/20px ui-monospace, Menlo, monospace; text-align: center; }
+.dr-bdg[hidden] { display: none; }
+#drawer .nav-btn .wd-badge { margin-left: auto; }
+#drawer .nav-btn.active .dr-bdg, #drawer .nav-btn.active .wd-badge { margin-right: 18px; }
+
+@keyframes drIn { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+#drawer.open .drawer-links .nav-btn { animation: drIn .32s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 22ms); }
+html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { #drawer .nav-btn { animation: none !important; } }
+@media (max-height: 640px) { .dr-jarvis small { display: none; } .dr-group { margin-top: 8px; } }
+</style>
+<link rel="stylesheet" href="jarvis/jarvis.css?v=13">
 </head>
 <body>
     <div id="login-screen">
@@ -1990,21 +2038,31 @@ html.fx-paused :is(.m7x-scope *, #m7x-fab *, #m7x-console *) { animation-play-st
                 <div class="brand-wrap"><div class="brand-logo">Discipline OS</div><div class="brand-tag">Act like the person you want to become</div></div>
                 <button class="drawer-close" onclick="closeDrawer()" aria-label="Close menu">✕</button>
             </div>
+            <div class="dr-status" id="dr-status" aria-hidden="true">
+                <div class="dr-stat" id="dr-s-today"><small>TODAY</small><b id="dr-today">–</b><i class="bar"><u id="dr-today-bar"></u></i></div>
+                <div class="dr-stat" id="dr-s-streak"><small>STREAK</small><b id="dr-streak">–</b></div>
+                <div class="dr-stat" id="dr-s-att" data-lv="ok"><small>ATTENDANCE</small><b id="dr-att">–</b></div>
+            </div>
+            <button type="button" class="dr-jarvis" id="dr-jarvis"><span class="dr-orb"></span><span><b>Talk to Jarvis</b><small>“I’m not going to the DCN lab” · “what’s left today”</small></span></button>
             <div class="drawer-links">
-                <button class="nav-btn" data-tab="home" onclick="switchTab('home')">Home</button>
-                <button class="nav-btn" data-tab="tick" onclick="switchTab('tick')">Daily Grid</button>
-                <button class="nav-btn" data-tab="timetable" onclick="switchTab('timetable')">Time Table</button>
-                <button class="nav-btn" data-tab="exceptions" onclick="switchTab('exceptions')">Exceptions</button>
-                <button class="nav-btn" data-tab="gym" onclick="switchTab('gym')">Gym</button>
-                <button class="nav-btn" data-tab="wardrobe" onclick="switchTab('wardrobe')">Wardrobe</button>
-                <button class="nav-btn" data-tab="laundry" onclick="switchTab('laundry')">Laundry<span class="wd-badge" id="wd-badge" style="display:none">0</span></button>
-                <button class="nav-btn" data-tab="soul" onclick="switchTab('soul')">Soul Timer</button>
-                <button class="nav-btn" data-tab="punishment" id="nav-punish-btn" onclick="switchTab('punishment')">Punishment</button>
-                <button class="nav-btn" data-tab="report" onclick="switchTab('report')">Reports</button>
-                <button class="nav-btn" data-tab="insights" onclick="switchTab('insights')">Insights</button>
-                <button class="nav-btn" data-tab="hard-truth" onclick="switchTab('hard-truth')">Hard Truth</button>
-                <button class="nav-btn" data-tab="achievements" onclick="switchTab('achievements')">Achievements</button>
-                <button class="nav-btn" data-tab="aar" onclick="switchTab('aar')">Weekly AAR</button>
+                <div class="dr-group">Track</div>
+                <button class="nav-btn" data-tab="home" data-ic="🏠" style="--i:0" onclick="switchTab('home')">Home</button>
+                <button class="nav-btn" data-tab="tick" data-ic="✅" style="--i:1" onclick="switchTab('tick')">Daily Grid</button>
+                <button class="nav-btn" data-tab="timetable" data-ic="🗓️" style="--i:2" onclick="switchTab('timetable')">Time Table<span class="dr-bdg" id="dr-bdg-tt" hidden></span></button>
+                <button class="nav-btn" data-tab="exceptions" data-ic="🌴" style="--i:3" onclick="switchTab('exceptions')">Exceptions</button>
+                <div class="dr-group">Body</div>
+                <button class="nav-btn" data-tab="gym" data-ic="🏋️" style="--i:4" onclick="switchTab('gym')">Gym</button>
+                <button class="nav-btn" data-tab="wardrobe" data-ic="👔" style="--i:5" onclick="switchTab('wardrobe')">Wardrobe</button>
+                <button class="nav-btn" data-tab="laundry" data-ic="🧺" style="--i:6" onclick="switchTab('laundry')">Laundry<span class="wd-badge" id="wd-badge" style="display:none">0</span></button>
+                <div class="dr-group">Focus</div>
+                <button class="nav-btn" data-tab="soul" data-ic="⏳" style="--i:7" onclick="switchTab('soul')">Soul Timer</button>
+                <button class="nav-btn" data-tab="punishment" id="nav-punish-btn" data-ic="⚠️" style="--i:8" onclick="switchTab('punishment')">Punishment<span class="dr-bdg" id="dr-bdg-pun" hidden></span></button>
+                <div class="dr-group">Review</div>
+                <button class="nav-btn" data-tab="report" data-ic="📊" style="--i:9" onclick="switchTab('report')">Reports</button>
+                <button class="nav-btn" data-tab="insights" data-ic="📈" style="--i:10" onclick="switchTab('insights')">Insights</button>
+                <button class="nav-btn" data-tab="hard-truth" data-ic="🔥" style="--i:11" onclick="switchTab('hard-truth')">Hard Truth</button>
+                <button class="nav-btn" data-tab="achievements" data-ic="🏆" style="--i:12" onclick="switchTab('achievements')">Achievements</button>
+                <button class="nav-btn" data-tab="aar" data-ic="📝" style="--i:13" onclick="switchTab('aar')">Weekly AAR</button>
             </div>
             <div class="drawer-tools" id="drawer-tools"></div>
         </aside>
@@ -8536,7 +8594,50 @@ function ib2Build(el) {
 </script>
 
 
-<script src="jarvis/jarvis.js?v=13" defer></script>
+<script id="drawer-v2-script">
+/* Side menu v2: live status strip + badges, refreshed every time the drawer opens. Read-only; never throws. */
+(function () {
+    var $ = function (id) { return document.getElementById(id); };
+    function fill() {
+        try {
+            var d = $('drawer'); if (!d) return;
+            // today's habit completion
+            if (typeof dayHabitScore === 'function') {
+                var s = dayHabitScore(new Date()), pct = s && s.possible > 0 ? Math.round(s.done / s.possible * 100) : 0;
+                $('dr-today').textContent = pct + '%'; $('dr-today-bar').style.width = pct + '%';
+            }
+            // streak
+            if (typeof calcStreaks === 'function') { var c = calcStreaks(); $('dr-streak').textContent = (c.current || 0) + 'd'; }
+            // attendance: any subject under 75%?
+            var low = [];
+            if (typeof bunkData === 'function') {
+                var bd = bunkData();
+                Object.keys(bd).forEach(function (k) { var o = bd[k]; if (o.total > 0 && o.attended * 4 < o.total * 3) low.push({ k: k, p: Math.floor(o.attended / o.total * 100) }); });
+            }
+            low.sort(function (a, b) { return a.p - b.p; });
+            var att = $('dr-att'), box = $('dr-s-att');
+            att.textContent = low.length ? low[0].k + ' ' + low[0].p + '%' : 'All ≥ 75%';
+            box.setAttribute('data-lv', low.length ? 'bad' : 'ok');
+            var b1 = $('dr-bdg-tt'); if (b1) { b1.hidden = !low.length; b1.textContent = low.length || ''; b1.title = low.length ? 'Subjects under 75% attendance' : ''; }
+            // penalties waiting
+            var n = 0; try { n = (JSON.parse(localStorage.getItem('punishment_list') || '[]') || []).filter(function (p) { return !p.served; }).length; } catch (e) { }
+            var b2 = $('dr-bdg-pun'); if (b2) { b2.hidden = !n; b2.textContent = n || ''; }
+        } catch (e) { }
+    }
+    function init() {
+        var d = $('drawer'); if (!d) return;
+        new MutationObserver(function () { if (d.classList.contains('open')) fill(); }).observe(d, { attributes: true, attributeFilter: ['class'] });
+        var j = $('dr-jarvis');
+        if (j) j.addEventListener('click', function () {
+            if (typeof closeDrawer === 'function') closeDrawer();
+            setTimeout(function () { var m = $('jv-mic'); if (m) m.click(); }, 260);   // after the drawer has slid away
+        });
+        fill();
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+<script src="jarvis/jarvis.js?v=14" defer></script>
 
 </body>
 </html>
