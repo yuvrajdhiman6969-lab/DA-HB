@@ -353,3 +353,28 @@ html.fx-mid #jv-panel::after{display:none}
 @media (max-width:420px){
   #jv-panel{max-height:calc(100dvh - 130px - env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 }
+
+/* =====================================================================
+   v12 — settings behind the gear, compact chip row, attendance cell
+   (additive: nothing above is changed)
+   ===================================================================== */
+#jv-gear.on{background:rgba(56,189,248,.22);color:#fff;opacity:1;box-shadow:0 0 10px rgba(56,189,248,.35)}
+#jv-gear{font-size:16px}
+#jv-settings{margin:0 0 10px;padding:8px 9px 9px;border:1px solid var(--jv-line);background:rgba(4,16,30,.72);
+  max-height:46vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+#jv-settings[hidden]{display:none}
+.jv-sethead{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px dashed rgba(56,189,248,.22);
+  font:600 10px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.2em;color:var(--jv-soft)}
+.jv-sethead b{color:var(--jv-or)}
+.jv-sethead span{flex:1;color:#5f8399;letter-spacing:.14em;font-weight:500;text-transform:uppercase}
+.jv-sethead .jv-ico{width:26px;height:26px;font-size:13px}
+#jv-settings .jv-ai{margin-bottom:6px}
+#jv-settings .jv-hint{margin-top:8px}
+/* one tidy, swipeable row of quick commands instead of a wall of chips */
+.jv-chips{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;margin-left:-2px;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.jv-chips::-webkit-scrollbar{display:none}
+.jv-chips button{flex:none;white-space:nowrap}
+/* attendance in the telemetry strip */
+.jv-stats .wide[data-lv=bad] b{color:var(--jv-bad,#ff6b6b);text-shadow:0 0 8px rgba(255,107,107,.35)}
+.jv-stats .wide[data-lv=ok] b{color:var(--jv-ok,#34d399)}

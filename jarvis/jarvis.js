@@ -44,6 +44,18 @@
      (“could you please…”), more mishearing fixes and a wider vocabulary for the fuzzy matcher.
    • New voice commands: change / pick a voice, mute / unmute, turn the AI brain on / off.
    --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   v12 (actions + settings pass)
+   • Class talk in plain English: “I am not going to the DCN lab”, “skip OS tomorrow”, “I am going to DAA”,
+     “can I skip Frontend today”, “which classes can I skip today”. He marks the right block (lab vs theory,
+     today / tomorrow / a weekday), checks that subject against the 75% line, and tells you straight when you
+     should go instead. “I am going” (or “undo that”) reverses a skip and removes its penalty.
+   • He volunteers it too: the briefing, the next-class answer, the HUD and a pop-up before a class all warn
+     when the subject is under 75%.
+   • “Did you mean …?” when he cannot parse a phrase (say yes to run the guess).
+   • All the tuning switches (voice, brain, mic, heard log…) now live behind the ⚙ button; the panel opens
+     clean. Say “open settings” / “close settings”.
+   --------------------------------------------------------------------- */
 (function () {
 'use strict';
 if (window.__jarvis) return;
@@ -208,7 +220,7 @@ async function importFirst(urls) {                                   // try pinn
   for (const u of list) { try { return await import(u); } catch (e) { err = e; dbg('import failed ' + u); } }
   throw err || new Error('import failed');
 }
-const CTX = { list: [], last: [], acts: [], at: 0, said: '', exc: '', excAt: 0 };
+const CTX = { list: [], last: [], acts: [], at: 0, said: '', exc: '', excAt: 0, cls: null };
 
 /* =====================================================================
    UI
@@ -223,6 +235,7 @@ function build() {
       '<i class="jv-c tl"></i><i class="jv-c tr"></i><i class="jv-c bl"></i><i class="jv-c br"></i>' +
       '<div class="jv-top"><span class="jv-title">J.A.R.V.I.S.</span><span id="jv-state"></span>' +
         '<span class="jv-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>' +
+        '<button class="jv-ico" id="jv-gear" aria-label="Jarvis settings" aria-expanded="false" title="Settings: voice, brain, microphone">&#9881;</button>' +
         '<button class="jv-ico" id="jv-sound" aria-label="Mute Jarvis" title="Voice on/off">&#128266;</button>' +
         '<button class="jv-ico" id="jv-close" aria-label="Close Jarvis">&#10005;</button></div>' +
       '<div class="jv-sub"><span>DISCIPLINE CORE // ONLINE</span><span id="jv-clock">--:--:--</span></div>' +
@@ -236,7 +249,8 @@ function build() {
           '<div><small>TODAY</small><b id="jv-today">0/0</b></div>' +
           '<div><small>STREAK</small><b id="jv-streak">0</b></div>' +
           '<div><small>MONTH</small><b id="jv-month">0%</b></div>' +
-          '<div class="wide"><small>NEXT BLOCK</small><b id="jv-next">—</b></div></div></div>' +
+          '<div class="wide"><small>NEXT BLOCK</small><b id="jv-next">—</b></div>' +
+          '<div class="wide" id="jv-attw" data-lv="ok"><small>ATTENDANCE</small><b id="jv-att">—</b></div></div></div>' +
       '<div id="jv-heard"></div><div id="jv-reply">At your service, sir.</div>' +
       '<div class="jv-ai"><button type="button" id="jv-ai" title="Free AI that runs on this device"></button><button type="button" id="jv-model" title="FAST = small model, SMART = bigger model (slower, better answers)"></button><button type="button" id="jv-eng" title="Voice engine: BROWSER = built-in voices. NEURAL = downloads a natural British male voice (about 90 MB, runs on this device)."></button><button type="button" id="jv-voice" title="Change the Jarvis voice"></button><button type="button" id="jv-rate" title="Speaking speed"></button><button type="button" id="jv-meter" title="Live mic level + talk-over-him interrupt"></button><button type="button" id="jv-vmode" title="FULL = he speaks every answer, CLIPS = short film lines only"></button><button type="button" id="jv-lmode" title="Phones: PHRASE = restarts after every phrase (most reliable). CONTINUOUS = fewer restart tones, try it if your phone handles it."></button><button type="button" id="jv-awake" title="Keep the screen awake while the wake word is armed (the screen sleeping is what kills phone microphones)"></button><button type="button" id="jv-hlog" title="What I heard: see and correct my mistakes"></button><span id="jv-aist"></span></div>' +
       '<div class="jv-aibar"><i id="jv-aibar"></i></div><div id="jv-log" hidden></div>' +
@@ -244,13 +258,15 @@ function build() {
         '<button type="button" data-c="what is left today">What’s left</button>' +
         '<button type="button" data-c="how am i doing">How am I doing</button>' +
         '<button type="button" data-c="next class">Next class</button>' +
+        '<button type="button" data-c="which classes can i skip today">Can I skip?</button>' +
+        '<button type="button" data-c="how is my attendance">Attendance</button>' +
         '<button type="button" data-c="start soul timer">Start timer</button>' +
         '<button type="button" data-c="focus for 45 minutes">Focus 45</button>' +
         '<button type="button" data-c="give me advice to improve today">Advice</button>' +
         '<button type="button" data-c="list my exceptions">Exceptions</button>' +
         '<button type="button" data-c="check the microphone">Mic check</button></div>' +
       '<form id="jv-form" autocomplete="off"><input id="jv-in" placeholder="Type a command…" enterkeyhint="send"><button id="jv-go" type="submit">Go</button></form>' +
-      '<div class="jv-hint">Say “Jarvis”, then: “tick gym and study”, “tick the first one”, “undo that”, “remind me in 10 minutes to drink water”, “weather in Delhi”, “what is 15 percent of 240”, “who is Nikola Tesla”, “help”. Keep this tab open and in front. AI BRAIN adds open-ended questions. Try “create an exception from the 20th to the 25th of October because of a trip”.</div>' +
+      '<div class="jv-hint">Say “Jarvis”, then: “tick gym and study”, “I am not going to the DCN lab”, “which classes can I skip today”, “tick the first one”, “undo that”, “remind me in 10 minutes to drink water”, “weather in Delhi”, “what is 15 percent of 240”, “who is Nikola Tesla”, “help”. Keep this tab open and in front. AI BRAIN adds open-ended questions. Try “create an exception from the 20th to the 25th of October because of a trip”.</div>' +
     '</div>' +
     '<div id="jv-dock" hidden>' +
       '<button class="jv-orb" id="jv-mic" aria-label="Talk to Jarvis" title="Tap to talk"><svg viewBox="0 0 64 64" aria-hidden="true">' +
@@ -260,7 +276,14 @@ function build() {
       '<button class="jv-wake" id="jv-wake" title="Always listen for the wake word “Jarvis”"><i></i>JARVIS</button><button class="jv-fchip" id="jv-fchip" hidden title="Focus timer — tap for time left"></button>' +
     '</div>';
   document.body.appendChild(root);
-  ['pop', 'panel', 'state', 'heard', 'reply', 'dock', 'mic', 'wake', 'sound', 'close', 'form', 'in', 'clock', 'tele', 'ring', 'pct', 'today', 'streak', 'month', 'next', 'ai', 'model', 'aist', 'aibar', 'voice', 'rate', 'vmode', 'c0', 'lv', 'meter', 'fchip', 'eng', 'mst', 'lmode', 'awake', 'hlog', 'log'].forEach(k => el[k] = $('jv-' + k));
+  (function () {                       // v12: every tuning switch lives behind the gear button, so the panel opens clean
+    const set = document.createElement('div'); set.id = 'jv-settings'; set.hidden = true;
+    set.innerHTML = '<div class="jv-sethead"><b>SETTINGS</b><span>voice · brain · microphone</span><button type="button" class="jv-ico" id="jv-setx" aria-label="Close settings">&#10005;</button></div>';
+    const sub = root.querySelector('.jv-sub');
+    sub.parentNode.insertBefore(set, sub.nextSibling);
+    set.appendChild(root.querySelector('.jv-ai')); set.appendChild($('jv-log')); set.appendChild(root.querySelector('.jv-hint'));
+  })();
+  ['pop', 'panel', 'state', 'heard', 'reply', 'dock', 'mic', 'wake', 'sound', 'close', 'form', 'in', 'clock', 'tele', 'ring', 'pct', 'today', 'streak', 'month', 'next', 'ai', 'model', 'aist', 'aibar', 'voice', 'rate', 'vmode', 'c0', 'lv', 'meter', 'fchip', 'eng', 'mst', 'lmode', 'awake', 'hlog', 'log', 'gear', 'settings', 'att', 'attw', 'setx'].forEach(k => el[k] = $('jv-' + k));
   bars = [].slice.call(root.querySelectorAll('.jv-bars i')); root.classList.add('viz');
 }
 
@@ -300,18 +323,25 @@ function hudNow() {                      // live telemetry strip — read-only, 
     el.streak.textContent = (s.streak || 0) + 'd';
     el.month.textContent = (s.hasData ? s.hPct : 0) + '%';
     const nx = ttToday().find(x => !x.over);
-    el.next.textContent = nx ? nx.at + ' · ' + nx.name : 'ALL CLEAR';
+    el.next.textContent = nx ? nx.at + ' · ' + nx.name + (classLow(nx.ev) ? ' ⚠' : '') : 'ALL CLEAR';
+    { const lo = attAll().filter(x => x.below); el.att.textContent = lo.length ? lo.map(x => x.k + ' ' + x.p + '%').join(' · ') : 'ALL ABOVE 75%'; el.attw.dataset.lv = lo.length ? 'bad' : 'ok'; }
     if (t.left.length) { el.c0.dataset.c = 'tick ' + HN[t.left[0]]; el.c0.textContent = 'Tick ' + cap(HN[t.left[0]]); } else { el.c0.dataset.c = 'brief me'; el.c0.textContent = 'Briefing'; }
   } catch (e) { }
+}
+function toggleSettings(force) {          // v12: the gear button
+  if (!el.settings) return;
+  const open = force === undefined ? el.settings.hidden : !!force;
+  el.settings.hidden = !open; el.gear.classList.toggle('on', open); el.gear.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) { openPanel(); armIdle(90000); setAi(); }
 }
 function openPanel() {
   if (el.panel.hidden) { el.panel.hidden = false; updateHud(); }
   if (!clockT) { tickClock(); clockT = setInterval(tickClock, 1000); }
 }
-function closePanel() { el.panel.hidden = true; showHeard(''); clearInterval(clockT); clockT = 0; cancelAnimationFrame(typeRaf); }
+function closePanel() { el.panel.hidden = true; toggleSettings(false); showHeard(''); clearInterval(clockT); clockT = 0; cancelAnimationFrame(typeRaf); }
 function armIdle(ms) {
   clearTimeout(idleT);
-  idleT = setTimeout(() => { if ((aiBusy || aiLoading) && Date.now() - aiBusyAt < 150000) armIdle(8000); else sleep(); }, ms);     // v11: never sleep mid-thought
+  idleT = setTimeout(() => { if ((aiBusy || aiLoading) && Date.now() - aiBusyAt < 150000) armIdle(8000); else sleep(); }, el.settings && !el.settings.hidden ? Math.max(ms, 90000) : ms);     // v11: never sleep mid-thought (v12: nor while settings are open)
 }
 function sleep() {                       // back to wake-word mode (or fully off)
   clearTimeout(idleT); clearTimeout(ackT);
@@ -590,7 +620,7 @@ function setScroll(n) {
   if (n > 0) { const made = assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`); extra = made ? ` Penalty assigned: ${SCROLL_SENTENCES[n]}` : ' That penalty was already issued today.'; }
   return n === 0 ? 'Scrolling control back to level 0.' : `Scrolling logged at level ${n}.${extra}`;
 }
-const SUBJ = { OS: /\b(os|operating systems?)\b/, COA: /\b(coa|computer organi[sz]ation)\b/, DAA: /\b(daa|algorithms?)\b/, Frontend: /\bfront ?end\b/, DCN: /\b(dcn|data communications?)\b/ };
+const SUBJ = { OS: /\b(os|operating systems?)\b/, COA: /\b(coa|computer organi[sz]ation|architecture)\b/, DAA: /\b(daa|algorithms?|algo)\b/, Frontend: /\b(front ?end|web dev\w*)\b/, DCN: /\b(dcn|data communications?|networks?|networking)\b/ };
 function markClass(n, state) {
   const sub = Object.keys(SUBJ).find(k => SUBJ[k].test(n)); if (!sub) return null;
   const iso = isoDate(today()), evs = ttToday().filter(x => x.ev.subCode === sub);
@@ -600,6 +630,217 @@ function markClass(n, state) {
   const before = readJSON('punishment_list', []).length; ttMark(state, iso, x.ev.id);
   return state === 'completed' ? `${sub} marked attended.` : `${sub} marked missed.` + (readJSON('punishment_list', []).length > before ? ' A penalty was assigned.' : '');
 }
+/* =====================================================================
+   v12 — CLASS & ATTENDANCE VOICE
+   Natural phrasing for skipping / attending classes, plus the 75% advisor.
+   Marks go through the app's own ttMark(), so the Time Table, bunk bank,
+   penalties and sync behave exactly as if you had tapped the buttons.
+   ===================================================================== */
+const plr = (n, one, many) => n + ' ' + (n === 1 ? one : (many || one + 's'));
+function attInfo(sub, bd) {              // everything Jarvis needs to know about one subject's attendance
+  let o; try { o = (bd || bunkData())[sub]; } catch (e) { }
+  if (!o) return null;
+  const a = o.attended, t = o.total, below = t > 0 && a * 4 < t * 3, t1 = t + 1;
+  return {
+    k: sub, a, t, below,
+    p: t ? (below ? Math.floor(a / t * 100) : Math.round(a / t * 100)) : 100,       // never show “75%” for 74.6
+    safe: Math.max(0, Math.floor((4 * a - 3 * t) / 3)),                              // classes you can still miss and stay at 75
+    need: Math.max(0, 3 * t - 4 * a),                                                // straight classes needed to get back to 75
+    pMiss: Math.floor(a / t1 * 100), belowIfMiss: a * 4 < t1 * 3
+  };
+}
+function attAll() { let bd; try { bd = bunkData(); } catch (e) { return []; } return Object.keys(bd).map(k => attInfo(k, bd)).filter(Boolean).sort((x, y) => x.p - y.p); }
+function classLow(ev) { try { const i = ev && ev.subCode && attInfo(ev.subCode); return !!(i && i.below); } catch (e) { return false; } }
+
+function dayClasses(d) {                  // that day's timetable classes, with their saved state
+  const iso = isoDate(d), now = new Date();
+  return eventsFor(d, readJSON('custom_tt_events', {})).filter(e => e.subCode).sort((a, b) => a.time.localeCompare(b.time)).map(ev => {
+    const lab = /\blab\b/i.test(ev.title);
+    return { ev, iso, d, st: getTTState(iso, ev.id), at: ev.time.split('-')[0], lab, over: eventEnd(d, ev) <= now, name: ev.subCode + (lab ? ' lab' : '') };
+  });
+}
+const DOWRX = /\b(sunday|monday|tuesday|tues|wednesday|weds|thursday|thurs|friday|saturday)\b/;
+function classDay(n) {                    // “today” unless the sentence names another day
+  const t0 = dayStart(); let m;
+  if (/\bday after tomorrow\b/.test(n)) return addDays(t0, 2);
+  if (/\btomorrow\b/.test(n)) return addDays(t0, 1);
+  if (/\byesterday\b/.test(n)) return addDays(t0, -1);
+  if (/\b(today|tonight)\b/.test(n)) return t0;
+  if ((m = DOWRX.exec(n))) { const w = ({ su: 0, mo: 1, tu: 2, we: 3, th: 4, fr: 5, sa: 6 })[m[1].slice(0, 2)]; return addDays(t0, (w - t0.getDay() + 7) % 7); }
+  return parseDay(n) || t0;
+}
+function dayWord(d) { const k = dayDiff(dayStart(), d); return k === 0 ? 'today' : k === 1 ? 'tomorrow' : k === -1 ? 'yesterday' : 'on ' + d.toLocaleDateString('en-IN', { weekday: 'long' }); }
+
+function classPick(n, subs, evs) {        // which timetable blocks does the sentence mean?
+  const lab = /\b(labs?|practicals?)\b/.test(n), th = /\b(theory|lectures?)\b/.test(n) || (/\bclass(es)?\b/.test(n) && !lab);
+  let c = subs.length ? evs.filter(x => subs.indexOf(x.ev.subCode) >= 0) : evs;
+  if (lab) c = c.filter(x => x.lab);
+  else if (th) { const t = c.filter(x => !x.lab); if (t.length) c = t; }
+  return c;
+}
+function disamb(rows, d) {                // same subject twice that day and the sentence did not say which: today -> the ones still to come
+  if (dayDiff(dayStart(), d) !== 0) return rows;
+  const out = [];
+  Object.keys(rows.reduce((o, x) => (o[x.ev.subCode] = 1, o), {})).forEach(s => {
+    const g = rows.filter(x => x.ev.subCode === s), up = g.filter(x => !x.over); out.push.apply(out, g.length > 1 && up.length ? up : g);
+  });
+  return out;
+}
+function nextOcc(sub, lab) {
+  const t0 = dayStart();
+  for (let k = 1; k <= 7; k++) { const d = addDays(t0, k), x = dayClasses(d).find(e => e.ev.subCode === sub && (!lab || e.lab)); if (x) return ` Next one: ${dayWord(d)} at ${x.at}.`; }
+  return '';
+}
+function noClassReply(n, subs, dw) {
+  const lab = /\blabs?\b/.test(n), what = lab ? 'lab' : 'class';
+  if (!subs.length) return R(`There is no ${what} on the timetable ${dw}, sir.`, 'err');
+  return R(`${subs[0]} has no ${what} ${dw}, sir.${nextOcc(subs[0], lab)}`, 'err');
+}
+function dropMissPenalty(x) {             // a reversed skip should not leave its penalty behind
+  try {
+    localStorage.removeItem('pun_miss_tt_state_' + x.iso + '_' + x.ev.id);
+    const l = readJSON('punishment_list', []), i = l.findIndex(p => !p.served && p.reason === 'Missed schedule: ' + x.ev.title);
+    if (i >= 0) { l.splice(i, 1); writeJSON('punishment_list', l); try { checkActivePunishments(); } catch (e) { } try { renderPunishmentSection(); } catch (e) { } }
+  } catch (e) { }
+}
+function undoClassMarks() {
+  const c = CTX.cls; CTX.cls = null; const ok = [];
+  c.items.forEach(it => { if (getTTState(it.iso, it.id) !== 'missed') return; try { ttMark('missed', it.iso, it.id); } catch (e) { console.error(e); } if (getTTState(it.iso, it.id) !== 'missed') { dropMissPenalty({ iso: it.iso, ev: { id: it.id, title: it.title } }); ok.push(it.title); } });
+  refresh(); updateHud();
+  return ok.length ? R(`Undone, sir. ${list(ok)} ${ok.length > 1 ? 'are' : 'is'} no longer marked missed.`) : R('There is nothing to undo, sir.', 'err');
+}
+function classAlerts() {                  // for the briefing: today's classes that must not be skipped
+  const out = [];
+  try {
+    dayClasses(today()).forEach(x => {
+      if (x.over || x.st !== 'pending') return; const i = attInfo(x.ev.subCode); if (!i) return;
+      if (i.below) out.push(`Attend ${x.name} at ${x.at}: ${x.ev.subCode} attendance is ${i.p} percent, under 75.`);
+      else if (i.safe < 1) out.push(`Do not skip ${x.name} at ${x.at}: ${x.ev.subCode} has no bunks left, at ${i.p} percent.`);
+    });
+  } catch (e) { }
+  return out.slice(0, 2);
+}
+
+/* ----- the verdicts ----- */
+function doSkip(rows, dw) {
+  const before = {}, marked = [], already = [], pen0 = readJSON('punishment_list', []).length;
+  rows.forEach(x => { if (!before[x.ev.subCode]) before[x.ev.subCode] = attInfo(x.ev.subCode); });
+  rows.forEach(x => { if (x.st === 'missed') already.push(x); else { try { ttMark('missed', x.iso, x.ev.id); marked.push(x); } catch (e) { console.error(e); } } });
+  if (marked.length) CTX.cls = { items: marked.map(x => ({ iso: x.iso, id: x.ev.id, title: x.ev.title })), at: Date.now() };
+  const pen = readJSON('punishment_list', []).length - pen0; refresh();
+  const bd = bunkData(), subs = Object.keys(before); let bad = false;
+  const parts = subs.map(s => {
+    const mine = rows.filter(x => x.ev.subCode === s), label = list(mine.map(x => x.name)), b = before[s], a = attInfo(s, bd);
+    if (mine.every(x => already.indexOf(x) >= 0)) return `${cap(label)} ${dw} is already marked missed.` + (a && a.below ? ` ${s} is at ${a.p} percent, under 75. Please reconsider, sir.` : '');
+    let t = `${cap(label)} ${dw} marked missed.`;
+    if (!a || !b) return t;
+    if (b.below) { bad = true; t += ` Sir, ${s} was already under the 75 line at ${b.p} percent, and this takes it to ${a.p}. I strongly advise you to go. You need ${plr(a.need, 'straight class', 'straight classes')} to recover. Say “I am going” and I will reverse it.`; }
+    else if (a.below) { bad = true; t += ` That drops ${s} from ${b.p} to ${a.p} percent, below 75. I would go, sir. Say “I am going” and I will reverse it.`; }
+    else t += ` ${s} stays at ${a.p} percent` + (a.safe ? `, with ${plr(a.safe, 'bunk')} still in hand.` : '. That was your last safe bunk, so no more skipping.');
+    return t;
+  });
+  return R(parts.join(' ') + (pen > 0 ? (pen > 1 ? ' Penalties were assigned.' : ' A penalty was assigned.') : ''), bad ? 'warn' : 'ok');
+}
+function classSkip(n, subs, d, evs) {
+  const dw = dayWord(d); let rows = classPick(n, subs, evs);
+  if (!rows.length) return noClassReply(n, subs, dw);
+  rows = rows.filter(x => x.st !== 'excepted');
+  if (!rows.length) return R(`${cap(dw)} is covered by an exception, sir. Attendance is not counted then, so there is nothing to mark.`, 'ok');
+  if (!/\b(labs?|practicals?|theory|lectures?)\b/.test(n)) rows = disamb(rows, d);
+  if (!subs.length && rows.length > 1) {          // “skip everything / I am not going to college” is big: confirm first
+    const lows = list(rows.filter(x => classLow(x.ev)).map(x => x.name));
+    pendingFn = () => doSkip(rows, dw);
+    return R(`That would mark ${plr(rows.length, 'class', 'classes')} missed ${dw}: ${list(rows.map(x => x.name + ' at ' + x.at))}.` + (lows ? ` ${cap(lows)} are already under 75, so I would not skip those.` : '') + ' Say yes to confirm, sir.', lows ? 'warn' : 'ok');
+  }
+  return doSkip(rows, dw);
+}
+function classGoing(n, subs, d, evs) {
+  const dw = dayWord(d); let rows = classPick(n, subs, evs).filter(x => x.st !== 'excepted');
+  if (!rows.length) return noClassReply(n, subs, dw);
+  if (!/\b(labs?|practicals?|theory|lectures?)\b/.test(n)) rows = disamb(rows, d);
+  const revived = [];
+  rows.forEach(x => { if (x.st === 'missed') { try { ttMark('missed', x.iso, x.ev.id); } catch (e) { console.error(e); } if (getTTState(x.iso, x.ev.id) !== 'missed') { dropMissPenalty(x); revived.push(x); } } });
+  if (revived.length) { CTX.cls = null; refresh(); }
+  const subsD = Object.keys(rows.reduce((o, x) => (o[x.ev.subCode] = 1, o), {}));
+  const parts = subsD.map(s => {
+    const mine = rows.filter(x => x.ev.subCode === s), i = attInfo(s), rev = mine.some(x => revived.indexOf(x) >= 0);
+    const where = list(mine.map(x => `${x.name} at ${x.at}` + (x.ev.room ? ` in room ${x.ev.room}` : '')));
+    return (rev ? `Restored: ${where}.` : `${cap(where)}.`) + (i ? (i.below ? ` ${s} attendance is ${i.p} percent, under 75, so this one matters.` : ` ${s} attendance is ${i.p} percent.`) : '');
+  });
+  return R('Good, sir. ' + parts.join(' '), 'cheer');
+}
+function classAttended(n, subs, d, evs) {
+  if (d > dayStart()) return classGoing(n, subs, d, evs);
+  const dw = dayWord(d); let rows = classPick(n, subs, evs).filter(x => x.st !== 'excepted');
+  if (!rows.length) return noClassReply(n, subs, dw);
+  if (!/\b(labs?|practicals?|theory|lectures?)\b/.test(n)) rows = disamb(rows, d);
+  const todo = rows.filter(x => x.st !== 'completed');
+  if (!todo.length) return R(`${cap(list(rows.map(x => x.name)))} ${dw} is already marked attended.`, 'ok');
+  todo.forEach(x => { if (x.st === 'missed') dropMissPenalty(x); try { ttMark('completed', x.iso, x.ev.id); } catch (e) { console.error(e); } });
+  refresh();
+  const bd = bunkData(), tail = Object.keys(todo.reduce((o, x) => (o[x.ev.subCode] = 1, o), {})).map(s => { const i = attInfo(s, bd); return i ? `${s} is at ${i.p} percent` + (i.below ? `, still under 75, keep going, sir.` : '.') : ''; }).join(' ');
+  return R(`${cap(list(todo.map(x => x.name)))} marked attended. ${tail}`, 'cheer');
+}
+function classAdvice(n, subs, d, evs) {
+  const dw = dayWord(d), lab = /\blabs?\b/.test(n);
+  const rows = (subs.length || lab) ? classPick(n, subs, evs) : evs.filter(x => x.st !== 'excepted');
+  if (!rows.length) return subs.length || lab ? noClassReply(n, subs, dw) : R(`There are no classes ${dw}, sir. Nothing to skip.`, 'cheer');
+  let bad = false;
+  const lines = rows.map(x => {
+    const i = attInfo(x.ev.subCode), tag = x.st === 'missed' ? ' (already marked missed)' : x.st === 'completed' ? ' (already attended)' : '';
+    if (!i) return `${x.name} at ${x.at}${tag}.`;
+    if (i.below) { bad = true; return `${x.name} at ${x.at}${tag}: go. ${i.p} percent is under 75; you need ${plr(i.need, 'straight class', 'straight classes')} to recover.`; }
+    if (i.safe < 1) { bad = true; return `${x.name} at ${x.at}${tag}: go. You are at ${i.p} percent with no bunks left; missing it drops you to ${i.pMiss}.`; }
+    return `${x.name} at ${x.at}${tag}: you can skip it. ${i.p} percent, ${plr(i.safe, 'bunk')} in hand, ${i.pMiss} if you miss it.`;
+  });
+  return R((subs.length || lab ? '' : `Classes ${dw}:\n`) + lines.join('\n'), bad ? 'warn' : 'ok');
+}
+
+/* ----- understanding the sentence ----- */
+const CW_RX = /\b(class|classes|lab|labs|lecture|lectures|period|periods|practical|practicals|theory|college|campus|university)\b/;
+const ADV_RX = /\b(can i|could i|should i|may i|am i safe|is it (ok|okay|safe|fine|alright|worth)|safe to|worth (it|going)|do i (need|have|really need) to|need to (go|attend)|have to (go|attend)|which (class|classes|lab|labs)|what (class|classes)|any (class|classes)|how many (bunks?|classes|more)|what if)\b/;
+const NEG_RX = /\b(not|never|wont|cant|cannot|dont|aint|wouldnt|shouldnt)\b.{0,20}\b(go|going|attend|attending|come|coming|make it|be there|be present|show up|join|joining|gonna)\b|\bno (need|point)\b.{0,12}\b(go|attend)\b|\b(skip|skipping|skipped|bunk|bunking|bunked|absent|ditch|ditching|bail|bailing|missed|missing)\b|\bgive\b.{0,14}\ba miss\b|\bwill miss\b/;
+const NOT_NEG_RX = /\b(not|never|wont|dont|didnt|wouldnt|no)\b.{0,16}\b(skip|skipping|bunk|bunking|miss|missing|bail)\b/;
+const GO_RX = /\b(going|go|attend|attending|coming|come|joining|be there|showing up|present)\b/;
+const PAST_RX = /\b(attended|went|was present|made it|showed up|came back from|got back from|just had|just attended|done with|came from)\b/;
+function classVoice(n) {
+  if (/\b(attendance|percent|percentage)\b/.test(n) && !ADV_RX.test(n) && !NEG_RX.test(n)) return null;     // plain attendance questions keep their own answer
+  const subs = Object.keys(SUBJ).filter(k => SUBJ[k].test(n)), cw = CW_RX.test(n);
+  if (!subs.length && !cw) return null;
+  if (!subs.length) { try { if (habitsIn(n).indexOf(habitIdx('gym')) >= 0) return null; } catch (e) { } }       // “skipped gym class” is a gym question
+  let intent = null;
+  if (ADV_RX.test(n)) intent = 'advice';
+  else if (ISQ.test(n)) return null;
+  else if (NOT_NEG_RX.test(n)) intent = 'going';
+  else if (NEG_RX.test(n)) intent = 'skip';
+  else if (PAST_RX.test(n) && (subs.length || /\blabs?\b/.test(n))) intent = 'attended';
+  else if (GO_RX.test(n) && (subs.length || /\blabs?\b/.test(n))) intent = 'going';
+  if (!intent) return null;
+  const d = classDay(n); let evs;
+  try { evs = dayClasses(d); } catch (e) { console.error(e); return null; }
+  if (intent === 'advice') return classAdvice(n, subs, d, evs);
+  if (intent === 'skip') return classSkip(n, subs, d, evs);
+  if (intent === 'attended') return classAttended(n, subs, d, evs);
+  return classGoing(n, subs, d, evs);
+}
+
+/* ----- “Did you mean …?” ----- */
+const SUG_STOP = new Set(['the', 'and', 'for', 'you', 'can', 'please', 'jarvis', 'that', 'this', 'what', 'with', 'are', 'was', 'not', 'how', 'all', 'any', 'just', 'now', 'too', 'its', 'got', 'get', 'have', 'has', 'had', 'did', 'does', 'will', 'would']);
+function suggestCmd(n) {
+  if (aiOn || pendingAct) return null;
+  const words = n.split(' ').filter(w => w.length > 2 && !SUG_STOP.has(w)); if (!words.length || words.length > 8) return null;
+  const c = ['what is left today', 'how am i doing', 'brief me', 'next class', 'how is my attendance', 'which classes can i skip today', 'start soul timer', 'focus for 25 minutes', 'list my exceptions', 'what is my streak', 'any penalties', 'lock the app'];
+  HN.forEach(h => { c.push('tick ' + h); c.push('untick ' + h); });
+  Object.keys(TNAME).forEach(k => c.push('open ' + TNAME[k].toLowerCase()));
+  Object.keys(SUBJ).forEach(k => { c.push('i am not going to ' + k.toLowerCase() + ' today'); c.push('i am going to ' + k.toLowerCase()); });
+  const score = cand => { const cw = cand.split(' '); let k = 0; words.forEach(w => { if (cw.some(x => x === w || (w.length >= 3 && x.length >= 3 && w[0] === x[0] && lev(x, w) <= 1) || (w.length > 4 && x.length > 4 && x.slice(0, 4) === w.slice(0, 4)))) k++; }); return k; };
+  let best = null, bs = 0;
+  c.forEach(x => { const k = score(x); if (k > bs || (k === bs && best && x.split(' ').length < best.split(' ').length)) { bs = k; best = x; } });
+  if (!best || bs < Math.max(2, Math.ceil(words.length / 2))) return null;
+  pendingFn = () => { const r = exec(best); refresh(); return r; };
+  return R(`I did not quite follow, sir. Did you mean “${best}”? Say yes and I will do it.`, 'huh');
+}
+
 const TABS = [['hard-truth', /hard truth|\btruth\b/], ['soul', /soul|timer|deep work/], ['tick', /daily grid|\bgrid\b|habits?|tick sheet/], ['timetable', /time ?table|schedule/], ['exceptions', /exceptions?|away|leave/], ['gym', /\b(gym|workout)\b/], ['wardrobe', /wardrobe|clothes|closet/], ['laundry', /laundry/], ['punishment', /punish\w*|penalt\w*/], ['report', /reports?/], ['insights', /insights?|analytics|statistics/], ['achievements', /achievements?|badges?|trophies/], ['aar', /\baar\b|weekly|debrief/], ['home', /\bhome\b|dashboard|main page/]];
 const TNAME = { 'hard-truth': 'Hard Truth', soul: 'Soul Timer', tick: 'Daily Grid', timetable: 'Time Table', exceptions: 'Exceptions', gym: 'Gym', wardrobe: 'Wardrobe', laundry: 'Laundry', punishment: 'Punishment', report: 'Reports', insights: 'Insights', achievements: 'Achievements', aar: 'Weekly AAR', home: 'Home' };
 
@@ -614,6 +855,7 @@ function briefing() {
   if (s.streak > 0) a.push(`Streak at ${plural(s.streak, 'day')}.`);
   if (t.left.length) a.push(`Still pending: ${list(t.left.slice(0, 4).map(i => HN[i]))}.`);
   if (up) a.push(`Next up, ${up.name} at ${up.at}.`);
+  classAlerts().forEach(x => a.push(x));
   if (s.activePenalties) a.push(`${plural(s.activePenalties, 'penalty')} waiting to be served.`);
   CTX.list = t.left.slice(); CTX.at = Date.now();
   return R(a.join(' '), p >= 70 ? 'cheer' : p >= 40 ? 'ok' : 'warn');
@@ -623,6 +865,7 @@ function exec(n) {
   if (/^(stop|quit jarvis|exit|close|cancel|goodbye|bye|go to sleep|thats all|dismiss|never ?mind|im done|thank(s| you)( jarvis)?)$/.test(n)) return Object.assign(R('Very good, sir.'), { close: true });
   { const ex = excVoice(n, n); if (ex) return ex; }                          // v11: exception commands (also reached from AI ACTION lines)
   { const mt = metaCmd(n); if (mt) return mt; }                              // v11: voice / mute / AI-brain switches
+  { const cl = classVoice(n); if (cl) return cl; }                           // v12: skip / attend / “can I skip” with the 75% advisor
   if (/\b(brief me|briefing|catch me up|sitrep|status report)\b|^good (morning|afternoon|evening)( jarvis)?$/.test(n)) return briefing();
   if (/\b(focus|break)\b/.test(n) && (/\b(start|begin|for|mode|set|take|run|on|stop|cancel|end|quit|off|left|remaining|status|how)\b/.test(n) || /\d/.test(n))) {
     const kind = /\bbreak\b/.test(n) && !/\bfocus\b/.test(n) ? 'break' : 'focus';
@@ -635,7 +878,7 @@ function exec(n) {
     focusStart(min, kind);
     return R(kind === 'focus' ? `Focus engaged, sir. ${plural(min, 'minute')}. Alerts are muted. I will check in when it ends.` : `Break started, ${plural(min, 'minute')}. Rest properly, sir.`);
   }
-  if (/\b(help|what can you do|commands)\b/.test(n)) return R('Tick or untick habits, even several at once: “tick gym and study”, “tick everything except water”, “tick the first one”, “undo that”. Create exceptions: “create an exception from the 20th to the 25th of October because of a wedding”, “I am sick tomorrow”, “extend my leave till the 28th”, “delete the wedding exception”, “list my exceptions”. Mark classes, open any tab, run the Soul Timer or a focus session, set reminders: “remind me in 10 minutes to drink water”. Say “use the Arthur voice”, “mute”, or “turn on the AI brain”. Ask what’s left, how you are doing, your streak, attendance, weakest habit, next class, penalties. And ask me anything else: maths, conversions, dates, time zones, weather, facts, or just chat.');
+  if (/\b(help|what can you do|commands)\b/.test(n)) return R('Tick or untick habits, even several at once: “tick gym and study”, “tick everything except water”, “tick the first one”, “undo that”. Create exceptions: “create an exception from the 20th to the 25th of October because of a wedding”, “I am sick tomorrow”, “extend my leave till the 28th”, “delete the wedding exception”, “list my exceptions”. Skip or attend classes in plain English (“I am not going to the DCN lab”, “I am going to OS”, “which classes can I skip today”) and I will check the subject against 75 percent and tell you to go when it matters. Open any tab, run the Soul Timer or a focus session, set reminders: “remind me in 10 minutes to drink water”. Say “use the Arthur voice”, “mute”, or “turn on the AI brain”. Ask what’s left, how you are doing, your streak, attendance, weakest habit, next class, penalties. And ask me anything else: maths, conversions, dates, time zones, weather, facts, or just chat.');
   if (/^(hi|hello|hey|yo|are you there|you there|you up)$/.test(n)) return R('For you, sir, always.', 'wake');
   // soul timer
   if (/\b(timer|soul|session|deep work)\b/.test(n) && !/^(open|go to|show|take me)/.test(n)) {
@@ -690,7 +933,7 @@ function exec(n) {
   if (/\b(attendance|bunk|bunks|can i skip)\b/.test(n)) {
     const bd = bunkData(), sub = Object.keys(SUBJ).find(k => SUBJ[k].test(n));
     const info = k => { const o = bd[k], p = o.total ? Math.round(o.attended / o.total * 100) : 100, al = Math.max(0, Math.floor(o.attended / .75 - o.total)), need = Math.max(0, Math.ceil(3 * o.total - 4 * o.attended)); return { k, p, al, need }; };
-    if (sub && bd[sub]) { const i = info(sub); return i.p >= 75 ? R(`${sub} attendance is ${i.p} percent. You can still bunk ${plural(i.al, 'class')}.`) : R(`${sub} attendance is ${i.p} percent, below 75. Attend the next ${i.need} classes to recover.`, 'warn'); }
+    if (sub && bd[sub]) { const i = info(sub); return i.p >= 75 ? R(`${sub} attendance is ${i.p} percent. You can still bunk ${plr(i.al, 'class', 'classes')}.`) : R(`${sub} attendance is ${i.p} percent, below 75. Attend the next ${i.need} classes to recover.`, 'warn'); }
     const all = Object.keys(bd).map(info), low = all.filter(x => x.p < 75);
     return R(`Attendance: ${list(all.map(x => `${x.k} ${x.p}%`))}. ` + (low.length ? `Danger in ${list(low.map(x => x.k))}.` : 'All subjects are above 75 percent.'), low.length ? 'warn' : 'ok');
   }
@@ -719,13 +962,14 @@ function exec(n) {
   if (/\b(next|upcoming|class(es)?|timetable|schedule|lecture)\b/.test(n)) {
     const tt = ttToday(), up = tt.filter(x => !x.over), nx = /next/.test(n);
     if (!tt.length) return R('Nothing is scheduled today, sir.');
-    return R(up.length ? `${nx ? 'Next' : 'Remaining today'}: ${list(up.slice(0, nx ? 1 : 5).map(x => `${x.name} at ${x.at}`))}.` : 'Your schedule is complete for today, sir.');
+    return R(up.length ? `${nx ? 'Next' : 'Remaining today'}: ${list(up.slice(0, nx ? 1 : 5).map(x => `${x.name} at ${x.at}`))}.` + (classLow(up[0].ev) ? ` Attendance in ${up[0].ev.subCode} is ${attInfo(up[0].ev.subCode).p}%, under 75, so do go, sir.` : '') : 'Your schedule is complete for today, sir.', up.length && classLow(up[0].ev) ? 'warn' : 'ok');
   }
   if (/\b(workout|gym|exercise)\b/.test(n)) { const p = gymPlanFor(isoDate(today())); return R(p ? (p.type === 'workout' ? `Today is ${p.title.replace(/^\S+\s/, '')}, ${p.variant}.` : 'Today is a rest day, sir.') : 'No gym plan for today.'); }
   if (/\b(time|date|day)\b/.test(n)) { const d = today(); return R(`It is ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, ${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}.`); }
   if (/\b(motivat\w*|quote|inspire|encourage|push me)\b/.test(n)) { const x = pick(MASTER_QUOTES), c = x.lastIndexOf(' — '); return R(c > -1 ? x.slice(0, c) : x, 'cheer'); }
   if (/\b(who are you|your name)\b/.test(n)) return R('J.A.R.V.I.S., sir. A rather discerning discipline system.', 'wake');
   if (hs.length) { const d = today(); return R(list(hs.map(i => `${HN[i]} is ${({ done: 'done', missed: 'missed', na: 'excused today', pending: 'still pending' })[hState(d, i)]}`)) + '.'); }
+  { const sg = suggestCmd(n); if (sg) return sg; }                           // v12: “Did you mean …?”
   const hd = HEARD.last && HEARD.last.raw && HEARD.last.src === 'voice' ? ' I heard “' + HEARD.last.raw.slice(0, 60) + '”.' : '';
   return R(V('huh', ['I did not quite catch a command in that, sir.' + hd + ' Say “help” for what I can do.', 'Forgive me, sir, I did not follow.' + hd + ' Could you put that another way?', 'That one got past me, sir.' + hd + ' Try again, or say “help”.']), 'huh');
 }
@@ -935,6 +1179,7 @@ function resolveRefs(n) {                // returns { n: rewritten command } or 
     return { reply: R(up ? (i === RATES.length - 1 ? 'That is as fast as I go, sir.' : 'Faster, sir.') : (i === 0 ? 'That is as slow as I go, sir.' : 'Slower, sir.')) };
   }
   if (/^(undo|undo that|undo it|revert that|take that back|cancel that)$/.test(n)) {
+    if (CTX.cls && Date.now() - CTX.cls.at < 900000 && CTX.cls.at >= Math.max(CTX.at, CTX.excAt)) return { reply: undoClassMarks() };
     if (CTX.exc && Date.now() - CTX.excAt < 900000 && (!CTX.acts.length || CTX.excAt > CTX.at)) { const ur = excUndoLast(); if (ur) return { reply: ur }; }
     if (!CTX.acts.length) return { reply: R('There is nothing to undo, sir.', 'err') };
     const r = []; CTX.acts.forEach(a => { try { r.push(setHabit(a[0], !a[1])); } catch (e) { } }); CTX.acts = []; refresh();
@@ -965,7 +1210,7 @@ function resolveRefs(n) {                // returns { n: rewritten command } or 
   if (/\b(it|that|this|that one|this one|those|them)\b/.test(n) && fresh && CTX.last.length) return { n: verb + CTX.last.map(i => HN[i]).join(' and ') };
   return null;
 }
-const VERBS = 'tick|untick|uncheck|check|mark|open|go to|show|start|pause|resume|stop|attended|bunked|missed|set|log|lock|serve|remind|focus|switch|take me|clear';
+const VERBS = 'tick|untick|uncheck|check|mark|open|go to|show|start|pause|resume|stop|attended|bunked|missed|skip|bunk|attend|set|log|lock|serve|remind|focus|switch|take me|clear';
 function splitCmds(n) {                  // "tick gym and open reports then start the timer" -> three commands
   const out = [], re = new RegExp('\\s+(?:and|but)\\s+(?=(?:' + VERBS + ')\\b)');
   n.split(/\s+(?:and then|then|after that|also)\s+/).forEach(p => p.split(re).forEach(b => { b = b.trim(); if (b) out.push(b); }));
@@ -1512,6 +1757,8 @@ function metaCmd(n) {
   }
   if (/\b(change|switch|next|different|another|cycle)\b.*\bvoice\b|^next voice$/.test(n)) { const lb = cycleVoice(); return lb ? R('Voice changed to ' + lb.toLowerCase() + ', sir.') : R('No other voices on this device, sir.', 'err'); }
   if (/^(what|which|list)( are| is)?( the| my| your)? voices?( do you have| are there| available)?$/.test(n)) return R('I can speak as ' + list(voiceList().map(x => vlabel(x).toLowerCase())) + ', sir.');
+  if (/^(open|show|bring up|go to)( your| the| jarvis)? (settings|options|preferences|controls)$|^(settings|jarvis settings)$/.test(n)) { toggleSettings(true); return R('Settings are open, sir.'); }
+  if (/^(close|hide|dismiss)( your| the| jarvis)? (settings|options|preferences|controls)$/.test(n)) { toggleSettings(false); return R('Settings closed, sir.'); }
   if (/^(mute|mute yourself|be silent|go silent|voice off|silent mode)$/.test(n)) { muted = true; lsSet('jv_mute', '1'); stopVoice(); setState(); return R('Muted, sir. I will answer on screen only.'); }
   if (/^(unmute|unmute yourself|voice on|speak again|you can talk)$/.test(n)) { muted = false; lsSet('jv_mute', '0'); setState(); return R('Voice restored, sir.'); }
   if (/\b(turn|switch|put) (on|off) (the |your )?(local )?(ai|brain|ai brain)\b|\b(enable|disable) (the |your )?(local )?(ai|brain)\b/.test(n)) {
@@ -2010,6 +2257,13 @@ function evaluate() {
     if (hr >= 18 && tot && p < STREAK_MIN_PCT) add('risk_' + iso, 'bad', '⏳', s.streak ? `${s.streak}-day streak at risk` : 'Day is slipping', `Only ${p}% done. Finish ${list(t.left.slice(0, 3).map(i => HN[i]))}.`);
     if (hr >= 12 && s.hasData && s.hPct < 60 && d.getDate() >= 5) add('low_' + iso, 'bad', '📉', 'Month is going badly', `Only ${s.hPct}% this month. Fix your routine, sir.`);
     try { const bd = bunkData(); Object.keys(bd).forEach(k => { const o = bd[k], pc = o.total ? Math.round(o.attended / o.total * 100) : 100; if (pc < 75) add('att_' + iso + k, 'bad', '🎓', `${k} attendance ${pc}%`, 'Below the 75% safe line. Attend every class from now.'); }); } catch (e) { }
+    try {                                                      // v12: a class starts soon and that subject is under 75%
+      const nowM = d.getHours() * 60 + d.getMinutes();
+      dayClasses(d).forEach(x => {
+        if (x.over || x.st !== 'pending') return; const hm = x.at.split(':').map(Number), mins = hm[0] * 60 + hm[1] - nowM; if (mins > 90 || mins < -30) return;
+        const i = attInfo(x.ev.subCode); if (i && i.below) add('goclass_' + iso + x.ev.id, 'bad', '🎓', `${x.name} ${mins > 0 ? 'in ' + mins + ' min' : 'is on now'}`, `Attendance is ${i.p}%, under 75. Go, sir.`);
+      });
+    } catch (e) { }
   } catch (e) { console.warn('Jarvis evaluate', e); }
   const keys = Object.keys(seen); if (keys.length > 400) keys.slice(0, keys.length - 300).forEach(k => delete seen[k]);
   lsSet('jv_seen', JSON.stringify(seen));
@@ -2046,6 +2300,8 @@ function wire() {
     setState();
   };
   el.close.onclick = sleep;
+  el.gear.onclick = () => toggleSettings();
+  el.setx.onclick = () => toggleSettings(false);
   el.ai.onclick = async () => {
     if (aiLoading) return;
     if (aiOn) { aiOn = false; lsSet('jv_ai', '0'); setAi(); showReply('AI brain off, sir. Command mode only.'); return; }
