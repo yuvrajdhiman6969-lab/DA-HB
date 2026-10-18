@@ -465,7 +465,7 @@
             #gym-grid-cols .event-action-btn { min-height: 40px; min-width: 40px; }
             .stark-hud { padding: 12px 10px; }
             .hud-corner { width: 10px; height: 10px; }
-            .stark-hud-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+            .stark-hud-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
             .gym-hud-tab { padding: 0; min-height: 42px; text-align: center; font-size: 9.5px; letter-spacing: .06em; }
             .gym-metric-tabs { display: grid; grid-template-columns: repeat(3, 1fr); }
             .gym-metric-btn { min-height: 40px; padding: 0 4px; font-size: 9.5px; }
@@ -2001,7 +2001,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 @media (prefers-reduced-motion: reduce) { #drawer .nav-btn { animation: none !important; } }
 @media (max-height: 640px) { .dr-jarvis small { display: none; } .dr-group { margin-top: 8px; } }
 </style>
-<link rel="stylesheet" href="jarvis/jarvis.css?v=13">
+<link rel="stylesheet" href="jarvis/jarvis.css?v=14">
 </head>
 <body>
     <div id="login-screen">
@@ -2052,6 +2052,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 <button class="nav-btn" data-tab="exceptions" data-ic="🌴" style="--i:3" onclick="switchTab('exceptions')">Exceptions</button>
                 <div class="dr-group">Body</div>
                 <button class="nav-btn" data-tab="gym" data-ic="🏋️" style="--i:4" onclick="switchTab('gym')">Gym</button>
+                <button class="nav-btn" data-tab="holo" data-ic="🧬" style="--i:4" onclick="switchTab('holo')">Holo Room</button>
                 <button class="nav-btn" data-tab="wardrobe" data-ic="👔" style="--i:5" onclick="switchTab('wardrobe')">Wardrobe</button>
                 <button class="nav-btn" data-tab="laundry" data-ic="🧺" style="--i:6" onclick="switchTab('laundry')">Laundry<span class="wd-badge" id="wd-badge" style="display:none">0</span></button>
                 <div class="dr-group">Focus</div>
@@ -2064,6 +2065,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 <button class="nav-btn" data-tab="achievements" data-ic="🏆" style="--i:12" onclick="switchTab('achievements')">Achievements</button>
                 <button class="nav-btn" data-tab="aar" data-ic="📝" style="--i:13" onclick="switchTab('aar')">Weekly AAR</button>
             </div>
+            <button type="button" class="dr-hist" id="dr-hist"><span aria-hidden="true">🗂️</span><span><b>Jarvis history</b><small>Past conversations with Jarvis</small></span></button>
             <div class="drawer-tools" id="drawer-tools"></div>
         </aside>
 
@@ -2311,6 +2313,8 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                             <button class="gym-hud-tab" data-tab="lifts" onclick="gymHudSetTab('lifts')">LIFTS</button>
                             <button class="gym-hud-tab" data-tab="body" onclick="gymHudSetTab('body')">BODY</button>
                             <button class="gym-hud-tab" data-tab="calendar" onclick="gymHudSetTab('calendar')">CALENDAR</button>
+                            <button class="gym-hud-tab" data-tab="map" onclick="gymHudSetTab('map')">MAP</button>
+                            <button class="gym-hud-tab" data-tab="holo" onclick="gymHudSetTab('holo')">HOLO</button>
                         </div>
                         <div id="gym-hud-body"></div>
                     </div>
@@ -2333,6 +2337,9 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 </div>
                 <div class="schedule-grid-container" id="gym-grid-cols"></div>
             </div>
+
+            <!-- HOLO ROOM (holographic data room, built by jarvis/holo.js) -->
+            <div id="tab-holo" class="section"><div id="holo-root"></div></div>
 
             <!-- INSIGHTS (Stark HUD) -->
             <div id="tab-insights" class="section">
@@ -3495,6 +3502,8 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             if (tabId === 'wardrobe') lazyTab(tabId, wdOpen, soft);
             if (tabId === 'laundry') lazyTab(tabId, wdRenderLaundry, soft);
             if (tabId === 'report') lazyTab(tabId, renderMultiMonthReports, soft);
+            if (tabId === 'report' && window.HOLO) { try { HOLO.mountReport(); } catch (e) { console.warn('holo report', e); } }
+            if (tabId === 'holo' && window.HOLO) { try { HOLO.open(soft); } catch (e) { console.warn('holo', e); } }
             if (tabId === 'hard-truth') lazyTab(tabId, generateHardTruth, soft);
             if (tabId === 'achievements') lazyTab(tabId, renderAchievements, soft);
             if (tabId === 'insights') lazyTab(tabId, renderInsights, soft);
@@ -8627,6 +8636,11 @@ function ib2Build(el) {
     function init() {
         var d = $('drawer'); if (!d) return;
         new MutationObserver(function () { if (d.classList.contains('open')) fill(); }).observe(d, { attributes: true, attributeFilter: ['class'] });
+        var hb = $('dr-hist');
+        if (hb) hb.addEventListener('click', function () {
+            if (typeof closeDrawer === 'function') closeDrawer();
+            setTimeout(function () { if (window.__jarvis && window.__jarvis.history) window.__jarvis.history(); }, 260);
+        });
         var j = $('dr-jarvis');
         if (j) j.addEventListener('click', function () {
             if (typeof closeDrawer === 'function') closeDrawer();
@@ -8637,7 +8651,10 @@ function ib2Build(el) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
-<script src="jarvis/jarvis.js?v=14" defer></script>
+<script src="jarvis/jarvis.js?v=16" defer></script>
+<script src="jarvis/holo.js?v=2" defer></script>
+<script src="jarvis/musclemap.js?v=2" defer></script>
+<script src="jarvis/suggest.js?v=2" defer></script>
 
 </body>
 </html>
