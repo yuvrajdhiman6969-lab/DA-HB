@@ -112,7 +112,7 @@ function syncHN() {                                                     // after
   } catch (e) { }
 }
 fillHN();
-try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); SYNC_LOCAL_ONLY.add('jv_micok'); SYNC_LOCAL_ONLY.add('jv_debug'); SYNC_LOCAL_ONLY.add('jv_ai'); SYNC_LOCAL_ONLY.add('jv_model'); ['jv_voice', 'jv_rate', 'jv_vmode', 'jv_meter', 'jv_focus', 'jv_flast', 'jv_eng', 'jv_nvoice', 'jv_rem', 'jv_heard', 'jv_fix', 'jv_cont', 'jv_awake'].forEach(k => SYNC_LOCAL_ONLY.add(k)); } catch (e) { }
+try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); SYNC_LOCAL_ONLY.add('jv_micok'); SYNC_LOCAL_ONLY.add('jv_debug'); SYNC_LOCAL_ONLY.add('jv_ai'); SYNC_LOCAL_ONLY.add('jv_model'); ['jv_voice', 'jv_rate', 'jv_vmode', 'jv_meter', 'jv_focus', 'jv_flast', 'jv_eng', 'jv_nvoice', 'jv_rem', 'jv_heard', 'jv_fix', 'jv_cont', 'jv_awake', 'jv_hist', 'jv_pat', 'jv_sp_since'].forEach(k => SYNC_LOCAL_ONLY.add(k)); } catch (e) { }
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const TOUCH = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
@@ -287,6 +287,101 @@ function build() {
   bars = [].slice.call(root.querySelectorAll('.jv-bars i')); root.classList.add('viz');
 }
 
+/* =====================================================================
+   v13 — MODE (Mark VII / Stay Hard), SHORT-BY-DEFAULT ANSWERS, HISTORY, SOFT ACK
+   ===================================================================== */
+const modeNow = () => (document.documentElement.getAttribute('data-theme') === 'goggins' ? 'goggins' : 'mark7');
+const HARD = () => modeNow() === 'goggins';
+let DETAIL = false, lastMode = '', lastRun = null;                 // DETAIL is true only for the turn where you asked for more
+const MORE = { full: '' };                                           // the full text behind the last short answer ("tell me more")
+const DETAIL_RX = /\b(in detail|in more detail|detailed|in depth|in full|at length|elaborate|explain (?:it |that |this )?(?:fully|properly|more|in full)|full (?:explanation|report|briefing|answer|details?)|tell me everything|more (?:detail|details|info|information)|go deeper|break it down|walk me through|give me (?:the )?details?)\b/;
+const DETAIL_STRIP = /\b(in detail|in more detail|in depth|in full|at length|with details?|in a detailed way)\b/g;
+const MORE_RX = /^(?:(?:and|ok|okay|please|jarvis|yes|yeah|sure) )*(?:tell me more|tell me everything|more details?|more|go on|continue|elaborate|explain (?:that|it|more)|in detail|details?|give me the details?|go deeper)(?: please)?$/;
+const BRIEF_MAX = 260;
+const idleLine = () => HARD() ? 'Report, sir. No excuses.' : 'At your service, sir.';
+const ackLine = () => HARD() ? V('ackl', ['Speak, sir.', 'Listening. Make it count.', 'Go ahead, sir. Time is moving.']) : V('ackl', ['At your service, sir.', 'Yes, sir?', 'Listening, sir.']);
+const toneKick = () => HARD() ? V('hk', ['No excuses.', 'Nobody is coming to save you.', 'Get up and do the work.', 'Stay hard.']) : '';
+function firstSentences(t, k) {
+  const m = String(t).replace(/\s+/g, ' ').trim().match(/[^.!?]+[.!?]+(?=\s|$)/g);
+  return m ? m.slice(0, k).join(' ').trim() : String(t).trim();
+}
+function briefen(res) {                                              // short by default: only the important part, then an offer
+  if (DETAIL) return res;
+  return res.map(r => {
+    if (!r || r.streamed || r.nocut || r.c === 'err' || r.c === 'huh') return r;
+    if (r.more) { MORE.full = r.more; return Object.assign({}, r, { t: r.t + ' Say “tell me more” for the rest, sir.' }); }
+    if (r.t.length <= BRIEF_MAX) return r;
+    const s2 = firstSentences(r.t, 2);
+    if (s2.length < 30 || s2.length >= r.t.length - 24) return r;
+    MORE.full = r.t;
+    return Object.assign({}, r, { t: s2 + ' Say “tell me more” for the rest, sir.' });
+  });
+}
+function flair(res) {                                              // Stay Hard mode: blunter delivery on short canned replies
+  if (!HARD()) return res;
+  return res.map(r => {
+    if (!r || r.streamed || r.more || r.t.length > 200) return r;
+    let t = r.t;
+    t = t.replace(/^Very good, sir\.$/, 'Stay hard.').replace(/\bPardon the interruption, sir\.\s*/g, '').replace(/\bMagnificent, sir\./g, 'Good. Now do it again tomorrow.');
+    if (r.c === 'warn' || r.c === 'err') t += ' ' + toneKick();
+    else if (r.c === 'cheer') t += ' Do not get comfortable.';
+    return t === r.t ? r : Object.assign({}, r, { t });
+  });
+}
+/* ----- history: every exchange is kept here, shown only from the menu (☰ → Jarvis history) ----- */
+const HIST_KEY = 'jv_hist';
+function histLoad() { try { return JSON.parse(lsGet(HIST_KEY) || '[]') || []; } catch (e) { return []; } }
+function histAdd(who, text) {
+  text = String(text || '').trim(); if (!text) return;
+  const l = histLoad(); l.push({ t: Date.now(), w: who, x: text.slice(0, 1500) }); if (l.length > 150) l.splice(0, l.length - 150);
+  lsSet(HIST_KEY, JSON.stringify(l));
+}
+let histEl = null;
+function openHistory() {
+  if (histEl) histEl.remove();
+  histEl = document.createElement('div'); histEl.id = 'jv-hist'; histEl.setAttribute('role', 'dialog'); histEl.setAttribute('aria-label', 'Jarvis history');
+  const l = histLoad(), days = {};
+  l.forEach(e => { const k = new Date(e.t).toDateString(); (days[k] = days[k] || []).push(e); });
+  const keys = Object.keys(days);
+  histEl.innerHTML = '<div class="jh-box"><div class="jh-top"><b>JARVIS HISTORY</b><span><button type="button" data-a="clear">CLEAR</button><button type="button" data-a="close" aria-label="Close">&#10005;</button></span></div><div class="jh-list"></div></div>';
+  const box = histEl.querySelector('.jh-list');
+  if (!keys.length) box.innerHTML = '<div class="jh-empty">Nothing yet, sir. Our conversations will be kept here.</div>';
+  keys.forEach(k => {
+    const h = document.createElement('div'); h.className = 'jh-day'; h.textContent = k === new Date().toDateString() ? 'TODAY' : k.toUpperCase(); box.appendChild(h);
+    days[k].forEach(e => {
+      const m = document.createElement('div'); m.className = 'jh-msg ' + (e.w === 'u' ? 'me' : 'jv');
+      const tm = document.createElement('small'); tm.textContent = (e.w === 'u' ? 'YOU' : 'JARVIS') + ' · ' + new Date(e.t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const tx = document.createElement('span'); tx.textContent = e.x; m.appendChild(tm); m.appendChild(tx); box.appendChild(m);
+    });
+  });
+  histEl.onclick = ev => {
+    const b = ev.target.closest('button'), a = b && b.dataset.a;
+    if (a === 'close' || ev.target === histEl) { histEl.remove(); histEl = null; }
+    else if (a === 'clear') { lsSet(HIST_KEY, '[]'); openHistory(); }
+  };
+  document.body.appendChild(histEl); box.scrollTop = box.scrollHeight;
+}
+/* ----- soft acknowledgement: plays a short clip WITHOUT muting the microphone, so your next words are still caught ----- */
+let ackUntil = 0, ackA = null;
+const ACK_ECHO = /^(?:at your service|yes sir|welcome back|good (?:morning|afternoon|evening)|online|ready|how may i|how can i|go ahead|i am here|im here|listening|standing by|hello)(?: sir)?(?: .*)?$/;
+function ackSoft() {
+  if (muted || locked || !CLIPS.wake) return;
+  try {
+    const a = clip(pick(CLIPS.wake)); ackA = a; a.currentTime = 0; a.volume = .8;
+    ackUntil = Date.now() + (isFinite(a.duration) && a.duration > 0 ? a.duration * 1000 : 1700) + 450;
+    const p = a.play(); if (p && p.catch) p.catch(err => { ackUntil = 0; if (err && err.name === 'NotAllowedError') needUnlock = true; });
+  } catch (e) { ackUntil = 0; }
+}
+const ackEcho = txt => { const n = norm(txt); return Date.now() < ackUntil && n.split(' ').length <= 6 && ACK_ECHO.test(n); };
+/* Jarvis speaks first (patterns, penalties): shown, spoken, remembered; listens for an answer when the wake word is on */
+function jvSay(msg, listen) {
+  histAdd('j', msg); try { popup('bad', '⚠️', 'JARVIS', msg); } catch (e) { }
+  if (muted || !touched || locked || document.hidden) return;
+  if (listen && S.wake && SR && !needTap) { S.active = true; openPanel(); showReply(msg); setState(); armIdle(25000); }
+  else if (listen) { openPanel(); showReply(msg); armIdle(25000); }
+  if (TTS.full && canSpeak()) speakText(msg); else say('warn');
+}
+
 const LABEL = { off: 'STANDBY', wake: 'SAY “JARVIS”', listen: 'LISTENING…', speak: 'SPEAKING', think: 'THINKING…' };
 function setState() {
   const s = speaking ? 'speak' : (aiBusy || aiLoading) ? 'think' : S.active ? 'listen' : S.wake ? 'wake' : 'off';
@@ -338,7 +433,7 @@ function openPanel() {
   if (el.panel.hidden) { el.panel.hidden = false; updateHud(); }
   if (!clockT) { tickClock(); clockT = setInterval(tickClock, 1000); }
 }
-function closePanel() { el.panel.hidden = true; toggleSettings(false); showHeard(''); clearInterval(clockT); clockT = 0; cancelAnimationFrame(typeRaf); }
+function closePanel() { el.panel.hidden = true; toggleSettings(false); showHeard(''); try { el.reply.textContent = idleLine(); } catch (e) { } clearInterval(clockT); clockT = 0; cancelAnimationFrame(typeRaf); }
 function armIdle(ms) {
   clearTimeout(idleT);
   idleT = setTimeout(() => { if ((aiBusy || aiLoading) && Date.now() - aiBusyAt < 150000) armIdle(8000); else sleep(); }, el.settings && !el.settings.hidden ? Math.max(ms, 90000) : ms);     // v11: never sleep mid-thought (v12: nor while settings are open)
@@ -362,7 +457,7 @@ function preload() {                     // same clips, loaded one at a time so 
   let i = 0; const next = () => { if (i < all.length) { clip(all[i++]); setTimeout(() => idle(next, 1500), 200); } }; next();
 }
 function stopVoice() {
-  playTok++;
+  playTok++; try { if (ackA) { ackA.pause(); ackUntil = 0; } } catch (e) { }
   if (cur) { try { cur.pause(); } catch (e) { } clearTimeout(cur._t); cur = null; }
   TTS.q = []; TTS.cur = null; TTS.open = false; clearTimeout(TTS.t); clearTimeout(TTS.w); ttsU = null; try { if (synth) synth.cancel(); } catch (e) { }
   try { if (NEURAL.src) { NEURAL.src.onended = null; NEURAL.src.stop(); } } catch (e) { } NEURAL.src = null; NEURAL.pre = null; NEURAL.playing = false;
@@ -525,12 +620,16 @@ function onResult(e) {
   const now = Date.now();
   for (let i = e.resultIndex; i < e.results.length; i++) {
     const res = e.results[i];
-    if (speaking && wakeHit(res) && /\b(stop|quiet|enough|shut up|be quiet|silence|hold on|wait)\b/.test(norm(res[0].transcript))) {   // voice barge-in: "Jarvis, stop"
-      if (aiBusy) aiCancel(); stopVoice(); S.active = true; openPanel(); showHeard('Go ahead, sir…'); setState(); armIdle(14000); ignored.add(i); continue;
+    if (speaking && wakeHit(res)) {                                          // v13 barge-in: say “Jarvis …” while he talks: he stops at once and answers only what you just asked
+      const sn = norm(res[0].transcript), rest = stripWake(sn).replace(/\b(stop|quiet|enough|shut up|be quiet|silence|hold on|wait|please)\b/g, '').trim();
+      if (aiBusy) aiCancel(); stopVoice(); guardUntil = 0; S.active = true; openPanel(); setState(); armIdle(14000); showHeard('Go ahead, sir…');
+      if (!rest) { ignored.add(i); continue; }                               // just “Jarvis, stop”
+      woke.add(i);                                                           // otherwise the rest of this phrase is the new question
     }
     if (ignored.has(i)) { if (res.isFinal) ignored.delete(i); continue; }
     if (now < guardUntil) { if (!res.isFinal) ignored.add(i); continue; }      // that is Jarvis's own voice
     const txt = res.isFinal ? bestAlt(res) : res[0].transcript.trim(); if (!txt) continue;
+    if (ackEcho(txt)) { if (res.isFinal) ackUntil = 0; continue; }          // the soft acknowledgement clip heard back through the speakers
     kick(.9);
     if (!S.active) {                                                         // waiting for the wake word
       if (!wakeHit(res)) { continue; }
@@ -545,9 +644,9 @@ function onResult(e) {
   }
 }
 function activate() {                                                       // wake word heard (first words, not end of sentence)
-  if (QUIET_START) buzz(18); else chime('wake'); S.active = true; root.dataset.tone = ''; openPanel(); setState(); showReply('At your service, sir.');
-  clearTimeout(ackT); if (!QUIET_START) ackT = setTimeout(() => say(welcomed ? 'wake' : 'hi'), 600);   // skipped if a command follows right away
-  welcomed = true; armIdle(10000); warmAI();
+  if (QUIET_START) buzz(18); else chime('wake'); S.active = true; root.dataset.tone = ''; openPanel(); setState(); showReply(ackLine()); showHeard('Go ahead, sir…');
+  clearTimeout(ackT); if (!QUIET_START) ackT = setTimeout(ackSoft, 250);   // v13: a SOFT clip: the microphone stays open, so the words you say right after “Jarvis” are caught. Skipped if a command follows right away
+  welcomed = true; armIdle(12000); warmAI();
 }
 
 /* =====================================================================
@@ -850,15 +949,23 @@ const TNAME = { 'hard-truth': 'Hard Truth', soul: 'Soul Timer', tick: 'Daily Gri
 const R = (t, c) => ({ t, c: c === undefined ? 'ok' : c });
 function briefing() {
   const d = today(), h = d.getHours(), { t, tot, p, s } = summary(), up = ttToday().filter(x => !x.over)[0];
-  const a = [`${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, sir.`, `${t.done.length} of ${tot} habits done, ${p} percent.`];
-  try { const ei = excInfo(isoDate(d)); if (ei) a.splice(1, 0, `Exception active: ${list(ei.list.map(e => e.label || 'Away'))}.`); } catch (e) { }
-  if (s.streak > 0) a.push(`Streak at ${plural(s.streak, 'day')}.`);
-  if (t.left.length) a.push(`Still pending: ${list(t.left.slice(0, 4).map(i => HN[i]))}.`);
+  const hello = HARD() ? (h < 12 ? 'Up. The day has already started.' : h < 17 ? 'Afternoon. There is still time to win this day.' : 'Evening. Close the day properly.')
+    : `${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, sir.`;
+  const a = DETAIL ? [hello] : [];
+  a.push(`${t.done.length} of ${tot} habits done, ${p} percent.`);
+  try { const ei = excInfo(isoDate(d)); if (ei) a.push(`Exception active: ${list(ei.list.map(e => e.label || 'Away'))}.`); } catch (e) { }
+  if (DETAIL && s.streak > 0) a.push(`Streak at ${plural(s.streak, 'day')}.`);
+  if (t.left.length) a.push(`${DETAIL ? 'Still pending' : 'Left'}: ${list(t.left.slice(0, DETAIL ? 6 : 3).map(i => HN[i]))}${!DETAIL && t.left.length > 3 ? ' and ' + (t.left.length - 3) + ' more' : ''}.`);
   if (up) a.push(`Next up, ${up.name} at ${up.at}.`);
   classAlerts().forEach(x => a.push(x));
   if (s.activePenalties) a.push(`${plural(s.activePenalties, 'penalty')} waiting to be served.`);
+  if (DETAIL) {
+    try { if (t.done.length) a.push(`Done so far: ${list(t.done.map(i => HN[i]))}.`); } catch (e) { }
+    try { if (s.hasData) a.push(`This month you are at ${s.hPct} percent.`); } catch (e) { }
+    try { const low = attAll().filter(x => x && x.below); if (low.length) a.push(`Under the 75 percent line: ${list(low.map(x => x.k))}.`); } catch (e) { }
+  }
   CTX.list = t.left.slice(); CTX.at = Date.now();
-  return R(a.join(' '), p >= 70 ? 'cheer' : p >= 40 ? 'ok' : 'warn');
+  return Object.assign(R(a.join(' '), p >= 70 ? 'cheer' : p >= 40 ? 'ok' : 'warn'), { nocut: true });
 }
 function exec(n) {
   let m;
@@ -975,13 +1082,14 @@ function exec(n) {
 }
 function present(res) {
   heardResult(!res.some(r => r.c === 'huh'));
+  res = flair(briefen(res));                                   // v13: short by default (“tell me more” gives the rest), blunter in Stay Hard mode
   const txt = res.map(r => cap(r.t)).join('\n'), kinds = res.map(r => r.c), str = res.some(r => r.streamed);
-  CTX.said = txt;
+  CTX.said = txt; histAdd('j', txt);
   if (!str) {
     showReply(txt);
     if (TTS.full && canSpeak()) {
       const act = !kinds.includes('err') && /ticked|unticked|marked|running|paused|opening|locking|switched|set to/i.test(txt);
-      speakText((act && Math.random() < .45 ? V('ack', ['Done, sir. ', 'Right away, sir. ', 'Certainly, sir. ', 'Of course, sir. ', 'Consider it done, sir. ']) : '') + txt);
+      speakText((act && Math.random() < .45 ? V('ack', HARD() ? ['Done. ', 'Handled. ', 'Logged. '] : ['Done, sir. ', 'Right away, sir. ', 'Certainly, sir. ', 'Of course, sir. ', 'Consider it done, sir. ']) : '') + txt);
     } else say(kinds.includes('err') ? 'err' : kinds[0] || 'ok');
   }
   try { if (navigator.vibrate) navigator.vibrate(kinds.includes('err') ? [40, 40, 40] : 15); } catch (e) { }
@@ -1014,6 +1122,13 @@ function run(n, raw, src) {
   if (src !== 'chip' && /^(what did you (hear|catch)|what did i say)$/.test(n)) { const pe = HEARD.last; present([R(pe ? 'I heard: ' + pe.raw + '.' : 'I have not heard anything yet, sir.')]); return; }
   if (src === 'voice' || src === 'typed') heardAdd(raw || n, n, src); else HEARD.last = null;
   n = stripFillers(fuzzyFix(fixAsr(applyLearned(n))));
+  histAdd('u', raw || n);
+  { const noPend = !pendingFn && !pendingAct, wantMore = noPend && MORE_RX.test(n);       // v13: short answers by default, detail only when asked
+    DETAIL = wantMore || DETAIL_RX.test(n);
+    if (wantMore && MORE.full) { const f = MORE.full; MORE.full = ''; present([Object.assign(R(f), { nocut: true })]); return; }
+    if (wantMore && lastRun) { n = lastRun.n; raw = lastRun.raw; }
+    else if (DETAIL_RX.test(n)) n = n.replace(DETAIL_STRIP, ' ').replace(/\s+/g, ' ').trim() || n;
+    if (noPend && !wantMore && !YES_RX.test(n) && !NO_RX.test(n)) { lastRun = { n, raw: raw || n }; MORE.full = ''; } }
   if (pendingFn) {                                            // v11: a confirmation (delete an exception…) waiting for “yes”
     const pf = pendingFn; pendingFn = null;
     if (YES_RX.test(n)) { let r; try { r = pf(); } catch (e) { console.error(e); r = R('That failed, sir.', 'err'); } present([r]); return; }
@@ -1424,8 +1539,8 @@ async function wiki(q, lang) {
   const r = await getJSON(base + 'api/rest_v1/page/summary/' + encodeURIComponent(hit.title.replace(/ /g, '_')));
   if (!r || !r.extract || r.type === 'disambiguation') return null;
   const x = r.extract.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim(), sents = x.match(/[^.!?]+[.!?]+(?=\s|$)/g) || [x];
-  let out = ''; for (const st of sents) { if (out && (out + st).length > 330) break; out += st; }
-  return { title: r.title, text: out.trim() };
+  const cut = lim => { let o = ''; for (const st of sents) { if (o && (o + st).length > lim) break; o += st; } return o.trim(); };
+  return { title: r.title, text: cut(240), full: cut(1500) };
 }
 const KNOW = /^(?:hey |ok |okay )?(?:please )?(?:can you |could you )?(?:tell me |explain |define |search for |look up |google |wikipedia |whats |what is |what are |what was |what were |who is |who was |who are |whos |what does |meaning of |capital of |how tall |how old |how big |how far |how long |how many |how much |when did |when was |when is |where is |where was |why is |why are |why do |why does |why did |how does |which )/;
 const DOMAIN2 = /\b(my|habits?|streak|gym|penalt\w*|punish\w*|timetable|attendance|bunk\w*|focus|soul|timer|left|pending|progress|doing|tick|untick|report|insights|achievements?|wardrobe|laundry|grid|exceptions?|schedule|next class|this month)\b/;
@@ -1438,7 +1553,7 @@ function knowQ(n, raw) {
   if (q.length < 2) return null;
   const miss = () => aiOn ? askAI(raw) : R(navigator.gpu ? 'I could not find that, sir. Turn on AI BRAIN for open-ended questions.' : 'I could not find that, sir. This browser has no WebGPU, so I can answer facts, maths, conversions, dates, time zones and weather, but not open-ended questions.', 'huh');
   if (aiOn && EXPLAIN.test(n)) return askAI(raw);                                // reasoning questions suit the AI model better than an encyclopedia
-  return wiki(q, 'en').then(r => r ? R('According to Wikipedia, ' + r.text) : miss());
+  return wiki(q, 'en').then(r => r ? (DETAIL ? R('According to Wikipedia, ' + r.full) : Object.assign(R('According to Wikipedia, ' + r.text), r.full.length > r.text.length + 20 ? { more: 'According to Wikipedia, ' + r.full } : {})) : miss());
 }
 const clockq = n => n.split(' ').length <= 7 && /^(what|whats|tell me|say|current|show)\b/.test(n) && /\b(time|date|day)\b/.test(n) && !/\b(in|of|for|on|until|till|before|after|since|between)\b/.test(n);
 function general(n, raw) {               // returns R, a Promise of R, or null (= not a general question: use the habit commands)
@@ -1885,11 +2000,20 @@ function snapshot() {                    // live, read-only facts the model may 
   try { L.push(`Soul timer: ${timerStarted ? Math.ceil(timerRemainingSec / 60) + ' min left' + (timerRunning ? '' : ' (paused)') : 'not running'}.`); } catch (e) { }
   return L.join('\n');
 }
-function sysPrompt() {
-  return 'You are J.A.R.V.I.S., the personal assistant inside the user\'s Discipline OS habit app. Call the user "sir". Be brief: at most 2 short sentences (3 for general knowledge), plain speech, no markdown, no lists, no emojis. Dry British wit is welcome, never rude. ' +
+function styleFor(det) {
+  const persona = HARD()
+    ? 'STAY HARD MODE is active: you are a ruthless, no-nonsense, drill-sergeant version of J.A.R.V.I.S. in the spirit of David Goggins: blunt, intense, zero comfort, short punchy sentences, you hold the user accountable for every miss. Still call the user "sir". Never insult who the user is, never push unsafe training, starving or self-harm; if the user sounds genuinely distressed, drop the act and be kind. '
+    : 'MARK VII MODE is active: calm, precise, courteous, dry British wit, never rude. ';
+  const len = det
+    ? 'The user asked for DETAIL: give a thorough, well-organised spoken answer of up to about 10 sentences, plain speech, no markdown, no lists, no emojis. '
+    : 'Think before you answer, then say only the single most important thing: at most 2 short sentences, plain speech, no markdown, no lists, no emojis, no filler or preamble. If clearly more is worth saying, end with the question "Want the detail, sir?" ';
+  return persona + len;
+}
+function sysPrompt(det) {
+  return 'You are J.A.R.V.I.S., the personal assistant inside the user\'s Discipline OS habit app. Call the user "sir". ' + styleFor(det) +
     'For general-knowledge or casual questions that are not about the user, answer helpfully from your own knowledge; if you are not sure, say so rather than guessing. ' +
     'Use ONLY the LIVE DATA below for facts about the user. Never invent numbers, habits or workouts; if something is not in the data, say you do not have it. ' +
-    'Always answer in English, in the calm, precise, courteous manner of Tony Stark\'s J.A.R.V.I.S. ' +
+    'Always answer in English. ' +
     'To perform an app action, add a final separate line "ACTION: <command>" (at most 2). Allowed commands: tick <habit>, untick <habit>, open <tab>, start soul timer, pause soul timer, attended <subject>, missed <subject>, create exception from <date> to <date> because <reason>. ' +
     'Habits: sleep, classes, study, project, gym, scrolling, morning phone, night phone, water, skin care, reading, fruit. Tabs: home, daily grid, time table, gym, reports, insights, achievements, soul timer, punishment. ' +
     'Only act when the user clearly asks for it. For questions and advice give no ACTION.\n\nLIVE DATA:\n' + snapshot();
@@ -1905,13 +2029,13 @@ function runActs(acts) {                 // allow-list only; risky ones wait for
   if (ran) refresh();
   return out;
 }
-function splitReply(raw) {
+function splitReply(raw, det) {
   const acts = [], keep = [];
   raw.split('\n').forEach(l => { const m = /^\s*[*_`]*ACTION[*_`]*\s*:\s*(.+)$/i.exec(l); if (m) acts.push(m[1]); else if (!/^\s*[*_`]*ACTION/i.test(l)) keep.push(l); });
-  return { acts, reply: keep.join(' ').replace(/[*_`#]/g, '').replace(/\s+/g, ' ').trim().slice(0, 420) };
+  return { acts, reply: keep.join(' ').replace(/[*_`#]/g, '').replace(/\s+/g, ' ').trim().slice(0, det ? 3500 : 320) };
 }
 async function askAI(text) {
-  const tok = ++AI.tok, mine = () => tok === AI.tok;
+  const tok = ++AI.tok, mine = () => tok === AI.tok, det = DETAIL;
   aiBusy = true; aiBusyAt = Date.now(); setState();
   let begun = false, talk = false;
   try {
@@ -1920,7 +2044,7 @@ async function askAI(text) {
     if (!await ensureAI()) return mine() ? R('My local brain is unavailable, sir: ' + aiErr + ' Command mode still works.', 'err') : null;
     if (!mine()) return null;
     const sp0 = stallAfter(30000);
-    const stream = await Promise.race([aiEngine.chat.completions.create({ messages: [{ role: 'system', content: sysPrompt() }, ...aiHist.slice(-6), { role: 'user', content: text }], temperature: 0.4, max_tokens: 200, stream: true }), sp0]);
+    const stream = await Promise.race([aiEngine.chat.completions.create({ messages: [{ role: 'system', content: sysPrompt(det) }, ...aiHist.slice(-6), { role: 'user', content: text }], temperature: 0.4, max_tokens: det ? 700 : 120, stream: true }), sp0]);
     sp0.clear();
     let raw = '', said = 0, stalled = stream === STALL, gone = false;
     const begin = () => { if (!begun) { begun = true; fillerOff(); talk = speakBegin(); } };
@@ -1935,7 +2059,7 @@ async function askAI(text) {
       if (nx.done) break; first = false;
       const ch = nx.value;
       raw += (ch.choices && ch.choices[0] && ch.choices[0].delta && ch.choices[0].delta.content) || '';
-      kick(.8); const part = splitReply(raw).reply; if (part) el.reply.textContent = part;
+      kick(.8); const part = splitReply(raw, det).reply; if (part) el.reply.textContent = part;
       const seg = part.slice(said), k = Math.max(seg.lastIndexOf('. '), seg.lastIndexOf('! '), seg.lastIndexOf('? '));
       if (k > -1) { begin(); if (talk) speakPush(seg.slice(0, k + 1)); said += k + 2; }      // he starts talking before the model finishes
       armIdle(30000);
@@ -1946,7 +2070,7 @@ async function askAI(text) {
     }
     if (gone) return null;
     if (stalled) { AI.stalls++; if (AI.stalls >= 2) { AI.stalls = 0; aiReset(); } } else AI.stalls = 0;
-    const sp = splitReply(raw), acts = stalled ? [] : sp.acts;
+    const sp = splitReply(raw, det), acts = stalled ? [] : sp.acts;
     let reply = sp.reply;
     if (!reply) {
       if (stalled) return R('My brain stalled on that one, sir, so I dropped it. I am still listening: say it again, or try a command.', 'err');
@@ -2080,6 +2204,7 @@ function shape(x, para) {                // per-sentence delivery: questions ris
   else if (/\b(congratulat|excellent|flawless|magnificent|well done|perfect|streak)/i.test(x)) { o.rate *= 1.03; o.pitch += .03; }
   if (/\bsir[.!?]?$/i.test(x) && x.length < 28) { o.rate *= .96; o.gap = Math.min(o.gap, 120); }
   const h = new Date().getHours(); if (h >= 23 || h < 5) { o.vol = .75; o.rate *= .95; }          // late night: quieter and calmer
+  if (HARD()) { o.rate *= 1.05; o.pitch -= .08; o.gap = Math.round(o.gap * .7); }                 // Stay Hard: faster, lower, no soft pauses
   return o;
 }
 
@@ -2237,6 +2362,93 @@ function popup(kind, icon, title, body) {
   c.querySelector('.cx').onclick = ev => { ev.stopPropagation(); kill(); };
   c.onclick = () => { kill(); if (TTS.full && canSpeak()) speakText(title + '. ' + body); else say(kind === 'bad' ? 'warn' : 'cheer'); };
 }
+/* =====================================================================
+   v13 — PATTERN MEMORY and SMART PUNISHMENTS (both run from evaluate(), only while Jarvis is idle)
+   ===================================================================== */
+const DOW_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const hm12 = t => { const a = t.split(':').map(Number); return (a[0] % 12 || 12) + (a[1] ? ':' + p2(a[1]) : '') + (a[0] < 12 ? ' AM' : ' PM'); };
+const mins = t => { const a = t.split(':').map(Number); return a[0] * 60 + a[1]; };
+function patternState(ev, d, now) {                       // 'miss' | 'done' | 'skip' | 'wait'
+  let st; try { st = getTTState(isoOf(d), ev.id); } catch (e) { return 'skip'; }
+  if (st === 'completed') return 'done';
+  if (st === 'excepted') return 'skip';
+  if (st === 'missed') return 'miss';
+  try { if (eventEnd(d, ev).getTime() < now.getTime() - 3 * 3600000) return 'miss'; } catch (e) { }       // over for hours and never ticked
+  return 'wait';
+}
+function patternScan() {                                  // the same gym / study block missed 3+ times in a row on the same weekday
+  const now = new Date(), t0 = dayStart(), start = getStartISO(), seen = jget('jv_pat', {});
+  let best = null;
+  for (let dow = 0; dow < 7; dow++) {
+    (TT_BLUEPRINT[DAY_NAMES[dow]] || []).forEach(ev => {
+      if (ev.type !== 'gym' && ev.type !== 'study') return;
+      let d = addDays(t0, -((t0.getDay() - dow + 7) % 7)), streak = 0, last = '';
+      for (let k = 0; k < 8; k++, d = addDays(d, -7)) {
+        const iso = isoOf(d);
+        if (iso < start || (ev.type === 'gym' && typeof GYM_EPOCH_ISO !== 'undefined' && iso < GYM_EPOCH_ISO)) break;
+        const r = patternState(ev, d, now);
+        if (r === 'miss') { streak++; if (!last) last = iso; } else if (r === 'done') break;          // skipped / still waiting: neutral
+      }
+      if (streak < 3) return;
+      const when = seen[ev.id]; if (when && dayDiff(isoToDate(when), t0) < 14) return;               // asked recently
+      if (!best || streak > best.streak) best = { ev, dow, streak, last };
+    });
+  }
+  return best;
+}
+function freeSlot(d) {                                    // first 75-minute gap on that day, late afternoon first
+  let busy = []; try { busy = eventsFor(d, readJSON('custom_tt_events', {})).map(e => { const a = e.time.split('-'); let x = mins(a[0]), y = mins(a[1]); if (y <= x) y += 1440; return [x, y]; }); } catch (e) { }
+  const cands = ['17:00', '18:00', '16:30', '19:00', '15:30', '19:30'];
+  for (const c of cands) { const x = mins(c), y = x + 75; if (!busy.some(b => x < b[1] + 15 && y > b[0] - 15)) return { label: hm12(c), at: +new Date(d.getFullYear(), d.getMonth(), d.getDate(), +c.split(':')[0], +c.split(':')[1]) }; }
+  return { label: hm12('18:00'), at: +new Date(d.getFullYear(), d.getMonth(), d.getDate(), 18, 0) };
+}
+function patternAsk(p) {                                  // returns the line he says; sets the “yes” action
+  const ev = p.ev, name = ev.title.replace(/^[^\w(]+/, '').replace(/ ->.*/, '').replace(/^Morning /i, '').toLowerCase();
+  const at = hm12(ev.time.split('-')[0]), dn = DOW_NAME[p.dow] + 's';
+  const t0 = dayStart(), nxt = addDays(t0, ((p.dow - t0.getDay() + 7) % 7) || 7), slot = freeSlot(nxt);
+  const seen = jget('jv_pat', {}); seen[ev.id] = isoOf(t0); lsSet('jv_pat', JSON.stringify(seen));
+  const mine = () => {
+    const l = remList().filter(r => r.at > Date.now() - 60000); l.push({ at: slot.at, text: cap(name) + ': your new slot, ' + slot.label }); remSave(l);
+    return R(`Done, sir. I will remind you at ${slot.label} on ${DOW_NAME[p.dow]}. The Time Table block itself stays as it is: edit it there to move it for good.`, 'done');
+  };
+  pendingFn = mine; setTimeout(() => { if (pendingFn === mine) pendingFn = null; }, 150000);
+  return HARD()
+    ? `${p.streak} ${dn} in a row you skipped the ${at} ${name}. Maybe the slot is the excuse. Want it moved to ${slot.label}, or will you finally show up?`
+    : `You have skipped the ${at} ${name} ${p.streak} ${dn} in a row, sir. Shall I move it to ${slot.label}?`;
+}
+const SP_SKIP = new Set(['classes', 'media_scroll']);      // classes and scrolling already have their own penalties
+function spTask(h) {
+  const hard = HARD(), id = h.id;
+  if (id === 'study' || id === 'project_work' || id === 'reading') return hard ? 'an extra 50-minute focus block in the Soul Timer, phone in another room' : 'an extra 25-minute focus session in the Soul Timer';
+  if (id === 'gym') return hard ? '100 burpees and a cold shower' : 'a cold shower and 30 burpees';
+  if (id === 'sleep') return hard ? 'lights out 60 minutes earlier for three nights' : 'lights out 30 minutes earlier tonight';
+  if (id === 'water') return hard ? 'two extra litres of water today, finished before noon' : 'one extra litre of water today';
+  return hard ? 'a two-minute cold shower, no hot water' : 'a cold shower tonight';
+}
+function punishScan() {                                   // a habit missed twice in the same week: a task you must tick off in the Punishment tab
+  const out = [];
+  if (typeof assignPunishment !== 'function') return out;
+  let since = lsGet('jv_sp_since'); if (!since) { since = isoOf(dayStart()); lsSet('jv_sp_since', since); }
+  const t0 = dayStart(), dow = (t0.getDay() + 6) % 7, mon = addDays(t0, -dow), wk = isoOf(mon), start = getStartISO();
+  HABITS.forEach((h, i) => {
+    if (SP_SKIP.has(h.id)) return;
+    let miss = 0;
+    for (let k = 0; k < dow; k++) {                      // Monday .. yesterday (today is still open)
+      const dt = addDays(mon, k), iso = isoOf(dt); if (iso < since || iso < start) continue;
+      const st = hState(dt, i); if (st === 'missed' || st === 'pending') miss++;
+    }
+    const nm = HN[i] || hnFor(h);
+    let madeNow = false;
+    [[2, ''], [4, '_x4']].forEach(a => {
+      const need = a[0], suf = a[1]; if (miss < need || (suf && (!HARD() || madeNow))) return;
+      const task = spTask(h), sentence = (suf ? 'Second strike this week. ' : '') + cap(task) + (suf ? ', plus 50 pushups' : '') + '. Tick it off here when it is done.';
+      if (assignPunishment(`Missed ${nm} ${miss === 2 ? 'twice' : miss + ' times'} this week`, sentence, 'pun_smart_' + h.id + '_' + wk + suf)) { madeNow = true; out.push({ nm, miss, task: task + (suf ? ', plus 50 pushups' : '') }); }
+    });
+  });
+  if (out.length) { try { if (document.querySelector('#tab-punishment.active') && typeof renderPunishmentSection === 'function') renderPunishmentSection(); } catch (e) { } }
+  return out;
+}
+
 function evaluate() {
   if (locked || document.hidden) return;
   if (focusOn()) { schedEval(60000); return; }
@@ -2256,6 +2468,7 @@ function evaluate() {
     if (hState(d, habitIdx('gym')) === 'missed') add('gymm_' + iso, 'bad', '🛑', 'Gym missed', 'That is not the standard. Tomorrow, no excuses.');
     if (hr >= 18 && tot && p < STREAK_MIN_PCT) add('risk_' + iso, 'bad', '⏳', s.streak ? `${s.streak}-day streak at risk` : 'Day is slipping', `Only ${p}% done. Finish ${list(t.left.slice(0, 3).map(i => HN[i]))}.`);
     if (hr >= 12 && s.hasData && s.hPct < 60 && d.getDate() >= 5) add('low_' + iso, 'bad', '📉', 'Month is going badly', `Only ${s.hPct}% this month. Fix your routine, sir.`);
+    try { punishScan().forEach(x => { const ttl = HARD() ? 'Sir. You failed.' : 'Sir, there is bad news', bdy = HARD() ? `${cap(x.nm)} missed ${x.miss} times this week. Penalty assigned: ${x.task}. Serve it.` : `You have missed ${x.nm} ${x.miss === 2 ? 'twice' : x.miss + ' times'} this week. A penalty has been assigned: ${x.task}.`; out.unshift(['bad', '⚠️', ttl, bdy]); histAdd('j', ttl + '. ' + bdy); }); } catch (e) { console.warn('Jarvis punish', e); }
     try { const bd = bunkData(); Object.keys(bd).forEach(k => { const o = bd[k], pc = o.total ? Math.round(o.attended / o.total * 100) : 100; if (pc < 75) add('att_' + iso + k, 'bad', '🎓', `${k} attendance ${pc}%`, 'Below the 75% safe line. Attend every class from now.'); }); } catch (e) { }
     try {                                                      // v12: a class starts soon and that subject is under 75%
       const nowM = d.getHours() * 60 + d.getMinutes();
@@ -2268,6 +2481,7 @@ function evaluate() {
   const keys = Object.keys(seen); if (keys.length > 400) keys.slice(0, keys.length - 300).forEach(k => delete seen[k]);
   lsSet('jv_seen', JSON.stringify(seen));
   out.slice(0, 3).forEach(o => popup(...o));
+  if (!out.length) { try { const pt = patternScan(); if (pt) jvSay(patternAsk(pt), true); } catch (e) { console.warn('Jarvis pattern', e); } }
   if (out.length && touched && !muted) { if (TTS.full && canSpeak()) speakText(out.slice(0, 2).map(o => o[2] + '. ' + o[3]).join(' ')); else say(out.some(o => o[0] === 'bad') ? 'warn' : 'cheer'); }   // spoken in full, at most two items
 }
 function schedEval(ms) { clearTimeout(evalT); evalT = setTimeout(() => idle(evaluate, 5000), ms); }
@@ -2283,8 +2497,8 @@ function wire() {
     if (aiBusy) { aiCancel(); S.active = true; openPanel(); showHeard('Go ahead, sir…'); showReply('Dropped that thought, sir. Go ahead.'); setState(); armIdle(14000); stopRec(); start(); return; }     // v11: tap the orb to cancel a slow thought
     if (speaking) { stopVoice(); S.active = true; openPanel(); showHeard('Go ahead, sir…'); setState(); armIdle(14000); stopRec(); start(); return; }   // tap = interrupt him and talk
     if (S.active && !el.panel.hidden && !rearmed) { sleep(); return; }
-    S.active = true; openPanel(); showHeard(''); showReply('Listening, sir…'); setState();
-    clearTimeout(ackT); if (QUIET_START) buzz(14); else say(welcomed ? 'wake' : 'hi'); welcomed = true; armIdle(12000);
+    S.active = true; openPanel(); showHeard(''); showReply(HARD() ? 'Speak.' : 'Listening, sir…'); setState();
+    clearTimeout(ackT); if (QUIET_START) buzz(14); else ackSoft(); welcomed = true; armIdle(12000);
     if (perm === 'denied') { micBlocked('MIC BLOCKED IN BROWSER', 'The microphone is blocked, sir. Tap the lock icon in the address bar, allow the microphone for this site, then tap the orb. You can still type a command below.'); return; }
     if (!(rec && recLive)) { stopRec(); start(); }     // inside the tap, so iOS / Android treat it as a user-started session
     warmAI();
@@ -2390,6 +2604,11 @@ let lockPoll = 0;
 
 function init() {
   build(); wire(); syncHN(); watchPerm(); dbg('init');
+  lastMode = modeNow(); root.dataset.mode = lastMode; applyModeLabels(); try { el.reply.textContent = idleLine(); } catch (e) { }
+  try {
+    new MutationObserver(() => { const m = modeNow(); if (m === lastMode) return; lastMode = m; root.dataset.mode = m; applyModeLabels(); try { el.reply.textContent = idleLine(); } catch (e) { } announceMode(m); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  } catch (e) { }
   try { const f = JSON.parse(lsGet('jv_focus') || 'null'); if (f && f.end > Date.now()) { Object.assign(FOCUS, f); FOCUS.iv = setInterval(focusTick, 1000); focusTick(); } } catch (e) { }
   el.dock.hidden = true; setState();
   if (SR && window.isSecureContext === false) micErr = 'MIC NEEDS HTTPS'; else if (SR && S.wake && TOUCH) { micErr = 'TAP ANYWHERE TO ENABLE MIC'; needTap = true; }
@@ -2398,6 +2617,22 @@ function init() {
   if (locked) { lockPoll = setInterval(checkLock, 1500); }
   setInterval(() => schedEval(0), 180000);          // gentle re-check every 3 min, only while idle
 }
-window.__jarvis = { run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
+function applyModeLabels() { try { const sp = root.querySelector('.jv-sub span'); if (sp) sp.textContent = HARD() ? 'DISCIPLINE CORE // STAY HARD' : 'DISCIPLINE CORE // ONLINE'; } catch (e) { } }
+function announceMode(m) {                                // the theme was switched: he changes character, and says so
+  const msg = m === 'goggins' ? 'Stay hard mode engaged, sir. No excuses from here on.' : 'Mark Seven online, sir. Systems nominal.';
+  histAdd('j', msg); if (locked) return;
+  try { popup('info', m === 'goggins' ? '🔥' : '⚙️', m === 'goggins' ? 'STAY HARD' : 'MARK VII', msg); } catch (e) { }
+  if (!muted && touched && !speaking && !focusOn()) { if (TTS.full && canSpeak()) speakText(msg); else say(m === 'goggins' ? 'warn' : 'ok'); }
+}
+/* nudge(msg): a short spoken line + a small card, for other parts of the app (e.g. the Gym suggestions in suggest.js).
+   Stays quiet while locked, muted, in a focus session, or while Jarvis is already talking / listening. Returns true if it was shown. */
+function nudge(msg) {
+  msg = String(msg || '').trim(); if (!msg || locked || document.hidden) return false;
+  try { popup('info', '💪', 'JARVIS', msg); } catch (e) { }
+  if (muted || !touched || focusOn() || speaking || S.active) return true;
+  if (TTS.full && canSpeak()) speakText(msg); else say('warn');
+  return true;
+}
+window.__jarvis = { nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
