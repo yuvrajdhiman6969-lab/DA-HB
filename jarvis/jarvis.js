@@ -56,6 +56,19 @@
    • All the tuning switches (voice, brain, mic, heard log…) now live behind the ⚙ button; the panel opens
      clean. Say “open settings” / “close settings”.
    --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   v14 (screen control, four voices, no surprise downloads)
+   • SCREEN BY VOICE: “scroll down”, “scroll up a little”, “scroll down a lot”, “go to the top / bottom”, “keep scrolling”
+     (slow auto-scroll; say “stop” or touch the screen), “zoom in”, “zoom out”, “zoom in a lot”, “reset zoom”, “zoom to 150 percent”.
+     When the Muscle Map or Holo body is on screen, zoom / “turn left” / “show my back” / “spin” drive THAT body.
+   • VOICES: exactly four. JARVIS and VISION are the two deep, calm British male voices tuned to sound like the film assistant
+     (lower pitch, slower, measured, a little more air between sentences, and on the neural engine a faint studio-grade polish).
+     UK is the plain British voice and GIRL is the female voice. Say “use the girl voice”, “use the Vision voice”, “next voice”.
+   • NO MORE SURPRISE 1 GB DOWNLOADS. The AI brain never downloads by itself: only the AI BRAIN button (after you confirm) can start
+     a download; every other path only loads a model that is ALREADY on this device. If your browser ever clears it, Jarvis simply
+     falls back to command mode and tells you, instead of silently fetching 1 GB again. (The service worker used to wipe it on every
+     update: fixed in sw.js.)
+   --------------------------------------------------------------------- */
 (function () {
 'use strict';
 if (window.__jarvis) return;
@@ -112,7 +125,7 @@ function syncHN() {                                                     // after
   } catch (e) { }
 }
 fillHN();
-try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); SYNC_LOCAL_ONLY.add('jv_micok'); SYNC_LOCAL_ONLY.add('jv_debug'); SYNC_LOCAL_ONLY.add('jv_ai'); SYNC_LOCAL_ONLY.add('jv_model'); ['jv_voice', 'jv_rate', 'jv_vmode', 'jv_meter', 'jv_focus', 'jv_flast', 'jv_eng', 'jv_nvoice', 'jv_rem', 'jv_heard', 'jv_fix', 'jv_cont', 'jv_awake', 'jv_hist', 'jv_pat', 'jv_sp_since'].forEach(k => SYNC_LOCAL_ONLY.add(k)); } catch (e) { }
+try { SYNC_LOCAL_ONLY.add('jv_wake'); SYNC_LOCAL_ONLY.add('jv_seen'); SYNC_LOCAL_ONLY.add('jv_mute'); SYNC_LOCAL_ONLY.add('jv_micok'); SYNC_LOCAL_ONLY.add('jv_debug'); SYNC_LOCAL_ONLY.add('jv_ai'); SYNC_LOCAL_ONLY.add('jv_model'); SYNC_LOCAL_ONLY.add('jv_aidl'); SYNC_LOCAL_ONLY.add('jv_v14'); SYNC_LOCAL_ONLY.add('jv_vslot'); SYNC_LOCAL_ONLY.add('jv_neural_ok'); ['jv_voice', 'jv_rate', 'jv_vmode', 'jv_meter', 'jv_focus', 'jv_flast', 'jv_eng', 'jv_nvoice', 'jv_rem', 'jv_heard', 'jv_fix', 'jv_cont', 'jv_awake', 'jv_hist', 'jv_pat', 'jv_sp_since'].forEach(k => SYNC_LOCAL_ONLY.add(k)); } catch (e) { }
 
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const TOUCH = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
@@ -123,10 +136,18 @@ let rec = null, restartT = 0, fails = 0, startedAt = 0, idleT = 0, ackT = 0, eva
 let root, el = {};
 /* local AI state (WebLLM, runs on this device) */
 let aiOn = lsGet('jv_ai') === '1', aiSmart = lsGet('jv_model') === 'smart';
+/* v14 one-time migration: a phone that has the AI switch on but NO saved model would otherwise start a 1 GB download at the next
+   tap. Switch it off once (the AI BRAIN button turns it back on, with a confirmation) and remember which models are really saved. */
+(function () {
+  if (lsGet('jv_v14') === '1') return; lsSet('jv_v14', '1');
+  if (lsGet('jv_aicached') === '1') lsSet('jv_aidl', '1');
+  else if (aiOn) { aiOn = false; lsSet('jv_ai', '0'); }
+  if (lsGet('jv_eng') === 'neural') lsSet('jv_neural_ok', '1');
+})();
 let aiEngine = null, aiLoading = null, aiBusy = false, aiErr = '', aiHist = [], pendingAct = '', ttsU = null;
 /* v7: speech engine state + live visualiser */
 const synth = window.speechSynthesis;
-const TTS = { q: [], cur: null, open: false, t: 0, rate: parseFloat(lsGet('jv_rate')) || 1, voice: lsGet('jv_voice') || '', full: lsGet('jv_vmode') !== 'clips', w: 0, dead: false, fails: 0 };
+const TTS = { q: [], cur: null, open: false, t: 0, rate: parseFloat(lsGet('jv_rate')) || 1, voice: lsGet('jv_voice') || '', slot: lsGet('jv_vslot') || 'jarvis', full: lsGet('jv_vmode') !== 'clips', w: 0, dead: false, fails: 0 };
 let env = 0, vizRaf = 0, bars = [];
 /* v8: listening hardening + conversation context */
 let hold = false, recLive = false, recAt = 0, lastEnd = 0, micErr = '', langI = 0, actAt = 0, lastBound = 0;
@@ -252,7 +273,7 @@ function build() {
           '<div class="wide"><small>NEXT BLOCK</small><b id="jv-next">—</b></div>' +
           '<div class="wide" id="jv-attw" data-lv="ok"><small>ATTENDANCE</small><b id="jv-att">—</b></div></div></div>' +
       '<div id="jv-heard"></div><div id="jv-reply">At your service, sir.</div>' +
-      '<div class="jv-ai"><button type="button" id="jv-ai" title="Free AI that runs on this device"></button><button type="button" id="jv-model" title="FAST = small model, SMART = bigger model (slower, better answers)"></button><button type="button" id="jv-eng" title="Voice engine: BROWSER = built-in voices. NEURAL = downloads a natural British male voice (about 90 MB, runs on this device)."></button><button type="button" id="jv-voice" title="Change the Jarvis voice"></button><button type="button" id="jv-rate" title="Speaking speed"></button><button type="button" id="jv-meter" title="Live mic level + talk-over-him interrupt"></button><button type="button" id="jv-vmode" title="FULL = he speaks every answer, CLIPS = short film lines only"></button><button type="button" id="jv-lmode" title="Phones: PHRASE = restarts after every phrase (most reliable). CONTINUOUS = fewer restart tones, try it if your phone handles it."></button><button type="button" id="jv-awake" title="Keep the screen awake while the wake word is armed (the screen sleeping is what kills phone microphones)"></button><button type="button" id="jv-hlog" title="What I heard: see and correct my mistakes"></button><span id="jv-aist"></span></div>' +
+      '<div class="jv-ai"><button type="button" id="jv-ai" title="Optional free AI that runs on this device. One-time ~1 GB download that only starts when you tap this button and confirm. Jarvis works fully without it."></button><button type="button" id="jv-model" title="FAST = small model, SMART = bigger model (slower, better answers)"></button><button type="button" id="jv-eng" title="Voice engine: BROWSER = built-in voices. NEURAL = downloads a natural British male voice (about 90 MB, runs on this device)."></button><button type="button" id="jv-voice" title="Change the Jarvis voice"></button><button type="button" id="jv-rate" title="Speaking speed"></button><button type="button" id="jv-meter" title="Live mic level + talk-over-him interrupt"></button><button type="button" id="jv-vmode" title="FULL = he speaks every answer, CLIPS = short film lines only"></button><button type="button" id="jv-lmode" title="Phones: PHRASE = restarts after every phrase (most reliable). CONTINUOUS = fewer restart tones, try it if your phone handles it."></button><button type="button" id="jv-awake" title="Keep the screen awake while the wake word is armed (the screen sleeping is what kills phone microphones)"></button><button type="button" id="jv-hlog" title="What I heard: see and correct my mistakes"></button><span id="jv-aist"></span></div>' +
       '<div class="jv-aibar"><i id="jv-aibar"></i></div><div id="jv-log" hidden></div>' +
       '<div class="jv-chips"><button type="button" id="jv-c0" data-c="brief me">Briefing</button>' +
         '<button type="button" data-c="what is left today">What’s left</button>' +
@@ -264,9 +285,13 @@ function build() {
         '<button type="button" data-c="focus for 45 minutes">Focus 45</button>' +
         '<button type="button" data-c="give me advice to improve today">Advice</button>' +
         '<button type="button" data-c="list my exceptions">Exceptions</button>' +
+        '<button type="button" data-c="scroll down">Scroll ↓</button>' +
+        '<button type="button" data-c="scroll up">Scroll ↑</button>' +
+        '<button type="button" data-c="zoom in">Zoom +</button>' +
+        '<button type="button" data-c="zoom out">Zoom −</button>' +
         '<button type="button" data-c="check the microphone">Mic check</button></div>' +
       '<form id="jv-form" autocomplete="off"><input id="jv-in" placeholder="Type a command…" enterkeyhint="send"><button id="jv-go" type="submit">Go</button></form>' +
-      '<div class="jv-hint">Say “Jarvis”, then: “tick gym and study”, “I am not going to the DCN lab”, “which classes can I skip today”, “tick the first one”, “undo that”, “remind me in 10 minutes to drink water”, “weather in Delhi”, “what is 15 percent of 240”, “who is Nikola Tesla”, “help”. Keep this tab open and in front. AI BRAIN adds open-ended questions. Try “create an exception from the 20th to the 25th of October because of a trip”.</div>' +
+      '<div class="jv-hint">Say “Jarvis”, then: “tick gym and study”, “I am not going to the DCN lab”, “which classes can I skip today”, “tick the first one”, “undo that”, “remind me in 10 minutes to drink water”, “weather in Delhi”, “what is 15 percent of 240”, “who is Nikola Tesla”, “help”. Keep this tab open and in front. AI BRAIN adds open-ended questions. Try “create an exception from the 20th to the 25th of October because of a trip”. Screen: “scroll down”, “go to the top”, “keep scrolling”, “zoom in”, “reset zoom”.</div>' +
     '</div>' +
     '<div id="jv-dock" hidden>' +
       '<button class="jv-orb" id="jv-mic" aria-label="Talk to Jarvis" title="Tap to talk"><svg viewBox="0 0 64 64" aria-hidden="true">' +
@@ -969,6 +994,7 @@ function briefing() {
 }
 function exec(n) {
   let m;
+  { const sc = screenCmd(n); if (sc) return sc; }                            // v14: scroll / zoom / turn the 3D body (“stop” ends an auto-scroll before it can close Jarvis)
   if (/^(stop|quit jarvis|exit|close|cancel|goodbye|bye|go to sleep|thats all|dismiss|never ?mind|im done|thank(s| you)( jarvis)?)$/.test(n)) return Object.assign(R('Very good, sir.'), { close: true });
   { const ex = excVoice(n, n); if (ex) return ex; }                          // v11: exception commands (also reached from AI ACTION lines)
   { const mt = metaCmd(n); if (mt) return mt; }                              // v11: voice / mute / AI-brain switches
@@ -985,7 +1011,7 @@ function exec(n) {
     focusStart(min, kind);
     return R(kind === 'focus' ? `Focus engaged, sir. ${plural(min, 'minute')}. Alerts are muted. I will check in when it ends.` : `Break started, ${plural(min, 'minute')}. Rest properly, sir.`);
   }
-  if (/\b(help|what can you do|commands)\b/.test(n)) return R('Tick or untick habits, even several at once: “tick gym and study”, “tick everything except water”, “tick the first one”, “undo that”. Create exceptions: “create an exception from the 20th to the 25th of October because of a wedding”, “I am sick tomorrow”, “extend my leave till the 28th”, “delete the wedding exception”, “list my exceptions”. Skip or attend classes in plain English (“I am not going to the DCN lab”, “I am going to OS”, “which classes can I skip today”) and I will check the subject against 75 percent and tell you to go when it matters. Open any tab, run the Soul Timer or a focus session, set reminders: “remind me in 10 minutes to drink water”. Say “use the Arthur voice”, “mute”, or “turn on the AI brain”. Ask what’s left, how you are doing, your streak, attendance, weakest habit, next class, penalties. And ask me anything else: maths, conversions, dates, time zones, weather, facts, or just chat.');
+  if (/\b(help|what can you do|commands)\b/.test(n)) return R('Tick or untick habits, even several at once: “tick gym and study”, “tick everything except water”, “tick the first one”, “undo that”. Create exceptions: “create an exception from the 20th to the 25th of October because of a wedding”, “I am sick tomorrow”, “extend my leave till the 28th”, “delete the wedding exception”, “list my exceptions”. Skip or attend classes in plain English (“I am not going to the DCN lab”, “I am going to OS”, “which classes can I skip today”) and I will check the subject against 75 percent and tell you to go when it matters. Open any tab, run the Soul Timer or a focus session, set reminders: “remind me in 10 minutes to drink water”. Say “use the girl voice”, “use the Vision voice”, “next voice”, “mute”, or “turn on the AI brain”. Control the screen: “scroll down”, “scroll to the top”, “keep scrolling”, “stop”, “zoom in”, “zoom out”, “reset zoom”; with the muscle map open, “turn left”, “show my back”, “spin”. Ask what’s left, how you are doing, your streak, attendance, weakest habit, next class, penalties. And ask me anything else: maths, conversions, dates, time zones, weather, facts, or just chat.');
   if (/^(hi|hello|hey|yo|are you there|you there|you up)$/.test(n)) return R('For you, sir, always.', 'wake');
   // soul timer
   if (/\b(timer|soul|session|deep work)\b/.test(n) && !/^(open|go to|show|take me)/.test(n)) {
@@ -1146,6 +1172,11 @@ function run(n, raw, src) {
     if (ex.rest) { const more = splitCmds(norm(ex.rest)).map(p => { try { return exec(p.trim()); } catch (e) { return R('Something went wrong with that one, sir.', 'err'); } }); present([ex].concat(more)); }
     else present([ex]);
     return;
+  }
+  if (!pendingAct) {                                          // v14: screen commands first, so “zoom in” / “scroll down” are never mistaken for a question
+    let scr = null;
+    try { const parts = splitCmds(n).map(p => p.trim()).filter(Boolean); if (parts.length && parts.every(p => screenParse(p))) scr = parts.map(p => exec(p)); } catch (e) { console.error(e); }
+    if (scr && scr.length) { present(scr); return; }
   }
   const g = pendingAct ? null : general(n, raw || n);          // maths, chat, dates, weather, facts, reminders…
   if (g) { if (g.then) viaGeneral(g, rid); else present([g]); return; }
@@ -1325,7 +1356,7 @@ function resolveRefs(n) {                // returns { n: rewritten command } or 
   if (/\b(it|that|this|that one|this one|those|them)\b/.test(n) && fresh && CTX.last.length) return { n: verb + CTX.last.map(i => HN[i]).join(' and ') };
   return null;
 }
-const VERBS = 'tick|untick|uncheck|check|mark|open|go to|show|start|pause|resume|stop|attended|bunked|missed|skip|bunk|attend|set|log|lock|serve|remind|focus|switch|take me|clear';
+const VERBS = 'tick|untick|uncheck|check|mark|open|go to|show|start|pause|resume|stop|attended|bunked|missed|skip|bunk|attend|set|log|lock|serve|remind|focus|switch|take me|clear|scroll|zoom|rotate|spin';
 function splitCmds(n) {                  // "tick gym and open reports then start the timer" -> three commands
   const out = [], re = new RegExp('\\s+(?:and|but)\\s+(?=(?:' + VERBS + ')\\b)');
   n.split(/\s+(?:and then|then|after that|also)\s+/).forEach(p => p.split(re).forEach(b => { b = b.trim(); if (b) out.push(b); }));
@@ -1850,28 +1881,198 @@ function excVoice(n, raw) {                                // returns an R (with
 }
 
 /* =====================================================================
-   VOICE / MUTE / AI-BRAIN SWITCHES BY VOICE (v11)
+   v14: SCREEN CONTROL BY VOICE (scroll + zoom + 3D body)
+   “Jarvis scroll down” · “scroll up a little” · “scroll down a lot” · “go to the top” · “go to the bottom”
+   “keep scrolling” (slow auto-scroll, say “stop” or touch the screen to end it) · “scroll down fast / slowly”
+   “Jarvis zoom in” · “zoom out” · “zoom in a lot” · “reset zoom” · “zoom to 150 percent”
+   When a 3D body is on screen (Muscle Map or Holo room) “zoom in / out / reset”, “turn left / right”, “show my back”,
+   “turn around” and “spin” drive that body (HOLO.bodyAct). Otherwise zoom scales the whole page.
+   “zoom in on the page / text / screen” always means the page, “zoom in on the body” always means the 3D body.
+   The scroll target is whatever is open in front (a log window, the history sheet…) and the page when nothing is.
    ===================================================================== */
+const SC = { zoom: 1, auto: false, raf: 0, last: 0, dir: 1, pps: 110, until: 0, tgt: null, acc: 0, tagT: 0, face: 0 };
+const SC_ZMIN = .6, SC_ZMAX = 2.2;
+const scPage = () => document.scrollingElement || document.documentElement;
+const scMax = e => Math.max(0, e.scrollHeight - e.clientHeight);
+function scTarget() {                    // the thing that should scroll: an open window / sheet if there is one, else the page
+  const r = $('jv-root'), keep = r ? r.style.pointerEvents : '', pts = [[.5, .5], [.5, .3], [.5, .72], [.28, .5], [.72, .5]], big = innerHeight * .45;
+  let found = null;
+  if (r) r.style.pointerEvents = 'none';   // so the Jarvis panel itself is never "under" the screen centre
+  try {
+    for (let i = 0; i < pts.length && !found; i++) {
+      let e = document.elementFromPoint(innerWidth * pts[i][0], innerHeight * pts[i][1]);
+      while (e && e !== document.body && e !== document.documentElement) {
+        const cs = getComputedStyle(e);
+        if (/(auto|scroll)/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 4 && e.clientHeight >= big) { found = e; break; }
+        e = e.parentElement;
+      }
+    }
+  } catch (err) { }
+  if (r) r.style.pointerEvents = keep;
+  return found || scPage();
+}
+function scBy(e, px) { try { if (e === scPage()) window.scrollBy({ top: px, behavior: 'smooth' }); else e.scrollBy({ top: px, behavior: 'smooth' }); } catch (x) { e.scrollTop += px; } }
+function scTo(e, y) { try { if (e === scPage()) window.scrollTo({ top: y, behavior: 'smooth' }); else e.scrollTo({ top: y, behavior: 'smooth' }); } catch (x) { e.scrollTop = y; } }
+function scStop() {
+  if (SC.raf) cancelAnimationFrame(SC.raf); SC.raf = 0; const was = SC.auto; SC.auto = false;
+  if (was) { try { const e = SC.tgt || scPage(); if (e === scPage()) window.scrollTo({ top: window.scrollY, behavior: 'instant' }); else e.scrollTo({ top: e.scrollTop, behavior: 'instant' }); } catch (x) { } }      // freeze exactly where it is, even if the page has smooth scrolling in its CSS
+  return was;
+}
+function scAuto(e, dir, pps) {           // slow, steady auto-scroll that keeps going until you say stop, touch the screen, or reach the end
+  scStop(); SC.auto = true; SC.dir = dir; SC.pps = pps; SC.last = 0; SC.acc = 0; SC.until = Date.now() + 240000; SC.tgt = e;
+  const tick = t => {
+    if (!SC.auto) return;
+    const e0 = SC.tgt, cur = e0.scrollTop, max = scMax(e0), over = Date.now() > SC.until;
+    if (document.hidden || over || (SC.dir > 0 && cur >= max - 1) || (SC.dir < 0 && cur <= 1)) {
+      const end = !document.hidden && !over; scStop(); if (end) showHeard(SC.dir > 0 ? 'Reached the bottom, sir.' : 'Reached the top, sir.'); return;
+    }
+    const dt = SC.last ? Math.min(80, t - SC.last) : 16; SC.last = t; SC.acc += SC.dir * SC.pps * dt / 1000;
+    const px = SC.acc > 0 ? Math.floor(SC.acc) : Math.ceil(SC.acc);
+    if (px) { SC.acc -= px; try { if (e0 === scPage()) window.scrollBy({ top: px, behavior: 'instant' }); else e0.scrollTo({ top: cur + px, behavior: 'instant' }); } catch (x) { e0.scrollTop = cur + px; } }
+    SC.raf = requestAnimationFrame(tick);
+  };
+  SC.raf = requestAnimationFrame(tick);
+}
+['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(ev => addEventListener(ev, e => {       // you touching the screen always wins over auto-scroll
+  if (!SC.auto) return; const t = e.target; if (t && t.closest && t.closest('#jv-root')) return; scStop();
+}, { passive: true, capture: true }));
+function scDo(a) {
+  const was = scStop(), e = scTarget(), vh = e === scPage() ? innerHeight : e.clientHeight, cur = e.scrollTop, max = scMax(e);
+  if (a.to === 'top') { if (cur <= 2) return R('You are already at the top, sir.', 'err'); scTo(e, 0); return R('Back to the top.'); }
+  if (a.to === 'bottom') { if (cur >= max - 2) return R('You are already at the bottom, sir.', 'err'); scTo(e, max); return R('Down to the bottom.'); }
+  const atEnd = (a.dir > 0 && cur >= max - 2) || (a.dir < 0 && cur <= 2);
+  if (atEnd) return R(a.dir > 0 ? 'That is the bottom, sir.' : 'That is the top, sir.', 'err');
+  if (a.auto) { scAuto(e, a.dir, a.pps); return R('Scrolling ' + (a.dir > 0 ? 'down' : 'up') + '. Say stop when you want me to hold.'); }
+  scBy(e, a.dir * vh * a.frac * (a.times || 1));
+  return R('Scrolling ' + (a.dir > 0 ? 'down' : 'up') + '.');
+}
+
+/* ----- page zoom (CSS zoom on <html>; Jarvis' own HUD is counter-scaled in jarvis.css so it never grows with the page) ----- */
+function scTag(txt) {
+  let t = $('jv-ztag'); if (!t) { t = document.createElement('div'); t.id = 'jv-ztag'; (root || document.body).appendChild(t); }
+  t.textContent = txt; t.classList.add('on'); clearTimeout(SC.tagT); SC.tagT = setTimeout(() => t.classList.remove('on'), 1500);
+}
+function scZoomPage(z) {
+  z = Math.max(SC_ZMIN, Math.min(SC_ZMAX, Math.round(z * 100) / 100)); SC.zoom = z;
+  const h = document.documentElement;
+  if (z === 1) { h.style.removeProperty('zoom'); h.style.removeProperty('--jvz'); } else { h.style.zoom = String(z); h.style.setProperty('--jvz', String(+(1 / z).toFixed(4))); }
+  scTag('ZOOM ' + Math.round(z * 100) + '%');
+}
+function scZoom(a) {
+  const H = window.HOLO, canBody = !a.page && H && typeof H.bodyAct === 'function';
+  if (canBody && a.d !== 'set') {
+    let moved = false; const act = a.d === 0 ? 'reset' : a.d > 0 ? 'in' : 'out';
+    for (let i = 0; i < (a.d === 0 ? 1 : (a.n || 1)); i++) moved = H.bodyAct(act) || moved;
+    if (moved) return R(a.d === 0 ? 'View reset.' : a.d > 0 ? 'Zooming in.' : 'Zooming out.');
+  }
+  if (a.bodyW && !a.page) return R('There is no 3D body on screen, sir. Open the Muscle Map or the Holo room first.', 'err');
+  const prev = SC.zoom; let z = prev;
+  if (a.d === 'set') z = a.v; else if (a.d === 0) z = 1; else z = a.d > 0 ? prev * a.f : prev / a.f;
+  scZoomPage(z);
+  if (a.d !== 0 && a.d !== 'set' && SC.zoom === prev) return R(a.d > 0 ? 'That is the maximum zoom, sir.' : 'That is the minimum zoom, sir.', 'err');
+  return R(a.d === 0 ? 'Zoom reset.' : 'Zoom ' + Math.round(SC.zoom * 100) + ' percent.');
+}
+function scBody(a) {
+  const H = window.HOLO; let act = a.act;
+  if (act === 'around') { SC.face = SC.face ? 0 : 1; act = SC.face ? 'back' : 'front'; } else if (act === 'back') SC.face = 1; else if (act === 'front') SC.face = 0;
+  const ok = H && typeof H.bodyAct === 'function' && H.bodyAct(act);
+  if (!ok) return R('There is no 3D body on screen, sir. Open the Muscle Map or the Holo room first.', 'err');
+  return R(act === 'spin' ? 'Spin toggled.' : act === 'back' ? 'Showing your back.' : act === 'front' ? 'Showing your front.' : 'Turning ' + act + '.');
+}
+
+/* ----- understanding the phrase (pure: no side effects, so the same parser can vet a whole compound sentence first) ----- */
+function scScrollParse(n) {
+  const m = /^(?:(?:can|could|would|will) you )?(?:(keep|start|continue|carry on|begin) )?(scroll|scrolling|scrawl|scrolls|swipe|slide|roll|move|go|jump|take me|page|pull)\b ?(.*)$/.exec(n);
+  if (!m) return null;
+  const kw = m[1], vb = m[2], rest = m[3] || '', loose = /^(scroll|scrolling|scrawl|scrolls|swipe|slide|roll)$/.test(vb);
+  if (rest.split(' ').length > 9) return null;
+  const isTop = /\b(top|beginning)\b/.test(rest) || /\ball the way up\b/.test(rest), isBot = /\b(bottom|footer)\b/.test(rest) || /\ball the way down\b/.test(rest) || (loose && /\b(the end|to the end)\b/.test(rest));
+  const iu = rest.search(/\b(up|upward|upwards|above|back up)\b/), id = rest.search(/\b(down|downward|downwards|below|lower)\b/);
+  const dirs = iu >= 0 && (id < 0 || iu < id) ? -1 : id >= 0 ? 1 : 0;
+  if (!loose && !(isTop || isBot || dirs)) return null;
+  if (!loose && !/^(?:(?:back|all the way|right|straight|a little|a bit|a lot|slightly|way|far|more|up|down) )*(?:to )?(?:the )?(?:up|down|top|bottom|beginning)(?: of (?:the )?(?:page|screen|list|app))?(?: a little| a bit| a lot| slightly| more| again| fast| slowly| slow)?$/.test(rest)) return null;
+  if (isTop && !isBot) return { k: 'scroll', to: 'top' };
+  if (isBot && !isTop) return { k: 'scroll', to: 'bottom' };
+  let dir = dirs;
+  if (!dir) { if (loose && (kw || !rest)) dir = 1; else return null; }
+  const auto = !!kw && /^(keep|continue|carry on|start|begin)$/.test(kw) || /\b(continuously|automatically|non ?stop|auto)\b/.test(rest);
+  let frac = .8, times = 1, mt;
+  if (/\b(little|bit|slightly|small|tiny|touch)\b/.test(rest)) frac = .3; else if (/\bhalf\b/.test(rest)) frac = .5; else if (/\b(lot|far|way|much|more|big|huge)\b/.test(rest)) frac = 1.25;
+  if ((mt = /\b(\d{1,2}) (?:times|pages|screens)\b/.exec(rest))) times = Math.min(10, +mt[1]); else if (/\btwice\b/.test(rest)) times = 2;
+  const pps = /\b(fast|quick|quickly|faster)\b/.test(rest) ? 260 : /\b(slow|slowly|gently|gentle|slower)\b/.test(rest) ? 45 : 110;
+  return { k: 'scroll', dir, frac, times, auto, pps };
+}
+function scZoomParse(n, n0) {
+  const zw = /\b(zoom|zoomed|zooming|zooms|zoon|zum)\b/.test(n);
+  const grow = /\b(bigger|larger|closer|enlarge|magnify|increase|plus)\b/.test(n), shrink = /\b(smaller|shrink|farther|away|decrease|reduce|minus|wider|less)\b/.test(n);
+  const lead = /^(?:make|get|go|move|come|bring|enlarge|magnify|shrink|bigger|larger|smaller|closer|increase|decrease|reduce)\b/.test(n);
+  if (!zw && !(lead && (grow || shrink))) return null;
+  if (n.split(' ').length > (zw ? 9 : 7)) return null;                       // a long sentence is not a zoom command
+  const page = /\b(page|screen|text|font|app|everything|whole|window|site|website|letters|ui|interface)\b/.test(n0), bodyW = /\b(body|model|figure|hologram|muscle|muscles|avatar)\b/.test(n0);
+  let m;
+  if (zw && (m = /\b(\d{2,3}) ?(?:percent|pc)\b/.exec(n)) && +m[1] >= 50 && +m[1] <= 250) return { k: 'zoom', d: 'set', v: +m[1] / 100, page: true };
+  if (/\b(reset|restore|default|normal|original|actual|undo|cancel|100)\b/.test(n) && (zw || /\bsize\b/.test(n))) return { k: 'zoom', d: 0, page, bodyW };
+  if (/^(?:stop|no) zoom(?:ing)?$|^unzoom$|^un zoom$|^(?:normal|actual|original|default) size$/.test(n)) return { k: 'zoom', d: 0, page, bodyW };
+  let d = 1;
+  if (shrink && !grow) d = -1; else if (zw && /\b(out|away|back|wider)\b/.test(n)) d = -1;
+  let f = 1.25, cnt = 1;
+  if (/\b(little|bit|slightly|tiny|touch)\b/.test(n)) f = 1.1; else if (/\b(lot|much|way|max|maximum|huge|fully|all the way)\b/.test(n)) { f = 1.6; cnt = 3; }
+  if (/\b(twice|2 times)\b/.test(n)) cnt = 2;
+  return { k: 'zoom', d, f, n: cnt, page, bodyW };
+}
+function screenParse(n0) {
+  const n = String(n0 || '').replace(/\b(please|kindly|jarvis|just|now|for me|on the screen|on screen|a bit more please)\b/g, ' ').replace(/\b(the screen|this screen|the page|this page|the window|the app)\b/g, m => /screen|page|window|app/.test(m) && /zoom|bigger|larger|smaller|closer/.test(n0) ? m : ' ').replace(/\s+/g, ' ').trim();
+  let m;
+  if (!n || n.split(' ').length > 12) return null;
+  if (SC.auto && /^(?:ok |okay )?(?:stop|halt|hold|hold on|enough|pause|freeze|thats enough|that is enough|thats good|that is good)(?: scrolling| the scrolling| it| there| here)?$/.test(n)) return { k: 'stop' };
+  if (/^(?:stop|halt|cancel) (?:scrolling|the scroll|the scrolling)$/.test(n)) return { k: 'stop' };
+  /* the 3D body */
+  if ((m = /^(?:turn|rotate|spin|swing|swivel)(?: the| my)?(?: body| model| figure| hologram| avatar| it| me)?(?: to the| to| towards| toward)? ?(left|right|around|back|front)$/.exec(n))) return { k: 'body', act: m[1] };
+  if ((m = /^(?:show|see|face|display|flip to)(?: me)?(?: my| the)? (back|front|rear)(?: view| side)?$/.exec(n))) return { k: 'body', act: m[1] === 'front' ? 'front' : 'back' };
+  if (/^(?:(?:start|stop|toggle|pause|resume) )?(?:the )?(?:spin|spinning|rotating|rotation|auto rotate|auto rotation)$/.test(n)) return { k: 'body', act: 'spin' };
+  const z = scZoomParse(n, String(n0)); if (z) return z;
+  return scScrollParse(n);
+}
+function screenCmd(n) {
+  const a = screenParse(n); if (!a) return null;
+  if (a.k === 'stop') { scStop(); return R('Holding here, sir.'); }
+  if (a.k === 'scroll') return scDo(a);
+  if (a.k === 'zoom') return scZoom(a);
+  if (a.k === 'body') return scBody(a);
+  return null;
+}
+
+/* =====================================================================
+   VOICE / MUTE / AI-BRAIN SWITCHES BY VOICE (v11, voices rebuilt in v14: JARVIS · VISION · UK · GIRL)
+   ===================================================================== */
+const VWORD = { jarvis: 'jarvis', daniel: 'jarvis', original: 'jarvis', first: 'jarvis', vision: 'vision', arthur: 'vision', second: 'vision', deeper: 'vision',
+  uk: 'uk', british: 'uk', third: 'uk', girl: 'girl', female: 'girl', woman: 'girl', lady: 'girl', martha: 'girl', fourth: 'girl' };
+function slotIndex(id) { return Math.max(0, VSLOTS.findIndex(x => x.id === id)); }
+function useSlot(id) {                   // one place that switches BOTH engines (browser voice + neural voice) to the same slot
+  TTS.slot = id; lsSet('jv_vslot', id); NEURAL.vi = slotIndex(id); lsSet('jv_nvoice', NEURAL.vi); vlCache = null; setAi();
+  return VSLOTS[NEURAL.vi];
+}
 function setVoiceByWord(w) {
-  const l = voiceList(); if (!l.length) return null;
-  const f = l.find(x => (w === 'uk' ? VOICE_UK(x) : new RegExp('\\b' + w + '\\b', 'i').test(x.name))); if (!f) return null;
-  TTS.voice = f.name; lsSet('jv_voice', f.name); setAi(); return f;
+  const id = VWORD[String(w).toLowerCase()] || String(w).toLowerCase();
+  if (!VSLOTS.some(x => x.id === id)) return null;
+  if (!NEURAL.on && !voiceList().length) return null;
+  const sl = useSlot(id); return { slot: sl, name: sl.id };
 }
 function cycleVoice() {
-  if (NEURAL.on && NEURAL.eng) { NEURAL.vi = (NEURAL.vi + 1) % NEURAL.voices.length; lsSet('jv_nvoice', NEURAL.vi); setAi(); return 'DANIEL'; }
-  const l = voiceList(); if (!l.length) return null;
-  const cv = pickVoice(), i = l.findIndex(x => cv && x.name === cv.name), nv = l[(i + 1) % l.length];
-  TTS.voice = nv.name; lsSet('jv_voice', nv.name); setAi(); return vlabel(nv);
+  if (!NEURAL.on && !voiceList().length) return null;
+  return useSlot(VSLOTS[(slotIndex(TTS.slot) + 1) % VSLOTS.length].id).label;
 }
+const vsay = lb => { const sl = VSLOTS.find(x => x.label === lb); return sl ? sl.say : cap(String(lb).toLowerCase()) + ' speaking.'; };
 function metaCmd(n) {
   let m;
   if (/\b(check|test|fix|diagnose)\b.*\b(mic|microphone)\b|^mic (check|test)$/.test(n)) { micDoctor(false); return R('Running a microphone check, sir.'); }
-  if ((m = /\b(daniel|arthur|martha|uk)\b/.exec(n)) && (/\bvoice\b/.test(n) || /\b(use|switch to|change to|sound like|speak as|speak like)\b/.test(n)) && !/\b(habit|tick|untick)\b/.test(n)) {
+  if ((m = /\b(daniel|arthur|martha|uk|jarvis|vision|girl|female|woman|lady|british|original|deeper|first|second|third|fourth)\b/.exec(n)) && !/\b(habit|tick|untick)\b/.test(n)
+      && (/\bvoice\b/.test(n) || (!/^(first|second|third|fourth)$/.test(m[1]) && /\b(use|switch to|change to|sound like|speak as|speak like)\b/.test(n)))) {
     const f = setVoiceByWord(m[1]);
-    return f ? R('This is the ' + vlabel(f).toLowerCase().replace(/\buk\b/, 'UK') + ' voice, sir. Will it do?') : R('I do not have the ' + cap(m[1]) + ' voice on this device, sir. Available: ' + list(voiceList().map(x => vlabel(x).toLowerCase())) + '.', 'err');
+    return f ? R('This is the ' + f.slot.label.toLowerCase().replace(/\buk\b/, 'UK') + ' voice, sir. Will it do?') : R('I do not have that voice on this device, sir. Available: ' + list(VSLOTS.map(x => x.label.toLowerCase().replace(/\buk\b/, 'UK'))) + '.', 'err');
   }
   if (/\b(change|switch|next|different|another|cycle)\b.*\bvoice\b|^next voice$/.test(n)) { const lb = cycleVoice(); return lb ? R('Voice changed to ' + lb.toLowerCase() + ', sir.') : R('No other voices on this device, sir.', 'err'); }
-  if (/^(what|which|list)( are| is)?( the| my| your)? voices?( do you have| are there| available)?$/.test(n)) return R('I can speak as ' + list(voiceList().map(x => vlabel(x).toLowerCase())) + ', sir.');
+  if (/^(what|which|list)( are| is)?( the| my| your)? voices?( do you have| are there| available)?$/.test(n)) return R('I have four voices, sir: ' + list(VSLOTS.map(x => x.label.toLowerCase().replace(/\buk\b/, 'UK'))) + '. Say “use the girl voice”, or “next voice”.');
   if (/^(open|show|bring up|go to)( your| the| jarvis)? (settings|options|preferences|controls)$|^(settings|jarvis settings)$/.test(n)) { toggleSettings(true); return R('Settings are open, sir.'); }
   if (/^(close|hide|dismiss)( your| the| jarvis)? (settings|options|preferences|controls)$/.test(n)) { toggleSettings(false); return R('Settings closed, sir.'); }
   if (/^(mute|mute yourself|be silent|go silent|voice off|silent mode)$/.test(n)) { muted = true; lsSet('jv_mute', '1'); stopVoice(); setState(); return R('Muted, sir. I will answer on screen only.'); }
@@ -1917,7 +2118,7 @@ function setAi() {
   el.ai.classList.toggle('on', aiOn);
   el.model.textContent = aiSmart ? 'SMART' : 'FAST';
   const pv = pickVoice(), nv = NEURAL.on && NEURAL.eng;
-  el.voice.textContent = 'VOICE: ' + (nv ? NEURAL.voices[NEURAL.vi % NEURAL.voices.length].replace(/^[a-z]{2}_/, '').toUpperCase() : vlabel(pv, Math.max(0, voiceList().indexOf(pv))));
+  el.voice.textContent = 'VOICE: ' + (nv ? VSLOTS[NEURAL.vi % VSLOTS.length].label : vlabel(pv));
   el.eng.textContent = 'ENGINE: ' + (NEURAL.loading ? 'LOADING' : NEURAL.on ? (NEURAL.eng ? 'NEURAL' : 'NEURAL…') : 'BROWSER'); el.eng.classList.toggle('on', !!NEURAL.on);
   el.rate.textContent = TTS.rate + '×'; el.vmode.textContent = TTS.full ? 'SPEAK: FULL' : 'SPEAK: CLIPS'; el.meter.textContent = 'MIC: ' + (meterEnabled ? 'ON' : 'OFF');
   el.lmode.textContent = 'LISTEN: ' + (contMode ? 'CONTINUOUS' : 'PHRASE'); el.awake.textContent = 'AWAKE: ' + (awakeOn ? 'ON' : 'OFF'); el.awake.classList.toggle('on', awakeOn);
@@ -1945,7 +2146,7 @@ async function aiReset() {               // a wedged engine is unloaded; the nex
   const old = aiEngine; aiEngine = null;
   try { if (old && old.unload) await Promise.race([old.unload(), new Promise(r => setTimeout(r, 4000))]); } catch (e) { }
 }
-function ensureAI() {
+function ensureAI(allowDl) {              // v14: allowDl is true ONLY when you tapped AI BRAIN and confirmed. Everything else loads a model that is already saved, or gives up quietly.
   if (aiEngine) return Promise.resolve(true);
   if (aiLoading) return aiLoading;
   if (!navigator.gpu) { aiErr = 'WebGPU is not available in this browser.'; return Promise.resolve(false); }
@@ -1958,15 +2159,21 @@ function ensureAI() {
       let cached = lsGet('jv_aicached') === '1' && lsGet('jv_modelid') === id;
       try { if (lib.hasModelInCache) cached = !!(await lib.hasModelInCache(id)); } catch (e) { }
       aiFromCache = cached;
+      if (!cached && !allowDl) { const nd = new Error('NOT_ON_DEVICE'); nd.nd = true; throw nd; }                 // v14: no silent 1 GB download, ever
       el.aist.textContent = cached ? 'FROM DEVICE' : 'DOWNLOAD';
       try { if (window.perf && perf.pause) { perf.pause(); paused = true; } } catch (e) { }       // perf.js: do not judge scroll smoothness during a model load
       let lastP = Date.now();
       const dead = new Promise((res, rej) => { watch = setInterval(() => { if (Date.now() - lastP > 180000) rej(new Error('the model load stalled (no progress for 3 minutes)')); }, 5000); });
       const load = lib.CreateMLCEngine(id, { initProgressCallback: p => { lastP = Date.now(); const pc = Math.round((p.progress || 0) * 100); el.aist.textContent = (cached ? 'LOAD ' : 'DOWNLOAD ') + pc + '%'; el.aibar.style.width = pc + '%'; armIdle(60000); } });
       aiEngine = await Promise.race([load, dead]);
-      lsSet('jv_aicached', '1'); lsSet('jv_modelid', id);
+      lsSet('jv_aicached', '1'); lsSet('jv_modelid', id); lsSet('jv_aidl', '1');
       return true;
-    } catch (e) { aiEngine = null; aiErr = (e && e.message) || 'unknown error'; return false; }
+    } catch (e) {
+      aiEngine = null;
+      if (e && e.nd) { aiErr = 'The AI brain is not saved on this device (your browser may have cleared it). Open settings and tap AI BRAIN to download it again, or carry on in command mode.'; aiOn = false; lsSet('jv_ai', '0'); try { setAi(); } catch (x) { } }
+      else aiErr = (e && e.message) || 'unknown error';
+      return false;
+    }
     finally { clearInterval(watch); try { if (paused && window.perf && perf.resume) perf.resume(); } catch (e) { } aiLoading = null; el.aist.textContent = ''; el.aibar.style.width = '0'; setState(); }
   })();
   setState();
@@ -2089,36 +2296,64 @@ async function askAI(text) {
   } finally { fillerOff(); if (mine()) aiBusy = false; setState(); }
 }
 /* ---------- v8 speech engine: sentence-by-sentence delivery, natural pacing, optional on-device neural voice ---------- */
-/* v11: only four voice families are offered: Daniel, Arthur, Martha and the Google UK voice(s). If a device has none of
-   them he falls back to the nearest British voice so he never goes silent. */
+/* v14: FOUR voices, always in this order: JARVIS · VISION · UK · GIRL.
+   The browser's speech engine cannot be filtered, only steered, so every slot = the best matching voice installed on the device
+   + a delivery profile. The two Jarvis slots are tuned from how the film assistant is described (calm, precise, never rushed, dry
+   British formality, a low warm register, a touch of air before each sentence lands): lower pitch, slower pace, longer pauses.
+   JARVIS leans on Daniel and VISION on Arthur where they exist (Apple devices); on Windows / Android / Chrome they use the next
+   deepest British male voice, and if the device only has one, both slots reuse it with their own profile so they still differ.
+   prof.pitch is an absolute pitch for ordinary voices (natural / online voices ignore most of it, so they get a gentler version),
+   prof.rate scales the pace, prof.gap scales the pause between sentences, prof.fx is the neural polish amount (0 to 1). */
 let vlCache = null;
-const VOICE_NAMES = ['daniel', 'arthur', 'martha'];
-const VOICE_UK = x => /google uk english|uk english/i.test(x.name) || /^en[-_]gb[-_]x[-_]/i.test(x.name);
+const VSLOTS = [
+  { id: 'jarvis', label: 'JARVIS', say: 'Jarvis speaking.', male: true, kokoro: 'bm_daniel',
+    pref: [/\bdaniel\b/i, /\bgeorge\b/i, /\boliver\b/i, /\bgoogle uk english male\b/i, /\bryan\b/i, /\bgbb\b|\bgbd\b/i], prof: { pitch: .82, rate: .94, gap: 1.2, fx: 1 } },
+  { id: 'vision', label: 'VISION', say: 'Vision speaking.', male: true, kokoro: 'bm_george',
+    pref: [/\barthur\b/i, /\bryan\b/i, /\bharry\b/i, /\bjames\b/i, /\bmalcolm\b/i, /\bgeorge\b/i, /\bgoogle uk english male\b/i, /\bgbd\b|\bgbb\b/i], prof: { pitch: .9, rate: .9, gap: 1.35, fx: .7 } },
+  { id: 'uk', label: 'UK', say: 'The UK voice.', male: true, kokoro: 'bm_lewis',
+    pref: [/google uk english male/i, /google uk english/i, /\boliver\b/i, /\bgbd\b|\bgbb\b/i], prof: { pitch: .98, rate: 1, gap: 1, fx: 0 } },
+  { id: 'girl', label: 'GIRL', say: 'The girl voice.', female: true, kokoro: 'bf_emma',
+    pref: [/\bmartha\b/i, /google uk english female/i, /\bserena\b/i, /\bkate\b/i, /\blibby\b/i, /\bsonia\b/i, /\bhazel\b/i, /\bsusan\b/i, /\bsamantha\b/i, /\bkaren\b/i, /\bmoira\b/i, /\btessa\b/i, /\bgba\b|\bgbc\b|\bgbg\b/i], prof: { pitch: 1.03, rate: 1, gap: 1, fx: 0 } }
+];
 const vq = x => (/premium/i.test(x.name) ? 4 : /enhanced/i.test(x.name) ? 3 : /natural|neural/i.test(x.name) ? 2 : 0) + (x.localService ? 1 : 0);
-function voiceList() {
+const vtxt = x => (x.name || '') + ' ' + (x.voiceURI || '');
+const V_FN = /\b(female|woman|martha|serena|kate|samantha|karen|moira|tessa|fiona|victoria|susan|zira|hazel|sonia|libby|jenny|aria|emma|amy|joanna|salli|kimberly|ivy|ava|allison|veena|shelley|flo|sandy|nicky|catherine|linda|heera|alice|isabella|lily)\b/i;
+const V_ANDF = /[-_]x[-_](gba|gbc|gbg|sfg)\b/i, V_ANDM = /[-_]x[-_](gbb|gbd)\b/i;
+const vFem = x => { const t = vtxt(x); return /\b(female|woman)\b/i.test(t) || V_ANDF.test(t) || (!/\bmale\b/i.test(t) && !V_ANDM.test(t) && V_FN.test(t)); };
+const vMale = x => { const t = vtxt(x); return !vFem(x) && (/\bmale\b/i.test(t) || V_ANDM.test(t) || /\b(daniel|arthur|oliver|ryan|thomas|george|james|harry|alex|fred|ralph|lee|rishi|gordon|aaron|malcolm|evan|matthew|brian|russell|david|mark|guy|eddy|reed|rocko)\b/i.test(t)); };
+const vGB = x => /^en[-_]gb/i.test(x.lang || '') || /\b(uk|british|united kingdom|great britain)\b/i.test(vtxt(x)) || /\b(daniel|arthur|martha|oliver|serena|kate|libby|sonia|hazel|george|susan|ryan)\b/i.test(x.name || '');
+function vScore(x, s, used) {
+  let sc = vq(x) * 2 + (vGB(x) ? 14 : 0);                                             // British first, then the best quality build
+  if (s.female) sc += vFem(x) ? 20 : vMale(x) ? -40 : -8;
+  else if (s.male) sc += vMale(x) ? 12 : vFem(x) ? -40 : 0;
+  for (let i = 0; i < s.pref.length; i++) if (s.pref[i].test(vtxt(x))) { sc += 30 - i * 2; break; }
+  if (used.indexOf(x) >= 0) sc -= 25;                                                 // spread the four slots over different voices when the device has enough of them
+  return sc;
+}
+function voiceList() {                   // always the four slots (when the device has any English voice); each carries the real SpeechSynthesisVoice it uses
   const all = (synth && synth.getVoices()) || [];
   if (vlCache && vlCache.n === all.length) return vlCache.l;
-  const en = all.filter(x => /^en/i.test(x.lang) || /^en/i.test(x.name)), pickd = [];
-  VOICE_NAMES.forEach(nm => { const rx = new RegExp('\\b' + nm + '\\b', 'i'), hit = en.filter(x => rx.test(x.name)).sort((a, b) => vq(b) - vq(a))[0]; if (hit) pickd.push(hit); });
-  const uk = en.filter(x => VOICE_UK(x) && pickd.indexOf(x) < 0).sort((a, b) => (/female/i.test(a.name) ? 1 : 0) - (/female/i.test(b.name) ? 1 : 0) || a.name.localeCompare(b.name));
-  let l = pickd.concat(uk);
-  if (!l.length) l = en.filter(x => /^en[-_]gb/i.test(x.lang)).slice(0, 4);
-  if (!l.length) l = en.slice(0, 4);
+  let en = all.filter(x => /^en/i.test(x.lang) || /^en/i.test(x.name)); if (!en.length) en = all.slice();
+  const used = [], pickd = {};
+  if (en.length) ['jarvis', 'vision', 'girl', 'uk'].forEach(id => {
+    const sl = VSLOTS.find(x => x.id === id), best = en.map(x => ({ x, sc: vScore(x, sl, used) })).sort((p, q) => q.sc - p.sc)[0].x;
+    used.push(best); pickd[id] = best;
+  });
+  const l = en.length ? VSLOTS.map(sl => ({ name: sl.id, slot: sl, voice: pickd[sl.id], lang: pickd[sl.id].lang, localService: pickd[sl.id].localService, vname: pickd[sl.id].name })) : [];
   vlCache = { n: all.length, l }; return l;
 }
-function pickVoice() { const l = voiceList(); return l.find(x => x.name === TTS.voice) || l[0] || null; }
+function pickVoice() { const l = voiceList(); return l.find(x => x.name === TTS.slot) || l[0] || null; }
 function vlabel(v) {                     // short readable label for the VOICE button
   if (!v) return 'DEFAULT';
-  const m = /\b(daniel|arthur|martha)\b/i.exec(v.name); if (m) return m[1].toUpperCase();
-  if (VOICE_UK(v)) { if (/female/i.test(v.name)) return 'UK FEMALE'; if (/\bmale\b/i.test(v.name)) return 'UK MALE'; return 'UK ' + (voiceList().filter(VOICE_UK).indexOf(v) + 1); }
-  return (v.lang || 'EN').toUpperCase().slice(0, 8);
+  if (v.slot) return v.slot.label;
+  return String(v.name || 'EN').toUpperCase().slice(0, 10);
 }
 
 /* --- optional neural voice: Kokoro (82 M params) running on this device, a natural British male voice --- */
 const NEURAL = {
   on: lsGet('jv_eng') === 'neural', eng: null, loading: null, err: '', ctx: null, an: null, buf: null, src: null, playing: false, pre: null, chain: Promise.resolve(),
   lib: KOKORO_LIB, model: 'onnx-community/Kokoro-82M-v1.0-ONNX',
-  voices: ['bm_daniel'], vi: 0
+  voices: ['bm_daniel', 'bm_george', 'bm_lewis', 'bf_emma'], vi: Math.max(0, ['jarvis', 'vision', 'uk', 'girl'].indexOf(lsGet('jv_vslot') || 'jarvis'))      // v14: same four slots as the browser voices (all inside the one ~90 MB model)
 };
 function canSpeak() { return !muted && !TTS.dead && (!!synth || !!NEURAL.eng); }
 function neuralPrep() {                  // must run inside a tap so the phone lets us play audio
@@ -2126,7 +2361,23 @@ function neuralPrep() {                  // must run inside a tap so the phone l
   try {
     const AC = window.AudioContext || window.webkitAudioContext; NEURAL.ctx = new AC();
     NEURAL.an = NEURAL.ctx.createAnalyser(); NEURAL.an.fftSize = 256; NEURAL.an.connect(NEURAL.ctx.destination); NEURAL.buf = new Uint8Array(256);
+    NEURAL.fx = jvVoiceChain(NEURAL.ctx, NEURAL.an);
   } catch (e) { NEURAL.ctx = null; }
+}
+/* v14: studio polish for the neural Jarvis voices. No samples, no downloads: a high-pass to remove rumble, a warm low shelf, a presence
+   peak for crisp consonants, a gentle compressor so every word sits at one calm level, and a very short synthetic room (about 0.16 s) mixed
+   in at a whisper, which is the small "digital room" feel the film voice has. prof.fx scales all of it (0 = untouched, as for UK and GIRL). */
+function jvVoiceChain(ctx, out) {
+  try {
+    const inp = ctx.createGain(), hp = ctx.createBiquadFilter(), low = ctx.createBiquadFilter(), pres = ctx.createBiquadFilter(), comp = ctx.createDynamicsCompressor(),
+      dry = ctx.createGain(), wet = ctx.createGain(), conv = ctx.createConvolver(), n = Math.floor(ctx.sampleRate * .16), ir = ctx.createBuffer(2, n, ctx.sampleRate);
+    hp.type = 'highpass'; hp.frequency.value = 70; low.type = 'lowshelf'; low.frequency.value = 190; pres.type = 'peaking'; pres.frequency.value = 3100; pres.Q.value = .9;
+    comp.threshold.value = -24; comp.knee.value = 18; comp.ratio.value = 3; comp.attack.value = .004; comp.release.value = .2;
+    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3.2); }
+    conv.buffer = ir; wet.gain.value = 0; dry.gain.value = 1;
+    inp.connect(hp); hp.connect(low); low.connect(pres); pres.connect(comp); comp.connect(dry); comp.connect(conv); conv.connect(wet); dry.connect(out); wet.connect(out);
+    return { inp, set(a) { a = Math.max(0, Math.min(1, a || 0)); low.gain.value = 3.2 * a; pres.gain.value = 3.6 * a; wet.gain.value = .15 * a; } };
+  } catch (e) { return null; }
 }
 function ensureNeural() {
   if (NEURAL.eng) return Promise.resolve(true);
@@ -2139,6 +2390,7 @@ function ensureNeural() {
         dtype: 'q8', device: 'wasm',
         progress_callback: p => { if (p && typeof p.progress === 'number') { const pc = Math.round(p.progress); el.aist.textContent = 'VOICE ' + pc + '%'; el.aibar.style.width = pc + '%'; } }
       });
+      lsSet('jv_neural_ok', '1');
       return true;
     } catch (e) { NEURAL.eng = null; NEURAL.err = (e && e.message) || 'unknown error'; return false; }
     finally { NEURAL.loading = null; el.aist.textContent = ''; el.aibar.style.width = '0'; setAi(); }
@@ -2147,7 +2399,7 @@ function ensureNeural() {
   return NEURAL.loading;
 }
 function neuralGen(text) {               // one sentence at a time (the model cannot run two jobs at once)
-  NEURAL.chain = NEURAL.chain.then(() => NEURAL.eng.generate(text, { voice: NEURAL.voices[NEURAL.vi % NEURAL.voices.length], speed: TTS.rate })).catch(() => null);
+  NEURAL.chain = NEURAL.chain.then(() => NEURAL.eng.generate(text, { voice: NEURAL.voices[NEURAL.vi % NEURAL.voices.length], speed: Math.max(.5, Math.min(1.6, TTS.rate * VSLOTS[NEURAL.vi % VSLOTS.length].prof.rate)) })).catch(() => null);
   return NEURAL.chain;
 }
 function neuralLevel() {
@@ -2205,6 +2457,7 @@ function shape(x, para) {                // per-sentence delivery: questions ris
   if (/\bsir[.!?]?$/i.test(x) && x.length < 28) { o.rate *= .96; o.gap = Math.min(o.gap, 120); }
   const h = new Date().getHours(); if (h >= 23 || h < 5) { o.vol = .75; o.rate *= .95; }          // late night: quieter and calmer
   if (HARD()) { o.rate *= 1.05; o.pitch -= .08; o.gap = Math.round(o.gap * .7); }                 // Stay Hard: faster, lower, no soft pauses
+  { const pv = pickVoice(), pf = pv && pv.slot && pv.slot.prof; if (pf) { o.rate *= pf.rate; o.gap = Math.round(o.gap * pf.gap); o.pf = pf; } }          // v14: the chosen voice's own pace and pauses
   return o;
 }
 
@@ -2225,10 +2478,10 @@ function ttsNext() {
 function browserSay(x, tok, mark, nxt, retry) {
   if (!synth) { nxt(); return; }
   let began = false;
-  const u = new SpeechSynthesisUtterance(x.t), v = retry ? null : pickVoice();
+  const u = new SpeechSynthesisUtterance(x.t), sl = retry ? null : pickVoice(), v = sl && sl.voice;
   if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-GB';
-  const nat = v && /natural|neural|online/i.test(v.name);
-  u.rate = Math.max(.5, Math.min(2, TTS.rate * x.rate)); u.pitch = Math.max(.2, Math.min(2, (nat ? 1 : .93) + x.pitch)); u.volume = x.vol;
+  const nat = v && /natural|neural|online/i.test(v.name), pf = x.pf || { pitch: .93 };
+  u.rate = Math.max(.5, Math.min(2, TTS.rate * x.rate)); u.pitch = Math.max(.2, Math.min(2, (nat ? 1 - (1 - pf.pitch) * .6 : pf.pitch) + x.pitch)); u.volume = x.vol;
   mark.u = u;
   u.onstart = () => { began = true; TTS.fails = 0; clearTimeout(TTS.w); };
   u.onboundary = () => { began = true; lastBound = Date.now(); actAt = lastBound; kick(1); };       // every word pulses the orb and bars
@@ -2262,7 +2515,8 @@ function neuralSay(x, tok, mark, nxt) {
     clearTimeout(TTS.t);
     try {
       const ctx = NEURAL.ctx, buf = ctx.createBuffer(1, a.audio.length, a.sampling_rate), src = ctx.createBufferSource();
-      buf.copyToChannel(a.audio, 0); src.buffer = buf; src.connect(NEURAL.an);
+      buf.copyToChannel(a.audio, 0); src.buffer = buf;
+      if (NEURAL.fx) { NEURAL.fx.set(VSLOTS[NEURAL.vi % VSLOTS.length].prof.fx); src.connect(NEURAL.fx.inp); } else src.connect(NEURAL.an);
       src.onended = () => { NEURAL.playing = false; nxt(); };
       if (ctx.state === 'suspended') ctx.resume();
       NEURAL.src = src; NEURAL.playing = true; actAt = Date.now(); src.start();
@@ -2520,9 +2774,13 @@ function wire() {
     if (aiLoading) return;
     if (aiOn) { aiOn = false; lsSet('jv_ai', '0'); setAi(); showReply('AI brain off, sir. Command mode only.'); return; }
     if (!navigator.gpu) { showReply('This browser has no WebGPU, so the local AI cannot run here, sir. Use current Chrome or Edge on desktop, or Chrome on a recent Android phone. Commands still work.'); return; }
+    if (lsGet('jv_aicached') !== '1') {                  // v14: a download only ever starts after an explicit yes
+      let go = true; try { go = confirm('The AI brain is a one-time download of about 1 GB that is then kept on this device. Download it now? (Jarvis works without it. Wi-Fi recommended.)'); } catch (e) { }
+      if (!go) { openPanel(); showReply('No download, sir. Command mode stays on and everything else still works.'); return; }
+    }
     aiOn = true; lsSet('jv_ai', '1'); setAi(); openPanel(); armIdle(120000);
-    showReply('Loading the local brain, sir. First time only: roughly a 1 GB download, then it lives on this device. Wi-Fi recommended.');
-    const ok = await ensureAI(); armIdle(12000);
+    showReply(lsGet('jv_aicached') === '1' ? 'Waking the local brain from this device, sir. No download needed.' : 'Downloading the local brain, sir. One time only, roughly 1 GB, then it stays on this device. Wi-Fi recommended.');
+    const ok = await ensureAI(true); armIdle(12000);
     if (ok) { showReply('Local brain online, sir. Ask me anything about your progress.'); speakText('Local brain online, sir.'); }
     else { aiOn = false; lsSet('jv_ai', '0'); setAi(); showReply('The model failed to load: ' + aiErr); }
   };
@@ -2530,12 +2788,12 @@ function wire() {
     if (aiLoading) return;
     aiSmart = !aiSmart; lsSet('jv_model', aiSmart ? 'smart' : 'fast');
     const old = aiEngine; aiEngine = null; if (old && old.unload) old.unload().catch(() => { }); setAi(); openPanel();
-    showReply(aiSmart ? 'Smart model selected, sir. Bigger download, slower, better answers.' : 'Fast model selected, sir.');
-    if (aiOn) ensureAI();
+    showReply(aiSmart ? 'Smart model selected, sir. It is a bigger one and slower.' : 'Fast model selected, sir.');
+    if (aiOn) ensureAI(false).then(ok => { if (!ok) showReply('That model is not on this device yet, sir, so I stayed in command mode. Tap AI BRAIN to download it.'); });      // v14: a model switch never downloads by itself
   };
   el.voice.onclick = () => {
     if (!NEURAL.on && !voiceList().length) { openPanel(); showReply('No voices found on this device, sir.'); return; }
-    const lb = cycleVoice(); speakText('At your service, sir. ' + (lb ? cap(lb.toLowerCase().replace(/\buk\b/, 'UK')) + ' speaking.' : ''));
+    const lb = cycleVoice(); speakText('At your service, sir. ' + (lb ? vsay(lb) : ''));
   };
   el.eng.onclick = async () => {
     if (NEURAL.loading) return;
@@ -2569,7 +2827,7 @@ function wire() {
   const touch = () => {                  // first tap: unlock speech + audio on phones, then (re)start listening
     touched = true; tapAt = Date.now(); needTap = false; fails = 0; TTS.dead = false; if (/TAP/.test(micErr)) micErr = '';
     try { if (synth) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } } catch (e) { }
-    try { if (NEURAL.on) { neuralPrep(); ensureNeural(); } } catch (e) { }
+    try { if (NEURAL.on && lsGet('jv_neural_ok') === '1') { neuralPrep(); ensureNeural(); } } catch (e) { }          // v14: only loads a neural voice you already chose and downloaded
     if (needUnlock && !muted) { needUnlock = false; say('wake'); }
     chimeInit(); preload(); if (want()) start(); micStatus();
   };
@@ -2633,6 +2891,6 @@ function nudge(msg) {
   if (TTS.full && canSpeak()) speakText(msg); else say('warn');
   return true;
 }
-window.__jarvis = { nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
+window.__jarvis = { nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { screenParse, screenCmd, SC, VSLOTS, pickVoice, setVoiceByWord, cycleVoice, ensureAI, excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

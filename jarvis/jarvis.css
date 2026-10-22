@@ -410,3 +410,23 @@ html.fx-mid #jv-panel::after{display:none}
 .dr-hist:active{transform:scale(.985)}
 .dr-hist b{display:block;font-size:14px}
 .dr-hist small{display:block;margin-top:2px;font-size:11.5px;color:var(--muted)}
+
+/* =====================================================================
+   v14 — screen control by voice (zoom tag + counter-zoom) and the four-voice settings
+   (additive: nothing above is changed)
+   ===================================================================== */
+/* “zoom in” on the page uses CSS zoom on <html>; Jarvis's own HUD is scaled back down by the same amount so it never grows with the page */
+#jv-root{zoom:var(--jvz,1)}
+#jv-ztag{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));z-index:962;padding:7px 16px 7px 14px;pointer-events:none;
+  font:700 12px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.24em;color:#e9f7ff;
+  background:linear-gradient(90deg,rgba(56,189,248,.18),transparent 85%),rgba(3,10,19,.92);
+  border:1px solid rgba(143,220,255,.55);border-left:3px solid var(--jv,#38bdf8);
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+  opacity:0;translate:-50% -8px;transition:opacity .2s ease,translate .25s ease}
+#jv-ztag.on{opacity:1;translate:-50% 0}
+html.fx-lite #jv-ztag,html.fx-mid #jv-ztag{transition:none}
+/* quick-command chips for the screen: slightly cooler so they read as controls, not questions */
+.jv-chips button[data-c^="scroll"],.jv-chips button[data-c^="zoom"]{border-color:rgba(143,220,255,.6);color:#e6f6ff}
+/* the model / voice buttons: the AI one says clearly that it is optional */
+#jv-ai:not(.on){opacity:.9}
+@media print{#jv-ztag{display:none!important}}

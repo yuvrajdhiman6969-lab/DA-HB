@@ -9,13 +9,20 @@
    frame rate halves automatically when perf.js trims the phone (perf.level >= 1).
    Data is read live from the app: gym sets, gym status, habit scores. Nothing is stored by this file.
    Tweak: HOLO.target.Core = 6  (weekly hard-set target per muscle; default 10 like the BODY tab). */
+/* v2 (this pass)
+   • The Holo body is now the SOLID, GPU-lit body from musclemap.js (HOLO.map.mountSolid) instead of the old wireframe robot.
+     The wireframe is still here as the automatic fallback if musclemap.js or WebGL is missing (HOLO.cfg.wire = true forces it).
+   • Drag, inertia and pinch were rebuilt: pointer velocity is measured in real time, so a flick keeps spinning at the same
+     speed on 30, 60 and 120 Hz screens; two fingers pinch-zoom the body; Ctrl + wheel and double-click work on the desktop.
+   • The render loop no longer throttles while you drag (every display frame is drawn), and idles at 30 fps on phones to save battery.
+   • Colours: white-blue only. Brightness says how well a muscle is trained.                                                       */
 (function () {
 'use strict';
 if (window.HOLO) return;
-var W = window, D = document, TAU = Math.PI * 2, VERSION = 1;
+var W = window, D = document, TAU = Math.PI * 2, VERSION = 2;
 
 /* ================= palette ================= */
-var C = { cy: [96, 226, 255], bl: [64, 146, 255], dp: [38, 100, 225], or: [255, 112, 40], am: [255, 170, 66], wh: [235, 252, 255], pale: [170, 214, 255] };
+var C = { cy: [128, 232, 255], bl: [80, 156, 255], dp: [38, 100, 225], or: [74, 108, 186], am: [114, 158, 236], wh: [240, 252, 255], pale: [170, 214, 255] };      // v2: white-blue only (or = dim steel blue = neglected, am = ice blue = low)
 var COL = [C.or, C.am, C.bl, C.cy, C.dp, C.wh];                 // 0 neglected · 1 low · 2 mid · 3 on target · 4 neutral · 5 selected
 var FAL = [.30, .22, .15, .20, .10, .36];                       // fill alpha per colour
 var LAL = [.20, .50, .95];                                      // line alpha: back / side / front
@@ -31,6 +38,7 @@ var FACE_YAW = { Chest: 0, Core: 0, Shoulders: 0, Biceps: 0, Legs: 0, Back: Math
 
 /* ================= environment ================= */
 var reduced = !!(W.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+var TOUCH = !!(W.matchMedia && matchMedia('(pointer:coarse)').matches);
 function lvl() { return (W.perf && typeof W.perf.level === 'number') ? W.perf.level : 0; }
 function lite() { return reduced || lvl() >= 2 || D.documentElement.classList.contains('fx-lite'); }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -81,13 +89,14 @@ function agoTxt(a) { return a === null ? 'never logged' : a === 0 ? 'today' : a 
 function cidxList(d) { var a = []; GROUPS.forEach(function (g) { a[GI[g]] = ginfo(d, g).idx; }); a[7] = 4; return a; }
 
 /* ================= render engine ================= */
+var cfg = { wire: false, semantic: false, noGL: false, allowSoftwareGL: false };       // v2 switches: HOLO.cfg.wire / semantic / noGL / allowSoftwareGL
 var reg = [], raf = 0, lastT = 0;
 function loop(t) {
   raf = requestAnimationFrame(loop);
   if (D.hidden || W.__fxHold) return;                               // scrolling or backgrounded: keep the last frame
   var L = lite(), drag = false, i, s;
   for (i = 0; i < reg.length; i++) if (reg[i].drag) drag = true;
-  var gap = drag ? 14 : L ? 240 : lvl() >= 1 ? 32 : 15;
+  var gap = drag ? 0 : L ? 240 : lvl() >= 1 ? 32 : TOUCH ? 24 : 15;                // v2: a drag draws every display frame; idle spin is 30-40 fps on a phone
   if (t - lastT < gap) return;
   var dt = Math.min(90, t - lastT); lastT = t;
   for (i = reg.length - 1; i >= 0; i--) {
@@ -103,10 +112,10 @@ function loop(t) {
 function attach(wrap, draw, o) {
   o = o || {};
   var cv = D.createElement('canvas'); cv.className = 'hl-cv'; wrap.appendChild(cv);
-  var s = { cv: cv, ctx: cv.getContext('2d'), w: 0, h: 0, dpr: 1, vis: true, dirty: true, draw: draw, still: !!o.still, drag: false, ud: {}, wrap: wrap };
+  var s = { cv: cv, ctx: cv.getContext('2d'), w: 0, h: 0, dpr: 1, q: 1, vis: true, dirty: true, draw: draw, still: !!o.still, drag: false, ud: {}, wrap: wrap };
   function size() {
     var r = wrap.getBoundingClientRect(); if (r.width < 20 || r.height < 20) return;
-    var dpr = Math.min(W.devicePixelRatio || 1, lvl() >= 1 || D.documentElement.classList.contains('fx-low') ? 1.25 : 2);
+    var dpr = Math.min(W.devicePixelRatio || 1, lvl() >= 1 || D.documentElement.classList.contains('fx-low') ? 1.25 : TOUCH ? 1.75 : 2);
     s.w = r.width; s.h = r.height; s.dpr = dpr;
     cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
     s.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); s.dirty = true;
@@ -121,20 +130,41 @@ function attach(wrap, draw, o) {
 addEventListener('perf:level', function () { reg.forEach(function (s) { s.size && s.size(); }); });
 D.addEventListener('visibilitychange', function () { reg.forEach(function (s) { s.dirty = true; }); });
 
-/* drag-to-rotate on a canvas. onTap(x,y) fires for a still tap. */
-function dragger(s, onDelta, onTap) {
-  var cv = s.cv, down = false, sx = 0, sy = 0, lx = 0, moved = 0;
-  cv.style.touchAction = 'pan-y';                                   // vertical swipes still scroll the page
-  cv.addEventListener('pointerdown', function (e) { down = true; moved = 0; sx = lx = e.clientX; sy = e.clientY; s.drag = true; try { cv.setPointerCapture(e.pointerId); } catch (x) { } });
+/* drag-to-rotate on a canvas (v2).
+   onDelta(dx, dy, event)  every move (px since the last move)
+   onTap(x, y)             a still tap
+   onRelease(vx)           finger / mouse lifted after a drag: vx = px per millisecond (0 if you stopped before lifting)
+   onPinch(ratio)          two fingers: >1 spreading, <1 pinching
+   Vertical swipes on a touch screen still scroll the page (touch-action: pan-y); horizontal ones rotate. */
+function dragger(s, onDelta, onTap, onRelease, onPinch) {
+  var cv = s.cv, down = false, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0, vx = 0, pts = {}, np = 0, pd = 0, multi = false;
+  cv.style.touchAction = 'pan-y';
+  cv.style.userSelect = 'none'; cv.style.webkitUserSelect = 'none'; cv.style.webkitTouchCallout = 'none';
+  function dist() { var k = Object.keys(pts); if (k.length < 2) return 0; var a = pts[k[0]], b = pts[k[1]]; return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  cv.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    pts[e.pointerId] = [e.clientX, e.clientY]; np = Object.keys(pts).length;
+    try { cv.setPointerCapture(e.pointerId); } catch (x) { }
+    if (np >= 2 && onPinch) { multi = true; down = false; pd = dist(); s.drag = true; return; }
+    down = true; multi = false; sx = lx = e.clientX; sy = ly = e.clientY; lt = e.timeStamp; vx = 0; s.drag = true;
+  });
   cv.addEventListener('pointermove', function (e) {
-    if (!down) return; var dx = e.clientX - lx; lx = e.clientX; moved += Math.abs(dx) + Math.abs(e.clientY - sy) * 0.0;
-    if (dx) { onDelta(dx); s.dirty = true; }
+    if (!pts[e.pointerId]) return; pts[e.pointerId] = [e.clientX, e.clientY];
+    if (multi) { var d = dist(); if (pd > 8 && d > 8) { onPinch(d / pd); s.dirty = true; } pd = d; return; }
+    if (!down) return;
+    var dx = e.clientX - lx, dy = e.clientY - ly, dt = Math.max(1, e.timeStamp - lt);
+    lx = e.clientX; ly = e.clientY; lt = e.timeStamp;
+    if (dx || dy) { vx = vx * .6 + (dx / dt) * .4; onDelta(dx, dy, e); s.dirty = true; }
   });
   function up(e) {
+    if (pts[e.pointerId]) { delete pts[e.pointerId]; np = Object.keys(pts).length; }
+    if (multi) { if (np === 0) { multi = false; s.drag = false; s.dirty = true; } return; }
     if (!down) return; down = false; s.drag = false; s.dirty = true;
-    if (Math.abs(e.clientX - sx) < 6 && Math.abs(e.clientY - sy) < 6 && onTap) { var r = cv.getBoundingClientRect(); onTap(e.clientX - r.left, e.clientY - r.top); }
+    if (Math.abs(e.clientX - sx) < 6 && Math.abs(e.clientY - sy) < 6) { if (onTap) { var r = cv.getBoundingClientRect(); onTap(e.clientX - r.left, e.clientY - r.top); } }
+    else if (onRelease) onRelease(e.timeStamp - lt > 90 ? 0 : vx);
   }
-  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', function () { down = false; s.drag = false; });
+  cv.addEventListener('pointerup', up);
+  cv.addEventListener('pointercancel', function (e) { delete pts[e.pointerId]; np = Object.keys(pts).length; down = false; multi = false; s.drag = false; s.dirty = true; if (onRelease) onRelease(0); });
 }
 
 /* glow sprites */
@@ -241,7 +271,7 @@ function drawBody(ctx, w, h, t, s) {
   if (!mini) {
     if (u.tgt !== undefined && u.tgt !== null) { var df = Math.atan2(Math.sin(u.tgt - u.yaw), Math.cos(u.tgt - u.yaw)); u.yaw += df * Math.min(1, dt * .008); if (Math.abs(df) < .01) u.tgt = null; }
     else if (!s.drag && !lite() && t - (u.userT || 0) > 2600) u.yaw += dt * .00032;
-    u.vel = u.vel || 0; if (!s.drag && Math.abs(u.vel) > .0004) { u.yaw += u.vel * dt; u.vel *= .94; }
+    u.vel = u.vel || 0; if (!s.drag && Math.abs(u.vel) > .00015) { u.yaw += u.vel * dt; u.vel *= Math.pow(.94, dt / 16.7); s.dirty = true; }
   }
   var yaw = u.yaw, cyw = Math.cos(yaw), syw = Math.sin(yaw), pitch = mini ? .05 : .13, cp = Math.cos(pitch), sp = Math.sin(pitch), F = 4.4;
   var sc = mini ? h / 2.45 : Math.min(h / 2.62, w / 2.05), cx = w / 2, cy = h / 2 + (mini ? 0 : sc * .02);
@@ -367,7 +397,7 @@ function drawGlobe(ctx, w, h, t, s) {
   var u = s.ud, sprs = sprites(); if (!u.md || u.mkey !== u.y + '-' + u.m + '-' + u.mode + '-' + getData().at) { u.mkey = u.y + '-' + u.m + '-' + u.mode + '-' + getData().at; u.md = monthDays(u.y, u.m, u.mode); }
   var md = u.md, R = Math.min(w, h) * .335, cx = w / 2, cy = h / 2, dt = Math.min(90, t - (u.t0 || t)); u.t0 = t;
   if (!s.drag && !lite() && t - (u.userT || 0) > 2200 && !u.hold) u.rot += dt * .00022;
-  if (u.vel && !s.drag && Math.abs(u.vel) > .0004) { u.rot += u.vel * dt; u.vel *= .94; }
+  if (u.vel && !s.drag && Math.abs(u.vel) > .00015) { u.rot += u.vel * dt; u.vel *= Math.pow(.94, dt / 16.7); s.dirty = true; }
   var cyw = Math.cos(u.rot), syw = Math.sin(u.rot), tilt = .42, ct = Math.cos(tilt), st = Math.sin(tilt);
   function pr(x, y, z) { var xr = x * cyw + z * syw, zr = -x * syw + z * cyw, yt = y * ct - zr * st, zt = y * st + zr * ct; PX = cx + xr * R; PY = cy - yt * R; PZ = zt; }
   ctx.clearRect(0, 0, w, h); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
@@ -394,15 +424,15 @@ function drawGlobe(ctx, w, h, t, s) {
   md.days.forEach(function (dd) { lon = dd.w * TAU / 7; lat = ((rows - 1) / 2 - dd.row) * .349; pr(Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)); nodes.push({ d: dd, x: PX, y: PY, z: PZ }); });
   nodes.sort(function (a, b) { return a.z - b.z; }); u.nodes = nodes;
   nodes.forEach(function (n) {
-    var dd = n.d, front = n.z > -.05 ? 1 : .28, spr = sprs.cy, size = 15, core = false, a = front;
+    var dd = n.d, front = n.z > -.05 ? 1 : .28, spr = sprs.cy, size = 15, core = false, a = front, ring = false;
     switch (dd.state) {
       case 'done': spr = sprs.cy; size = 18; core = true; break;
       case 'mid': spr = sprs.bl; size = 15; core = true; break;
-      case 'missed': spr = sprs.or; size = 17; core = true; break;
+      case 'missed': spr = sprs.or; size = 17; core = true; ring = true; break;
       case 'rest': spr = sprs.pale; size = 10; a *= .7; break;
       case 'exc': spr = sprs.or; size = 10; a *= .55; break;
       case 'pending': spr = sprs.wh; size = 15; core = true; break;
-      case 'unmarked': spr = sprs.or; size = 12; a *= .6; break;
+      case 'unmarked': spr = sprs.or; size = 12; a *= .6; ring = true; break;
       default: spr = sprs.bl; size = 7; a *= .45;
     }
     if (dd.state === 'done' && dd.pct !== null) size = 11 + 9 * dd.pct;
@@ -410,6 +440,7 @@ function drawGlobe(ctx, w, h, t, s) {
     size *= (1 + n.z * .18);
     glow(ctx, spr, n.x, n.y, size * 1.9, a * .9);
     if (core) { ctx.fillStyle = rgba(C.wh, a * .95); ctx.beginPath(); ctx.arc(n.x, n.y, Math.max(1.2, size * .11), 0, TAU); ctx.fill(); }
+    if (ring) { ctx.strokeStyle = rgba(C.pale, a * .8); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(n.x, n.y, size * .42, 0, TAU); ctx.stroke(); }            // v2: missed / unmarked = hollow ring (no red or orange)
     if (dd.today) { var pu = .6 + .4 * Math.sin(t * .006); ctx.strokeStyle = rgba(C.wh, a * pu); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.arc(n.x, n.y, size * .72 + 3 * pu, 0, TAU); ctx.stroke(); }
     if (u.sel === dd.d) { ctx.strokeStyle = rgba(C.wh, a); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(n.x, n.y, size * .9 + 2, 0, TAU); ctx.stroke(); }
     if (front === 1 && w > 240 && (u.sel === dd.d || dd.today)) { ctx.fillStyle = rgba(C.wh, .95); ctx.font = '600 10px "Chakra Petch",monospace'; ctx.textAlign = 'center'; ctx.fillText(String(dd.d), n.x, n.y - size * .95 - 3); }
@@ -425,7 +456,7 @@ function drawTower(ctx, w, h, t, s) {
   var u = s.ud, bars = u.bars || []; if (!bars.length) { ctx.clearRect(0, 0, w, h); return; }
   var n = bars.length, spc = n > 7 ? .62 : .8, bw = spc * .33, dt = Math.min(90, t - (u.t0 || t)); u.t0 = t;
   if (!s.drag && !lite() && t - (u.userT || 0) > 2500) u.ph += dt * .0006;
-  if (u.vel && !s.drag && Math.abs(u.vel) > .0004) { u.off += u.vel * dt; u.vel *= .93; }
+  if (u.vel && !s.drag && Math.abs(u.vel) > .00015) { u.off += u.vel * dt; u.vel *= Math.pow(.93, dt / 16.7); s.dirty = true; }
   u.off = clamp(u.off, -1.2, 1.2);
   var yaw = (lite() ? 0 : Math.sin(u.ph) * .26) + u.off - .12, cyw = Math.cos(yaw), syw = Math.sin(yaw), pitch = .5, cp = Math.cos(pitch), sp = Math.sin(pitch), F = 7;
   var hs = (n - 1) / 2 * spc + .6, sc = Math.min(w / (2 * hs * 1.08), h / 2.5), cx = w / 2, cy = h * .66;
@@ -449,7 +480,7 @@ function drawTower(ctx, w, h, t, s) {
   var order = bars.map(function (b, i) { var x = (i - (n - 1) / 2) * spc; return { b: b, i: i, x: x, d: -x * syw }; }).sort(function (a, b) { return a.d - b.d; });
   u.pts = [];
   order.forEach(function (o) {
-    var b = o.b, x0 = o.x - bw, x1 = o.x + bw, z0 = -bw, z1 = bw, H = Math.max(.012, b.v / mx * HH), hot = b.today, col = b.cur ? C.or : C.cy, fc = b.cur ? C.or : C.bl;
+    var b = o.b, x0 = o.x - bw, x1 = o.x + bw, z0 = -bw, z1 = bw, H = Math.max(.012, b.v / mx * HH), hot = b.today, col = b.cur ? C.wh : C.cy, fc = b.cur ? C.wh : C.bl;
     var grow = u.grow === undefined ? 1 : u.grow; H *= grow;
     /* ghost: the same slot last period, as a wireframe */
     if (b.pv > 0) {
@@ -477,7 +508,7 @@ function drawTower(ctx, w, h, t, s) {
       }
     });
     pr(o.x, H, 0); var tx = PX, ty = PY; u.pts.push({ x: tx, y: ty, i: o.i });
-    if (b.v > 0) { glow(ctx, b.cur ? sprs.or : sprs.cy, tx, ty, sc * .5, hot ? .55 + .3 * Math.sin(t * .006) : .35); }
+    if (b.v > 0) { glow(ctx, b.cur ? sprs.wh : sprs.cy, tx, ty, sc * .5, hot ? .55 + .3 * Math.sin(t * .006) : .35); }
     ctx.globalCompositeOperation = 'source-over';
     if (b.v > 0 && w > 200) { ctx.fillStyle = rgba(C.wh, .92); ctx.font = '600 ' + (w < 330 ? 9 : 10.5) + 'px "Chakra Petch",monospace'; ctx.textAlign = 'center'; ctx.fillText(fmtK(b.v), tx, ty - 7); }
     pr(o.x, 0, zf + .3); ctx.fillStyle = rgba(hot ? C.wh : C.pale, hot ? 1 : .75); ctx.font = '600 ' + (w < 330 ? 8.5 : 10) + 'px "Chakra Petch",monospace'; ctx.textAlign = 'center'; ctx.fillText(b.label, PX, PY + 3);
@@ -557,13 +588,32 @@ function injectCSS() {
     '@media(min-width:1040px){.hl-room{grid-template-columns:minmax(260px,1fr) minmax(400px,1.25fr) minmax(260px,1fr);align-items:start}.hl-stage{grid-column:auto;order:0;grid-row:1}.hl-colL{grid-row:1;grid-column:1}.hl-colR{grid-row:1;grid-column:3}.hl-body{height:min(80vh,720px)}',
     '.hl-colL .hl-panel{transform:perspective(1100px) rotateY(7deg);transform-origin:100% 50%}.hl-colR .hl-panel{transform:perspective(1100px) rotateY(-7deg);transform-origin:0 50%}}',
     '@media(prefers-reduced-motion:reduce){.hl-scan{animation:none}.hl-trk u,.hl-ring circle.arc{transition:none}}',
-    'html.fx-lite .hl-scan{animation:none}'
+    'html.fx-lite .hl-scan{animation:none}',
+    /* ---------- v3 polish: Holo room (white-blue). Opacity + the separate translate property only, so the desktop side-panel tilt (a static transform) is never overridden ---------- */
+    '@keyframes hlIn{from{opacity:0;translate:0 10px}to{opacity:1;translate:0 0}}',
+    '.hl-stage,.hl-panel{animation:hlIn .6s cubic-bezier(.2,.8,.2,1) both;box-shadow:inset 0 0 0 1px rgba(150,215,255,.04),0 10px 30px rgba(0,0,0,.35);transition:border-color .25s,box-shadow .25s}',
+    '.hl-colL>.hl-panel:nth-child(2),.hl-colR>.hl-panel:nth-child(2){animation-delay:.07s}.hl-colL>.hl-panel:nth-child(3),.hl-colR>.hl-panel:nth-child(3){animation-delay:.14s}.hl-colR>.hl-panel:nth-child(4){animation-delay:.21s}',
+    '.hl-panel:hover{border-color:rgba(150,230,255,.5);box-shadow:inset 0 0 0 1px rgba(150,215,255,.08),0 12px 34px rgba(0,0,0,.4),0 0 22px rgba(80,170,255,.12)}',
+    '.hl-stage{box-shadow:inset 0 0 70px rgba(40,120,220,.14),0 12px 36px rgba(0,0,0,.4)}',
+    '.hl-stage::after{content:"";position:absolute;right:6px;bottom:6px;width:16px;height:16px;pointer-events:none;z-index:2;border-right:2px solid rgba(140,225,255,.7);border-bottom:2px solid rgba(140,225,255,.7)}',
+    '.hl-ph{text-shadow:0 0 12px rgba(120,210,255,.3)}',
+    '.hl-hint{text-shadow:0 0 8px #020912}',
+    '.hl-chip{transition:background .15s,border-color .15s,transform .12s}',
+    '.hl-chip:hover{background:rgba(64,146,255,.28);border-color:#bfe6ff}.hl-chip:active{transform:scale(.96)}',
+    '.hl-seg button{transition:background .15s}.hl-seg button:hover{background:rgba(64,146,255,.22)}',
+    '.hl-cv{touch-action:pan-y;-webkit-tap-highlight-color:transparent;outline:none}',
+    '.hl-chip:focus-visible,.hl-seg button:focus-visible,.hl-nav:focus-visible{outline:2px solid #bfe8ff;outline-offset:1px}',
+    '.hl-stat b,.hl-bar span:last-child,.hl-ring text{font-variant-numeric:tabular-nums}',
+    '@media(max-width:560px){.hl-hint{max-width:54%;font-size:9px;letter-spacing:.07em}.hl-legend{font-size:9px}.hl-legend i{width:7px;height:7px}}',
+    '@media(pointer:coarse){.hl-chip{min-height:38px;padding:7px 11px}.hl-seg button{min-height:32px}.hl-nav{width:36px;height:34px}}',
+    '@media(prefers-reduced-motion:reduce){.hl-stage,.hl-panel{animation:none}.hl-panel,.hl-chip{transition:none}}',
+    'html.fx-lite .hl-stage,html.fx-lite .hl-panel,html.fx-mid .hl-stage,html.fx-mid .hl-panel{animation:none}'
   ].join('\n');
   (D.head || D.documentElement).appendChild(st);
 }
 
 /* ================= reusable mounts ================= */
-function setSel(inst, g) { var u = inst.ud; u.sel = g ? GI[g] : -1; u.pick = null; if (g) u.tgt = FACE_YAW[g]; u.userT = performance.now(); inst.dirty = true; }
+function setSel(inst, g) { if (inst.solid) { inst.select(g); return; } var u = inst.ud; u.sel = g ? GI[g] : -1; u.pick = null; if (g) u.tgt = FACE_YAW[g]; u.userT = performance.now(); inst.dirty = true; }
 function readoutFor(g, d) {
   var o = ginfo(d, g), need = Math.max(0, o.target - o.wk), c = COL[o.idx], hex = 'rgb(' + c.join(',') + ')';
   return '<b style="color:' + hex + '">' + g.toUpperCase() + ' · ' + o.label + '</b><br>' + o.s28 + ' sets in 28 days · ' + o.wk + '/' + o.target + ' this week · last trained ' + agoTxt(o.ago) +
@@ -571,13 +621,16 @@ function readoutFor(g, d) {
 }
 function mountBody(wrap, o) {
   o = o || {}; wrap.innerHTML = '';
+  if (!cfg.wire && W.HOLO && W.HOLO.map && typeof W.HOLO.map.mountSolid === 'function') {          // v2: solid, lit, GPU body
+    try { return W.HOLO.map.mountSolid(wrap, o); } catch (e) { if (W.console) console.warn('holo solid body failed, using the wireframe', e); wrap.innerHTML = ''; }
+  }
   var s = attach(wrap, drawBody, { still: !!o.mini }); s.ud.mini = !!o.mini; s.ud.scan = !!o.scan; if (o.yaw !== undefined) s.ud.yaw = o.yaw;
   if (!o.mini) {
-    dragger(s, function (dx) { s.ud.yaw += dx * .012; s.ud.vel = dx * .0007; s.ud.userT = performance.now(); s.ud.tgt = null; }, function (x, y) {
+    dragger(s, function (dx) { s.ud.yaw += dx * .0125; s.ud.vel = 0; s.ud.userT = performance.now(); s.ud.tgt = null; }, function (x, y) {
       bodyState(s); var i = bodyPick(s, x, y);
       if (i < 0) { setSel(s, null); o.onSel && o.onSel(null); return; }
       var gi = BODY.GR[i], g = GROUPS[gi]; s.ud.sel = gi; s.ud.pick = i; s.ud.userT = performance.now(); s.dirty = true; o.onSel && o.onSel(g);
-    });
+    }, function (vx) { s.ud.vel = vx * .0125; s.ud.userT = performance.now(); });
   }
   return s;
 }
@@ -601,9 +654,9 @@ function mountGlobe(wrap, o) {
   o = o || {}; wrap.innerHTML = '';
   var now = new Date(), s = attach(wrap, drawGlobe); var u = s.ud;
   u.y = o.y || now.getFullYear(); u.m = o.m === undefined ? now.getMonth() : o.m; u.mode = o.mode || 'gym'; u.rot = -.6; u.sel = 0; u.vel = 0;
-  dragger(s, function (dx) { u.rot += dx * .011; u.vel = dx * .0006; u.userT = performance.now(); }, function (x, y) {
+  dragger(s, function (dx) { u.rot += dx * .011; u.vel = 0; u.userT = performance.now(); }, function (x, y) {
     var n = globePick(s, x, y); u.sel = n ? n.d : 0; u.userT = performance.now(); s.dirty = true; o.onSel && o.onSel(n);
-  });
+  }, function (vx) { u.vel = vx * .011; u.userT = performance.now(); });
   s.setMonth = function (y, m) { u.y = y; u.m = m; u.md = null; u.sel = 0; s.dirty = true; };
   s.setMode = function (md) { u.mode = md; u.md = null; s.dirty = true; };
   return s;
@@ -613,10 +666,10 @@ function mountTower(wrap, o) {
   var s = attach(wrap, drawTower); var u = s.ud; u.ph = 0; u.off = 0; u.vel = 0; u.grow = 0; u.mode = o.mode || 'week'; u.sel = -1;
   s.setMode = function (m) { u.mode = m; u.grow = 0; u.sel = -1; s.refresh(); };
   s.refresh = function () { var d = getData(); u.bars = towerBars(d, u.mode); s.dirty = true; };
-  dragger(s, function (dx) { u.off += dx * .008; u.vel = dx * .0004; u.userT = performance.now(); }, function (x, y) {
+  dragger(s, function (dx) { u.off += dx * .008; u.vel = 0; u.userT = performance.now(); }, function (x, y) {
     var best = -1, bd = 30 * 30; (u.pts || []).forEach(function (p) { var dx = p.x - x, dy = p.y - y, dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; best = p.i; } });
     u.sel = best; s.dirty = true; o.onSel && o.onSel(best >= 0 ? u.bars[best] : null, best);
-  });
+  }, function (vx) { u.vel = vx * .008; u.userT = performance.now(); });
   s.refresh(); return s;
 }
 function towerNote(b, mode) {
@@ -644,8 +697,8 @@ function buildRoom(root) {
       '<div class="hl-panel"><div class="hl-ph"><span>Weekly progress</span><small id="hl-wk-sub"></small></div><div class="hl-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(96,226,255,.14)" stroke-width="8"/><circle class="arc" id="hl-arc" cx="50" cy="50" r="40" fill="none" stroke="#4092ff" stroke-width="8" stroke-linecap="round" transform="rotate(-90 50 50)" style="stroke-dasharray:251.3;stroke-dashoffset:251.3;filter:drop-shadow(0 0 5px #4092ff)"/><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(96,226,255,.35)" stroke-dasharray="1.5 5"/><text x="50" y="57" text-anchor="middle" id="hl-pct">0%</text></svg><div class="hl-bars">' + barRow('Workouts', 'hl-p1') + barRow('Sets', 'hl-p2') + barRow('Reps', 'hl-p3') + barRow('Consistency', 'hl-p4') + '</div></div></div>' +
       '<div class="hl-panel"><div class="hl-ph"><span>Gym volume</span><span class="hl-seg" id="hl-tmode"><button class="on" data-m="week">WEEK</button><button data-m="weeks">8 WEEKS</button></span></div><div class="hl-cvw tower" id="hl-tower"></div><div class="hl-read" id="hl-tnote" style="margin:6px 0 0"></div></div>' +
     '</div>' +
-    '<div class="hl-stage"><div class="hl-hint">DRAG TO ROTATE · TAP A MUSCLE</div>' +
-      '<div class="hl-legend"><span>ON TARGET<i style="background:rgb(96,226,255)"></i></span><span>BUILDING<i style="background:rgb(64,146,255)"></i></span><span>LOW<i style="background:rgb(255,170,66)"></i></span><span>NEGLECTED<i style="background:rgb(255,112,40)"></i></span></div>' +
+    '<div class="hl-stage"><div class="hl-hint">DRAG TO ROTATE · TAP A MUSCLE · PINCH TO ZOOM</div>' +
+      '<div class="hl-legend"><span>ON TARGET<i style="background:rgb(96,226,255)"></i></span><span>BUILDING<i style="background:rgb(64,146,255)"></i></span><span>LOW<i style="background:rgb(114,158,236)"></i></span><span>NEGLECTED<i style="background:rgb(74,108,186)"></i></span></div>' +
       '<div class="hl-body" id="hl-body"></div><div class="hl-chips" id="hl-chips"></div><div class="hl-read" id="hl-read">Tap a muscle on the hologram or a chip to inspect it.</div></div>' +
     '<div class="hl-col hl-colR">' +
       '<div class="hl-panel"><div class="hl-ph"><span>Month view</span><span class="hl-seg" id="hl-gmode"><button class="on" data-m="gym">GYM</button><button data-m="habits">HABITS</button></span></div><div class="hl-cvw globe" id="hl-globe"></div>' +
@@ -671,8 +724,8 @@ function buildRoom(root) {
   function glabel() { root.querySelector('#hl-mlbl').textContent = MONS[gm] + ' ' + gy; }
   function gkey() {
     var gym = R.globe.ud.mode === 'gym';
-    root.querySelector('#hl-gkey').innerHTML = gym ? '<span><i style="background:rgb(96,226,255)"></i>Workout</span><span><i style="background:rgb(170,214,255)"></i>Rest</span><span><i style="background:rgb(255,112,40)"></i>Missed</span><span><i style="background:rgb(235,252,255)"></i>Today</span>'
-      : '<span><i style="background:rgb(96,226,255)"></i>80%+</span><span><i style="background:rgb(64,146,255)"></i>50–79%</span><span><i style="background:rgb(255,112,40)"></i>under 50%</span>';
+    root.querySelector('#hl-gkey').innerHTML = gym ? '<span><i style="background:rgb(96,226,255)"></i>Workout</span><span><i style="background:rgb(170,214,255)"></i>Rest</span><span><i style="background:rgb(74,108,186)"></i>Missed</span><span><i style="background:rgb(235,252,255)"></i>Today</span>'
+      : '<span><i style="background:rgb(96,226,255)"></i>80%+</span><span><i style="background:rgb(64,146,255)"></i>50–79%</span><span><i style="background:rgb(74,108,186)"></i>under 50%</span>';
   }
   function gtxt(n) { gnote.innerHTML = n ? '<b>' + DOWS[n.w] + ' ' + n.d + ' ' + MONS[gm] + '</b> · ' + esc(n.label || '—') : 'Each node is a day. Columns are weekdays, rings are weeks. Drag to spin, tap a node.'; }
   R.globe = mountGlobe(root.querySelector('#hl-globe'), { onSel: gtxt }); glabel(); gkey(); gtxt(null);
@@ -732,7 +785,7 @@ function renderGym() {
   var body = D.getElementById('gym-hud-body'); if (!body) return;
   D.querySelectorAll('.gym-hud-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === 'holo'); });
   var d = getData(true); try { var pw = D.getElementById('gym-hud-pwr'); if (pw) pw.innerText = d.st.scheduled ? Math.round(d.st.done / d.st.scheduled * 100) + '%' : '--'; } catch (e) { }
-  body.innerHTML = '<div class="hl-gym"><div class="hl-stage" style="order:0"><div class="hl-hint">DRAG · TAP A MUSCLE</div><div class="hl-body" id="hlg-body"></div><div class="hl-chips" id="hlg-chips"></div><div class="hl-read" id="hlg-read">Tap a muscle on the hologram or a chip to inspect it.</div></div>' +
+  body.innerHTML = '<div class="hl-gym"><div class="hl-stage" style="order:0"><div class="hl-hint">DRAG · PINCH · TAP A MUSCLE</div><div class="hl-body" id="hlg-body"></div><div class="hl-chips" id="hlg-chips"></div><div class="hl-read" id="hlg-read">Tap a muscle on the hologram or a chip to inspect it.</div></div>' +
     '<div class="hl-panel"><div class="hl-ph"><span>Volume towers</span><span class="hl-seg" id="hlg-tmode"><button class="on" data-m="week">WEEK</button><button data-m="weeks">8 WEEKS</button></span></div><div class="hl-cvw tower" id="hlg-tower"></div><div class="hl-read" id="hlg-tnote" style="margin:6px 0 0"></div></div></div>';
   var chips = D.getElementById('hlg-chips'), read = D.getElementById('hlg-read'), hi; chips.innerHTML = chipsHTML(d);
   var bd = mountBody(D.getElementById('hlg-body'), { onSel: function (g) { hi(g); } }); hi = wireChips(chips, read, bd);
@@ -758,7 +811,7 @@ function mountReport() {
     var first = tab.querySelector('.report-section-title'); if (first) tab.insertBefore(slot, first); else tab.insertBefore(slot, tab.firstChild);
     var now = new Date(), gy = now.getFullYear(), gm = now.getMonth(), note = D.getElementById('hlr-note');
     function lbl() { D.getElementById('hlr-lbl').textContent = MONS[gm] + ' ' + gy; }
-    function key() { D.getElementById('hlr-key').innerHTML = REP.ud.mode === 'gym' ? '<span><i style="background:rgb(96,226,255)"></i>Workout</span><span><i style="background:rgb(170,214,255)"></i>Rest</span><span><i style="background:rgb(255,112,40)"></i>Missed</span>' : '<span><i style="background:rgb(96,226,255)"></i>80%+ of habits</span><span><i style="background:rgb(64,146,255)"></i>50–79%</span><span><i style="background:rgb(255,112,40)"></i>under 50%</span>'; }
+    function key() { D.getElementById('hlr-key').innerHTML = REP.ud.mode === 'gym' ? '<span><i style="background:rgb(96,226,255)"></i>Workout</span><span><i style="background:rgb(170,214,255)"></i>Rest</span><span><i style="background:rgb(74,108,186)"></i>Missed</span>' : '<span><i style="background:rgb(96,226,255)"></i>80%+ of habits</span><span><i style="background:rgb(64,146,255)"></i>50–79%</span><span><i style="background:rgb(74,108,186)"></i>under 50%</span>'; }
     function txt(n) { note.innerHTML = n ? '<b>' + DOWS[n.w] + ' ' + n.d + ' ' + MONS[gm] + '</b> · ' + esc(n.label || '—') : 'Each node is a day of the month. Tap one.'; }
     REP = mountGlobe(D.getElementById('hlr-globe'), { mode: 'habits', onSel: txt }); lbl(); key(); txt(null);
     D.getElementById('hlr-mode').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; [].forEach.call(this.children, function (x) { x.classList.toggle('on', x === b); }); REP.setMode(b.dataset.m); key(); txt(null); });
@@ -769,7 +822,7 @@ function mountReport() {
 
 /* ================= public API ================= */
 W.HOLO = {
-  version: VERSION, open: open, mountReport: mountReport, renderGym: renderGym, target: TARGET,
+  version: VERSION, cfg: cfg, open: open, mountReport: mountReport, renderGym: renderGym, target: TARGET, mountBody: mountBody,
   refresh: function () { if (ROOM) fillPanels(ROOM); },
   kit: { attach: attach, dragger: dragger, sprites: sprites, glow: glow, rgba: rgba, clamp: clamp, lerp: lerp, esc: esc, C: C, lite: lite, lvl: lvl, getData: getData, ginfo: ginfo, GROUPS: GROUPS, TARGET: TARGET, DOWS: DOWS, MONS: MONS, fmt: fmt, countUp: countUp, injectCSS: injectCSS },
   _t: { drawBody: drawBody, drawGlobe: drawGlobe, drawTower: drawTower, bodyState: bodyState, buildBody: buildBody, monthDays: monthDays, towerBars: towerBars, getData: getData }   // test hooks
