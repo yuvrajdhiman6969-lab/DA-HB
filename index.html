@@ -1362,8 +1362,8 @@ html[data-theme] #login-screen .pin-container h2.lg-title{position:relative;text
 @keyframes lgwR{from{opacity:0;transform:scale(.2) rotate(-90deg)}to{opacity:.7;transform:scale(1) rotate(0)}}
 .lgw-line{position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,rgb(var(--fx-rgb)),transparent);box-shadow:0 0 16px rgb(var(--fx-rgb));animation:lgwLn 1.5s .1s ease-in-out forwards;opacity:0}
 @keyframes lgwLn{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(100vh)}}
-.lgw-k{position:relative;font:700 11px ui-monospace,Menlo,monospace;color:rgb(var(--fx-rgb));letter-spacing:.2em;opacity:0;animation:lgwK 1s .1s ease-out forwards}
-@keyframes lgwK{from{opacity:0;letter-spacing:.8em}to{opacity:1;letter-spacing:.42em}}
+.lgw-k{position:relative;font:700 clamp(18px,5.6vw,36px) ui-monospace,Menlo,monospace;color:#fff;text-shadow:0 0 18px rgba(var(--fx-rgb),.95),0 0 44px rgba(var(--fx-rgb),.5);letter-spacing:.2em;opacity:0;animation:lgwK 1s .1s ease-out forwards}
+@keyframes lgwK{from{opacity:0;letter-spacing:.6em}to{opacity:1;letter-spacing:.3em}}
 .lgw-h{position:relative;margin-top:14px;font:700 clamp(26px,9.4vw,54px)/1.08 var(--font-display,ui-sans-serif),system-ui,sans-serif;letter-spacing:.12em;color:#fff;text-shadow:0 0 18px rgba(var(--fx-rgb),.95),0 0 46px rgba(var(--fx-rgb),.5)}
 .lgw-h span{display:inline-block;opacity:0}
 #login-screen.granted .lgw-h span{animation:lgwL .55s calc(.35s + var(--i) * .05s) both}
@@ -2115,8 +2115,6 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             <svg class="lgw-rings" viewBox="0 0 200 200"><circle cx="100" cy="100" r="96" stroke-dasharray="3 7"/><circle cx="100" cy="100" r="78" stroke-dasharray="50 10 8 10"/><circle cx="100" cy="100" r="58" stroke-dasharray="1 5"/><circle cx="100" cy="100" r="40"/></svg>
             <div class="lgw-line"></div>
             <div class="lgw-k">ACCESS GRANTED</div>
-            <div class="lgw-h" id="lgw-h1"></div>
-            <div class="lgw-h lgw-sir" id="lgw-h2"></div>
             <div class="lgw-s" id="lgw-s"></div>
             <div class="lgw-b"><i id="lgw-fill"></i></div>
             <div class="lgw-t">INITIALISING DISCIPLINE OS</div>
@@ -6864,7 +6862,7 @@ function helmetFactory() {
     }
 
     /* ---------- geometry (design units 1000 x 1034, from the reference) ---------- */
-    const EYE = [[158, 352], [196, 331], [300, 338], [392, 362], [428, 384], [436, 408], [420, 424], [380, 424], [300, 414], [220, 398], [172, 373]];
+    const EYE = [[164, 330], [427, 364], [440, 388], [424, 402], [345, 410], [263, 411], [227, 409], [150, 362]];   // from the reference outline: flat top sloping down to a clipped inner end, angled bottom-left corner
     const RX = 500, RY = 270;
     const PANELS = { L: { x: 164, y: 124, w: 160, h: 146, sh: .085 }, R: { x: 676, y: 124, w: 160, h: 146, sh: -.085 }, BL: { x: 274, y: 676, w: 66, h: 148 }, BR: { x: 662, y: 676, w: 60, h: 150 } };
     const RAWM = [[572,482],[469,482],[417,425],[332,30],[172,100],[124,150],[122,410],[130,425],[151,610],[55,765],[58,858],[105,928],[128,935],[278,1100],[313,1285],[375,1337],[402,1293],[572,1293]];
@@ -7038,21 +7036,21 @@ function helmetFactory() {
 
     /* ---------- emissive sprites ---------- */
     function buildEye() {
-        const ex = 138, ey = 296, ew = 322, eh = 150; const c = mk(ew * P, eh * P), g = c.getContext('2d'); g.setTransform(P, 0, 0, P, -ex * P, -ey * P);
+        const ex = 124, ey = 300, ew = 350, eh = 140; const c = mk(ew * P, eh * P), g = c.getContext('2d'); g.setTransform(P, 0, 0, P, -ex * P, -ey * P);
         const rg = rng(99); g.lineJoin = 'round'; g.lineCap = 'round';
         // soft halo: stacked translucent strokes fake a blur (no ctx.filter, so it also works on iPhone Safari)
         for (let w = 30; w >= 6; w -= 4) { poly(g, EYE); g.strokeStyle = 'rgba(24,104,230,' + (.05 + (30 - w) * .004).toFixed(3) + ')'; g.lineWidth = w; g.stroke(); }
         // body: bright cyan core melting into deep blue at the rim
-        poly(g, EYE); const f = g.createRadialGradient(330, 384, 6, 320, 384, 170); f.addColorStop(0, '#9aeaf8'); f.addColorStop(.38, '#4ccaee'); f.addColorStop(.78, '#2490e8'); f.addColorStop(1, '#1559d2'); g.fillStyle = f; g.fill();
+        poly(g, EYE); const f = g.createRadialGradient(310, 372, 6, 300, 372, 170); f.addColorStop(0, '#9aeaf8'); f.addColorStop(.38, '#4ccaee'); f.addColorStop(.78, '#2490e8'); f.addColorStop(1, '#1559d2'); g.fillStyle = f; g.fill();
         g.save(); poly(g, EYE); g.clip();
         // cloudy light and shade inside the glass
-        for (let k = 0; k < 16; k++) { const x = 175 + rg() * 250, y = 340 + rg() * 80, r = 14 + rg() * 30, lt = rg() > .45; const q = g.createRadialGradient(x, y, 0, x, y, r); q.addColorStop(0, lt ? 'rgba(190,245,255,.38)' : 'rgba(10,70,200,.34)'); q.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = q; g.fillRect(x - r, y - r, r * 2, r * 2); }
-        const tg = g.createLinearGradient(0, 330, 0, 385); tg.addColorStop(0, 'rgba(210,250,255,.35)'); tg.addColorStop(1, 'rgba(210,250,255,0)'); g.fillStyle = tg; g.fillRect(150, 322, 300, 70);
+        for (let k = 0; k < 16; k++) { const x = 160 + rg() * 270, y = 335 + rg() * 70, r = 14 + rg() * 30, lt = rg() > .45; const q = g.createRadialGradient(x, y, 0, x, y, r); q.addColorStop(0, lt ? 'rgba(190,245,255,.38)' : 'rgba(10,70,200,.34)'); q.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = q; g.fillRect(x - r, y - r, r * 2, r * 2); }
+        const tg = g.createLinearGradient(0, 330, 0, 375); tg.addColorStop(0, 'rgba(210,250,255,.35)'); tg.addColorStop(1, 'rgba(210,250,255,0)'); g.fillStyle = tg; g.fillRect(140, 326, 310, 60);
         poly(g, EYE); g.strokeStyle = 'rgba(8,52,170,.55)'; g.lineWidth = 14; g.stroke();   // darker inner edge so the glow melts into the housing
         g.restore();
         // thin soft rim + a light-white hot spot at the inner end
         poly(g, EYE); g.strokeStyle = 'rgba(150,228,250,.55)'; g.lineWidth = 1.6; g.stroke();
-        const fl = g.createRadialGradient(424, 402, 0, 424, 402, 26); fl.addColorStop(0, 'rgba(235,252,255,.8)'); fl.addColorStop(1, 'rgba(110,210,245,0)'); g.fillStyle = fl; g.fillRect(396, 374, 56, 56);
+        const fl = g.createRadialGradient(430, 392, 0, 430, 392, 26); fl.addColorStop(0, 'rgba(235,252,255,.8)'); fl.addColorStop(1, 'rgba(110,210,245,0)'); g.fillStyle = fl; g.fillRect(402, 364, 56, 56);
         return { c, ex, ey, ew, eh };
     }
     function buildMesh() {
@@ -9915,7 +9913,7 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
     var tp = $('lg-tape-in'); if (tp) { h = ''; for (var r = 0; r < 2; r++) for (var d = 0; d < 360; d += 10) h += '<span' + (d % 30 === 0 ? ' class="mj"' : '') + '>' + (d === 0 ? 'N' : d === 90 ? 'E' : d === 180 ? 'S' : d === 270 ? 'W' : ('000' + d).slice(-3)) + '</span>'; tp.innerHTML = h; }
     var tt = $('lg-tick-in'); if (tt) { var s = 'DISCIPLINE OS  //  ZERO EXCUSES  //  LOCAL VAULT SEALED  //  HABIT ENGINE ARMED  //  STAY HARD  //  '; tt.textContent = s + s + s + s; }
     function letters(el, txt) { if (el) el.innerHTML = txt.split('').map(function (c, k) { return '<span style="--i:' + k + '">' + (c === ' ' ? '&nbsp;' : c) + '</span>'; }).join(''); }
-    letters($('lgw-h1'), 'WELCOME BACK'); letters($('lgw-h2'), 'SIR');
+    
 
     /* ---- helpers ---- */
     function readRgb() { try { var v = getComputedStyle(ls).getPropertyValue('--fx-rgb').replace(/\s/g, ''); if (v) rgb = v; } catch (e) { } }
@@ -9976,7 +9974,7 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
         inp.blur(); inp.readOnly = true; ls.classList.remove('denied'); ls.classList.add('granted'); readRgb();
         var q = calm() ? 1200 : 2700, st = $('lg-stt'), f = $('lgw-fill'), sb = $('lgw-s');
         if (st) st.textContent = 'UNLOCKED'; if (f) f.style.animationDuration = (q - 400) + 'ms';
-        if (sb) sb.textContent = greet() + '  \u00B7  ' + new Date().toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() + '  \u00B7  ALL SYSTEMS NOMINAL';
+        if (sb) sb.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() + '  \u00B7  ALL SYSTEMS NOMINAL';
         chime(); if (window.navigator && navigator.vibrate) try { navigator.vibrate([20, 40, 20]); } catch (e) { }
         setTimeout(function () { passed = true; inp.readOnly = false; inp.dispatchEvent(new Event('input', { bubbles: true })); }, q);
     }
@@ -10015,6 +10013,8 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
 @keyframes fx3Beam{0%{opacity:0;transform:translateX(-100%)}15%{opacity:1}85%{opacity:1}100%{opacity:0;transform:translateX(100%)}}
 .fx3-rip{position:fixed;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;z-index:20000;pointer-events:none;border:1.5px solid rgba(var(--fx-rgb,79,216,255),.9);background:radial-gradient(circle,rgba(var(--fx-rgb,79,216,255),.28),transparent 70%);animation:fx3Rip .65s cubic-bezier(.2,.7,.2,1) forwards}
 @keyframes fx3Rip{from{opacity:.95;transform:scale(.3)}to{opacity:0;transform:scale(5.5)}}
+/* the full-screen blue sweep lines that kept running top to bottom on Home are removed */
+.vz-sweep,#m7w-beam,.stark-hud::after{display:none !important;animation:none !important}
 html.fx-lite :is(.section.fx3-go *,#fx3-beam,.fx3-rip),html.fx-mid .fx3-rip{animation:none !important}
 @media(prefers-reduced-motion:reduce){.section.fx3-go *,#fx3-beam,.fx3-rip{animation:none !important}}
 </style>
