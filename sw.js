@@ -1,6 +1,6 @@
 // Bump this string whenever you push a new version of index.html
 // so phones/laptops pick up the update instead of serving the old cache.
-const CACHE_NAME = 'discipline-os-v4';
+const CACHE_NAME = 'discipline-os-v5';
 const CORE_FILES = [
   './index.html',
   './manifest.json',
