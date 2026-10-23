@@ -1,28 +1,18 @@
-/* finger.js v3 — FINGER MODE for Discipline OS.
-   Control the whole app with your hand in front of the webcam. Nothing in the app is changed: this file only adds a layer on top.
+/* finger.js v4 — FINGER MODE for Discipline OS. Relaxed hand: no pointing, no holding your arm up, every gesture looks different.
    It sends the same events a mouse would, so every button, tab, canvas (Muscle Map / Holo body), slider and scroll area just works.
 
-   WHAT'S NEW IN v3
-     - Cursor follows much more closely: retuned One-Euro filter, 60 fps cursor interpolation, no frame skipping.
-     - Pinch / finger detection now uses the 3D hand model (worldLandmarks), so tilting your hand no longer breaks click, grab or pinch.
-     - Pinch-zoom rewritten: both hands pinch (thumb + index), spread = zoom in, close = zoom out. Proportional (faster hands = faster zoom),
-       forgiving of dropped frames, with an on-screen line + label between your hands.
-     - Camera preview is HIDDEN by default and much smaller. Tap the camera button on the pill to show it.
-     - New colour theme + new compact UI. All colours live in THEME just below, change them there.
-
-   GESTURES (primary hand, the one that is clearest to the camera)
-     ☝  POINT            index finger up: the cursor ring follows your fingertip
-     🤏  PINCH           thumb + index: quick pinch = CLICK · pinch twice = DOUBLE CLICK
-                         pinch, hold and move = DRAG (rotates the 3D body, moves sliders) or SCROLL (everywhere else, like a touch screen)
-     🤏  GRAB            thumb + middle finger: picks up the panel under the cursor and moves it (positions are remembered)
-     🤏  BACK            thumb + ring finger: close the window / drawer / go back Home
-     🤏  JARVIS          thumb + little finger: tap the Jarvis orb (talk)
-     ✌  TWO FINGERS     index + middle up, move the hand up / down / sideways to SCROLL
-     🖐  OPEN PALM       swipe left / right = next / previous tab · swipe up / down = page down / up
-     🙌  TWO HANDS       pinch with both hands, spread apart / bring together = ZOOM (the 3D body if one is on screen, otherwise the page)
-                         and slide both hands sideways to turn the 3D body
-     👍 👎  THUMBS       hold 0.8 s = say YES / NO to Jarvis (when his panel is open)
-     ✊  FIST            hold 1.2 s = PAUSE gesture control · hold an open palm 1 s = RESUME
+   GESTURES (one hand, the one that is clearest to the camera)
+     🖐  RELAXED HAND   any loose hand moves the cursor (it follows the centre of your palm, so you never have to point)
+     🖐  OPEN PALM      hold it still ~2.2 s = open Jarvis (a ring fills up)
+     ✊  SQUEEZE        open hand, then close it quickly into a loose fist and open again = CLICK · twice = DOUBLE CLICK
+                         keep it closed and move = DRAG (rotates the 3D body, moves sliders, scrolls like a touch screen)
+                         keep it closed and still 1 s on a card, then move = MOVE THE CARD (remembered)
+                         keep it closed and completely still ~3 s = PAUSE
+     ✌  TWO FINGERS    move the hand up / down = SCROLL (the menu if it is open) · quick flick to the RIGHT = open menu, LEFT = close it
+     🤟  THREE FINGERS  hold 0.7 s = BACK (close window / menu / go Home)
+     🤏  PINCH ZOOM     thumb + index (and / or middle): touch and open = ZOOM IN · open and close = ZOOM OUT
+     👍 👎  THUMBS       hold 0.8 s = YES / NO to Jarvis (when his panel is open)
+     ✊  FIST           hold a fist 3 s = PAUSE · hold an open palm 1 s = RESUME
 
    Start / stop: the ✋ button (bottom right), Shift+F, or say “Jarvis, turn on finger mode” / “turn off finger mode”.
    Console: FINGER.start() · FINGER.stop() · FINGER.toggle() · FINGER.status() · FINGER.guide() · FINGER.resetLayout()
@@ -51,18 +41,18 @@ var MP_VER = '0.10.14';
 var LIBS = ['https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER + '/vision_bundle.mjs', 'https://unpkg.com/@mediapipe/tasks-vision@' + MP_VER + '/vision_bundle.mjs'];
 var WASM = ['https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + MP_VER + '/wasm', 'https://unpkg.com/@mediapipe/tasks-vision@' + MP_VER + '/wasm'];
 var MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-var MARGINS = [.08, .14, .22];                 // how much of the camera frame edge is ignored: bigger = less hand movement needed
+var MARGINS = [.10, .18, .26];                 // how much of the camera frame edge is ignored: bigger = less hand movement needed
 var SENS_NAME = ['WIDE', 'NORMAL', 'FAST'];
 var DWELL_MS = 1100;
 var PINCH_IN = .32, PINCH_OUT = .50;           // thumb-to-finger distance / palm size: below IN = pinch starts, above OUT = pinch ends
 var ZOOM_IN = .38, ZOOM_OUT = .56;             // same idea for the two-hand zoom pinch
 var ZOOM_STEP = Math.log(1.12);                // hands change distance by 12% = one zoom step
+var JARVIS_HOLD = 2200;                        // open palm held still this long (ms) = open Jarvis
 var ZOOM_GAP = 90;                             // minimum ms between two zoom steps (keeps Jarvis from being spammed)
 var PANEL_SEL = '.dash-card,.home-stat-box,.wd-card,.bunk-bank-card,.punish-card,.aar-card,.timer-card,.detailed-breakdown-card,.schedule-day-col,.exc-card,.hero-quote,.hero-streak,.hl-panel,.hl-stage,.mm-p,.ops-card,.stark-hud,.gym-ex-block,.qp,.table-wrapper,.month-selector,.wd-item,.ach-badge,.punish-log-item';
 var INTERACT = 'button,a[href],input,select,textarea,summary,label,[onclick],[role="button"],.nav-btn,.th-row,.wd-pill,.wd-chip,.wd-date,.ins-tab,.ins-chip,.gym-hud-tab,.gym-metric-btn,.gym-pick-chip,.qp-btn,.pl-item,.hamburger,.scroll-level-btn,.class-attendance-btn,.cell-check,.event-action-btn,.mm-row,.hl-chip,.mm-ctl button,canvas';
 var CONN = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
 var TIPS = [8, 12, 16, 20], PIPS = [6, 10, 14, 18];
-var PINCH_LABEL = ['CLICK', 'GRAB', 'BACK', 'JARVIS'];
 
 /* ================================================================ tiny helpers */
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -87,10 +77,10 @@ var P = {                                                  // saved preferences
 var S = {
   on: false, loading: false, paused: false, lm: null, stream: null, video: null, raf: 0, rraf: 0, lastDet: 0, lastVT: -1, minDt: 0, errs: 0, AR: 4 / 3,
   cx: innerWidth / 2, cy: innerHeight / 2, lx: 0, ly: 0, rx: null, ry: null, rt: 0, hist: [], fresh: true, freezeUntil: 0, prog: 0, state: 'idle', note: '', noteT: 0,
-  pose: '', cand: '', cnt: 0, hp: '', hpT: 0, holdDone: false, lostAt: 0, nHands: 0, pk: '', actT: 0, lastClick: 0, lastCP: [0, 0], tok: 0, pmiss: 0,
+  pose: '', cand: '', cnt: 0, hp: '', hpT: 0, holdDone: false, lostAt: 0, nHands: 0, pk: '', actT: 0, lastClick: 0, lastCP: [0, 0], tok: 0, vx: 0, vy: 0, mt: 0, mvT: 0, hvT: 0, pvel: 0, pmiss: 0, ch: [], pa: null, paT: 0, paDone: false, squeezeCool: 0,
   dw: { el: null, x: 0, y: 0, t: 0, done: false }, hot: null, pp: null, ph: [], fps: 0, fpsN: 0, fpsT: 0, pz: 1, vel: [0, 0], momRaf: 0, momTgt: null
 };
-var PN = { on: false, finger: -1, t0: 0, c0: [0, 0], m0: [0, 0], dragging: false, mode: '', tgt: null, last: [0, 0], vel: [0, 0], vt: 0, cancel: false };
+var PN = { on: false, finger: -1, t0: 0, c0: [0, 0], m0: [0, 0], dragging: false, mode: '', tgt: null, last: [0, 0], vel: [0, 0], vt: 0, cancel: false, armMove: false };
 var MV = null;                                             // panel being moved
 var Z = { on: false, bad: 0, acc: 0, prev: 0, t: 0, lt: 0, mx: 0, lab: 'ZOOM', f: null };   // two-hand zoom
 var LAY = (function () { try { return JSON.parse(lsGet('fg_layout') || '{}') || {}; } catch (e) { return {}; } })();
@@ -109,7 +99,7 @@ Euro.prototype.f = function (x, t) {
   this.px += alphaOf(cut, dt) * (x - this.px);
   return this.px;
 };
-var FX = new Euro(1.3, .045, 6), FY = new Euro(1.3, .045, 6), PFX = new Euro(1.6, .04, 6), PFY = new Euro(1.6, .04, 6);
+var FX = new Euro(1.9, .13, 6), FY = new Euro(1.9, .13, 6), PFX = new Euro(1.9, .09, 6), PFY = new Euro(1.9, .09, 6), SE = new Euro(2.6, .6, 5);
 Z.f = new Euro(2.5, 3, 4);                                 // works on log(distance between the hands)
 function ksc() { return 1400 / Math.max(360, innerWidth); } // filter in "1400px-wide" units so it feels the same on every screen
 
@@ -170,6 +160,7 @@ function css() {
     '#fg-zoom line{stroke:var(--fg-pk);stroke-width:2;stroke-dasharray:6 6;filter:drop-shadow(0 0 4px var(--fg-pk))}',
     '#fg-zoom circle{fill:rgba(255,95,162,.2);stroke:var(--fg-pk);stroke-width:2}',
     '#fg-zoom b{position:absolute;transform:translateX(-50%);padding:5px 11px;border-radius:99px;background:rgba(14,10,28,.88);border:1px solid var(--fg-pk);font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;color:#fff;white-space:nowrap}',
+    '#fg-zoom.solo svg{display:none}',
     /* guide */
     '#fg-guide{position:fixed;right:16px;top:calc(76px + env(safe-area-inset-top,0px));z-index:21060;width:min(340px,92vw);max-height:calc(100vh - 120px);overflow:auto;padding:14px 14px 12px;border-radius:18px;background:var(--fg-bg);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid var(--fg-ln);box-shadow:0 20px 50px rgba(0,0,0,.65);font-family:var(--font-body,system-ui,sans-serif);color:var(--fg-tx);display:none}',
     '#fg-guide.show{display:block}',
@@ -185,17 +176,16 @@ function css() {
   (D.head || H).appendChild(s);
 }
 var GUIDE = [
-  ['☝️', 'POINT', 'Raise your index finger and move your hand. The ring follows your fingertip.'],
-  ['🤏', 'PINCH = CLICK', 'Touch thumb and index finger and let go. Pinch twice quickly to double click.'],
-  ['🤏', 'PINCH + MOVE', 'Hold the pinch and move: drags sliders, rotates the 3D body, and scrolls everywhere else like a touch screen.'],
-  ['🫳', 'GRAB A PANEL', 'Pinch thumb + middle finger over a card and move it. Its place is remembered. RESET puts everything back.'],
-  ['↩️', 'BACK', 'Pinch thumb + ring finger: closes the window or menu, or goes back Home.'],
-  ['🎙️', 'JARVIS', 'Pinch thumb + little finger: taps the Jarvis orb so you can talk.'],
-  ['✌️', 'SCROLL', 'Index + middle finger up, then move your hand up, down or sideways.'],
-  ['🖐️', 'SWIPE', 'Open palm: swipe left or right to change tab, swipe up or down for a page.'],
-  ['🙌', 'ZOOM', 'Pinch (thumb + index) with BOTH hands, then spread apart to zoom in or bring together to zoom out. Move faster = zoom faster. Slide both hands sideways to turn the 3D body.'],
+  ['🖐️', 'MOVE', 'Just hold your hand loosely in front of the camera. The ring follows the centre of your palm. No pointing needed.'],
+  ['✊', 'SQUEEZE = CLICK', 'Open your hand, then close it quickly into a loose fist and open it again. Twice quickly = double click.'],
+  ['✊', 'SQUEEZE + MOVE', 'Stay closed and move: drags sliders, rotates the 3D body, scrolls like a touch screen. Closed and still for 1 s on a card, then move = carry the card.'],
+  ['🖐️', 'JARVIS', 'Hold an open palm still for about 2 seconds. The ring fills up, then Jarvis opens.'],
+  ['✌️', 'SCROLL', 'Two fingers up, move the hand up or down to scroll (works inside the menu too).'],
+  ['↔️', 'MENU', 'With two fingers up, flick your hand quickly RIGHT to open the menu and LEFT to close it.'],
+  ['🤟', 'BACK', 'Three fingers up for a moment: closes the window or menu, or goes Home.'],
+  ['🤏', 'ZOOM', 'Thumb + index (or middle): touch and open = zoom in, open and close = zoom out. Fingertips rising helps it understand.'],
   ['👍', 'YES / NO', 'Hold a thumb up or down for a second when Jarvis is asking you something.'],
-  ['✊', 'PAUSE', 'Hold a fist 1.2 s to pause. Hold an open palm 1 s to resume.']
+  ['⏸️', 'PAUSE', 'Squeeze and stay completely still ~3 s (or hold a fist 3 s). Open palm for 1 s to resume.']
 ];
 function buildUI() {
   if (U.built) return;
@@ -271,6 +261,7 @@ function analyse(lm, wl) {
   if (thumbExt && !anyExt && maxTip < 1.45 && lm[4].y < lm[3].y && lm[4].y < lm[2].y && lm[4].y < lm[5].y - .02) pose = 'up';
   else if (thumbExt && !anyExt && maxTip < 1.45 && lm[4].y > lm[3].y && lm[4].y > lm[0].y + .03) pose = 'down';
   else if (ext[0] && ext[1] && ext[2] && ext[3]) pose = 'palm';
+  else if (ext[0] && ext[1] && ext[2] && !ext[3]) pose = 'three';
   else if (ext[0] && ext[1] && !ext[2] && !ext[3]) pose = 'peace';
   else if (ext[0] && !ext[1] && !ext[2] && !ext[3]) pose = 'point';
   else if (fist) pose = 'fist';
@@ -371,24 +362,39 @@ function momentumRun() {
   };
   S.momRaf = requestAnimationFrame(step);
 }
+function openMenu() {
+  if (typeof W.openDrawer === 'function') W.openDrawer();
+  else if (typeof W.toggleDrawer === 'function') W.toggleDrawer();
+  else { var b = $('menu-btn'); if (b) b.click(); }
+  note('MENU');
+}
+/* two fingers up: move the hand up / down = scroll (the menu if it is open). A quick flick RIGHT opens the menu, LEFT closes it. */
 function peaceScroll(lm, now) {
-  var x = lm[9].x, y = lm[9].y, p = S.pp; S.pp = [x, y, now];
-  if (!p || now - p[2] > 150) return;
-  var dyn = y - p[1], dxn = -(x - p[0]), dy = dyn * innerHeight * 2.6, dx = dxn * innerWidth * 2.6, tgt = elAt(S.cx, S.cy);
-  if (Math.abs(dx) > Math.abs(dy) * 1.5) doScroll(tgt, -dx, 0); else doScroll(tgt, 0, -dy);
-}
-function swipe(lm, now) {
-  var x = lm[9].x, y = lm[9].y; S.ph.push([now, x, y]);
-  while (S.ph.length && now - S.ph[0][0] > 280) S.ph.shift();
-  if (S.ph.length < 3 || now - S.actT < 900) return;
-  var a = S.ph[0], dx = -(x - a[1]), dy = y - a[2];
-  if (Math.abs(dx) > .22 && Math.abs(dx) > Math.abs(dy) * 2) { S.actT = now; S.ph.length = 0; stepTab(dx < 0 ? 1 : -1); }
-  else if (Math.abs(dy) > .24 && Math.abs(dy) > Math.abs(dx) * 2) {
-    S.actT = now; S.ph.length = 0; note(dy < 0 ? 'PAGE DOWN' : 'PAGE UP');
-    try { W.scrollBy({ top: (dy < 0 ? 1 : -1) * innerHeight * .85, behavior: 'smooth' }); } catch (e) { }
+  if (!S.pp) SE.reset();
+  var t = now / 1000, x = lm[9].x, y = SE.f(lm[9].y, t), p = S.pp; S.pp = [x, y, now];
+  S.ph.push([now, x, y]); while (S.ph.length && now - S.ph[0][0] > 380) S.ph.shift();
+  var dr = $('drawer'), open = !!(dr && dr.classList.contains('open'));
+  if (S.ph.length >= 4 && now - S.actT > 900) {
+    var a0 = S.ph[0], fx = -(x - a0[1]) * S.AR, fy = y - a0[2];            // fx > 0 = hand moved to your right
+    if (Math.abs(fx) > .17 && Math.abs(fx) > Math.abs(fy) * 1.8) {
+      if (fx > 0 && !open) { S.actT = now; S.ph.length = 0; S.pp = null; S.pvel = 0; openMenu(); return; }
+      if (fx < 0 && open) { S.actT = now; S.ph.length = 0; S.pp = null; S.pvel = 0; if (typeof W.closeDrawer === 'function') W.closeDrawer(); note('MENU CLOSED'); return; }
+    }
   }
+  if (!p || now - p[2] > 150) return;
+  var sx = Math.abs(x - p[0]) * S.AR, dyn = y - p[1], dt = Math.max(.008, (now - p[2]) / 1000);
+  if (sx > Math.abs(dyn) * 1.5 && sx > .01) return;                          // a sideways flick is not a scroll
+  if (Math.abs(dyn) < .0012) { S.pvel *= .5; return; }                       // tiny wobble: ignore
+  var gain = 2.8 + clamp(Math.abs(dyn) / dt, 0, 2.2) * 1.5, dy = dyn * innerHeight * gain;   // slow = precise, fast = far
+  S.pvel = S.pvel * .5 - dy / dt * .5;
+  if (open) { try { dr.scrollBy({ top: -dy, behavior: 'instant' }); } catch (e) { dr.scrollTop -= dy; } }
+  else doScroll(elAt(S.cx, S.cy), 0, -dy);
 }
-
+function peaceEnd() {                                      // two fingers put away: let the page glide on
+  var dr = $('drawer');
+  if (!(dr && dr.classList.contains('open')) && Math.abs(S.pvel) > 160) { S.vel = [0, S.pvel]; S.momTgt = elAt(S.cx, S.cy); momentumRun(); }
+  S.pvel = 0;
+}
 /* ================================================================ app actions */
 function tabIds() { return [].map.call(D.querySelectorAll('#drawer .nav-btn[data-tab]'), function (b) { return b.dataset.tab; }); }
 function stepTab(d) {
@@ -451,21 +457,31 @@ function clearLayoutDom() {
 }
 function resetLayout() { LAY = {}; lsSet('fg_layout', '{}'); clearLayoutDom(); [].forEach.call(D.querySelectorAll('.fg-moving'), function (p) { p.style.translate = ''; p.classList.remove('fg-moving'); }); MV = null; note('LAYOUT RESET'); toast('Panels put back where they belong.'); }
 
-/* ================================================================ pinch: click / drag / scroll / grab / back / jarvis */
+/* ================================================================ SQUEEZE: click / drag / move a card
+   Open your hand, then close it quickly into a loose fist (SQUEEZE). Open again = CLICK (twice quickly = double click).
+   Keep it closed and move = DRAG: rotates the 3D body, moves sliders, scrolls like a touch screen.
+   Keep it closed and still for 1 s on a card, then move = MOVE THE CARD (its place is remembered). */
+function anchorN(lm) { var x = lm[0].x * .3 + (lm[5].x + lm[9].x + lm[13].x + lm[17].x) * .175, y = lm[0].y * .3 + (lm[5].y + lm[9].y + lm[13].y + lm[17].y) * .175; return { x: x, y: y }; }
+function anchorXY(lm) { var c = anchorN(lm); return mapXY(c.x, c.y); }   // palm centre: does not jump when the fingers open / close
 function dragMode(t) {
   if (!t || !t.closest) return 'scroll';
   if (t.closest('input[type=range]')) return 'range';
   if (t.closest('canvas,[data-fg="drag"]')) return 'pointer';
   return 'scroll';
 }
-function beginDrag() {
-  PN.tgt = elAt(PN.c0[0], PN.c0[1]); PN.mode = dragMode(PN.tgt); PN.dragging = true; PN.last = [PN.c0[0], PN.c0[1]]; PN.vel = [0, 0]; PN.vt = performance.now();
+function beginDrag(now) {
+  PN.tgt = elAt(PN.c0[0], PN.c0[1]); PN.mode = dragMode(PN.tgt); PN.dragging = true; PN.last = [PN.c0[0], PN.c0[1]]; PN.vel = [0, 0]; PN.vt = now;
+  if (PN.mode === 'scroll' && PN.armMove) {
+    var pn = PN.tgt && PN.tgt.closest ? PN.tgt.closest(PANEL_SEL) : null;
+    if (pn) { startMove(pn, PN.c0); PN.mode = 'move'; }
+  }
   if (PN.mode === 'pointer' && PN.tgt) { ptr('pointerdown', PN.tgt, PN.c0[0], PN.c0[1], 1, 0); mse('mousedown', PN.tgt, PN.c0[0], PN.c0[1], 1, 0); }
   if (PN.mode === 'range' && PN.tgt) setRange(PN.tgt.closest('input[type=range]'), PN.c0[0]);
-  cursorState('drag');
+  cursorState(PN.mode === 'move' ? 'grab' : 'drag');
 }
 function dragStep(x, y, now) {
   var dx = x - PN.last[0], dy = y - PN.last[1]; PN.last = [x, y];
+  if (PN.mode === 'move') { moveStep(x, y); return; }
   if (PN.mode === 'pointer' && PN.tgt) { ptr('pointermove', PN.tgt, x, y, 1, -1); mse('mousemove', PN.tgt, x, y, 1, 0); }
   else if (PN.mode === 'range' && PN.tgt) { var r = PN.tgt.closest('input[type=range]'); if (r) setRange(r, x); }
   else {
@@ -475,51 +491,103 @@ function dragStep(x, y, now) {
   }
 }
 function endDrag() {
-  if (PN.mode === 'pointer' && PN.tgt) { ptr('pointerup', PN.tgt, PN.last[0], PN.last[1], 0, 0); mse('mouseup', PN.tgt, PN.last[0], PN.last[1], 0, 0); }
+  if (PN.mode === 'move') endMove();
+  else if (PN.mode === 'pointer' && PN.tgt) { ptr('pointerup', PN.tgt, PN.last[0], PN.last[1], 0, 0); mse('mouseup', PN.tgt, PN.last[0], PN.last[1], 0, 0); }
   else if (PN.mode === 'scroll') { S.vel = [PN.vel[0], PN.vel[1]]; S.momTgt = PN.tgt; if (Math.abs(S.vel[0]) > 120 || Math.abs(S.vel[1]) > 120) momentumRun(); }
   PN.dragging = false; PN.tgt = null;
 }
-function pinchStep(h, pf, now) {
+function squeezeStep(h, now) {
   var lm = h.lm, t = now / 1000, k = ksc();
   if (!PN.on) {
-    if (pf < 0) return;
-    var mid0 = pinchMid(lm, pf), c0 = histAt(now - 120) || [S.cx, S.cy];
-    PN.on = true; PN.finger = pf; PN.t0 = now; PN.dragging = false; PN.mode = ''; PN.cancel = false; PN.c0 = c0; PN.m0 = mid0;
+    var mid0 = anchorXY(lm), c0 = histAt(now - 150) || [S.cx, S.cy];     // the click lands where the cursor was just BEFORE the hand closed
+    PN.on = true; PN.finger = 0; PN.t0 = now; PN.dragging = false; PN.mode = ''; PN.cancel = false; PN.armMove = false; PN.c0 = c0; PN.m0 = mid0;
     PFX.reset(); PFY.reset(); PFX.f(mid0[0] * k, t); PFY.f(mid0[1] * k, t); S.cx = c0[0]; S.cy = c0[1];
-    S.vel = [0, 0];
-    if (pf === 0) cursorState('pinch');
-    else if (pf === 1) {
-      var tg = elAt(c0[0], c0[1]), pn = tg && tg.closest ? tg.closest(PANEL_SEL) : null;
-      if (pn) startMove(pn, c0); else note('NO PANEL HERE');
-      cursorState('grab');
-    } else if (pf === 2) { if (now - S.actT > 900) { S.actT = now; goBack(); } cursorState('pinch'); }
-    else { if (now - S.actT > 900) { S.actT = now; talkJarvis(); } cursorState('pinch'); }
+    S.vel = [0, 0]; S.pmiss = 0; cursorState('pinch');
     try { if (navigator.vibrate) navigator.vibrate(6); } catch (e) { }
     return;
   }
-  if (pf !== PN.finger) { endPinch(now); return; }
-  var mid = pinchMid(lm, PN.finger), mx = PFX.f(mid[0] * k, t) / k, my = PFY.f(mid[1] * k, t) / k;
+  var mid = anchorXY(lm), mx = PFX.f(mid[0] * k, t) / k, my = PFY.f(mid[1] * k, t) / k;
   S.cx = clamp(PN.c0[0] + (mx - PN.m0[0]), 0, innerWidth); S.cy = clamp(PN.c0[1] + (my - PN.m0[1]), 0, innerHeight);
-  if (PN.finger === 0) {
-    var dist = Math.hypot(S.cx - PN.c0[0], S.cy - PN.c0[1]);
-    if (!PN.dragging && dist > 18) beginDrag();
-    if (PN.dragging) dragStep(S.cx, S.cy, now);
-  } else if (PN.finger === 1 && MV) moveStep(S.cx, S.cy);
-}
-function endPinch(now) {
-  var f = PN.finger; PN.on = false;
-  if (f === 0) {
-    if (PN.dragging) endDrag();
-    else if (!PN.cancel && now - PN.t0 < 2500) {
-      var dbl = now - S.lastClick < 430 && Math.hypot(PN.c0[0] - S.lastCP[0], PN.c0[1] - S.lastCP[1]) < 34;
-      clickAt(PN.c0[0], PN.c0[1], dbl); S.lastClick = dbl ? 0 : now; S.lastCP = PN.c0;
+  var dist = Math.hypot(S.cx - PN.c0[0], S.cy - PN.c0[1]);
+  if (!PN.dragging) {
+    var held = now - PN.t0;
+    if (!PN.armMove && held > 1000 && dist < 12) {
+      var tg = elAt(PN.c0[0], PN.c0[1]);
+      if (tg && tg.closest && tg.closest(PANEL_SEL) && dragMode(tg) === 'scroll') { PN.armMove = true; cursorState('grab'); note('MOVE PANEL'); }
     }
-  } else if (f === 1) endMove();
-  S.freezeUntil = now + 160; S.fresh = true; cursorState('point');
+    if (held > 1600) S.prog = clamp((held - 1600) / 1600, 0, 1);              // a closed fist held completely still for ~3 s = pause
+    if (held > 3200) { PN.cancel = true; pause(); return; }
+    if (dist > 18) beginDrag(now);
+  }
+  if (PN.dragging) dragStep(S.cx, S.cy, now);
+}
+function endSqueeze(now) {
+  PN.on = false;
+  if (PN.dragging) endDrag();
+  else if (!PN.cancel && now - PN.t0 < 2500) {
+    var dbl = now - S.lastClick < 430 && Math.hypot(PN.c0[0] - S.lastCP[0], PN.c0[1] - S.lastCP[1]) < 34;
+    clickAt(PN.c0[0], PN.c0[1], dbl); S.lastClick = dbl ? 0 : now; S.lastCP = PN.c0;
+  }
+  S.freezeUntil = now + 160; S.fresh = true; S.squeezeCool = now + 250; cursorState('point');
 }
 function releaseAll() {
-  if (PN.on) { var f = PN.finger; PN.on = false; PN.cancel = true; if (PN.dragging) endDrag(); if (f === 1) endMove(); }
+  if (PN.on) { PN.on = false; PN.cancel = true; if (PN.dragging) endDrag(); }
   if (MV) endMove();
+}
+
+/* ================================================================ ONE HAND ZOOM: pinch-out = zoom in, pinch-in = zoom out
+   Thumb + index (and / or middle finger). Touch them together and open them (pinch out) = zoom in; start open and close them
+   (pinch in) = zoom out. It is recognised from the movement itself: how fast the gap changes, whether it started / ended touching,
+   whether the hand stayed in place, and whether the fingertips rise (pinch out) or sink (pinch in). */
+var Z1 = { on: false, f: new Euro(2.2, 2.5, 4), h: [], acc: 0, prev: 0, t: 0, last: 0, lastSm: 0, bad: 0, cool: 0, lt: 0, lab: 'ZOOM' };
+function zoomGap(a) {                                     // smallest thumb-to-fingertip gap among index / middle (a curled finger does not count)
+  var g = null, f = -1;
+  for (var i = 0; i < 2; i++) if ((a.rt[i] > 1.15 || a.pr[i] < .2) && (g === null || a.pr[i] < g)) { g = a.pr[i]; f = i; }
+  return g === null ? null : [g, f];
+}
+function zoomSolo(on) {
+  if (!U.zm) return;
+  U.zm.classList.add('solo'); showZoom(on);
+  if (on) { U.zlab.style.left = S.cx.toFixed(0) + 'px'; U.zlab.style.top = (S.cy - 58).toFixed(0) + 'px'; if (U.zlab.textContent !== Z1.lab) U.zlab.textContent = Z1.lab; }
+}
+function endZoom1(now) {
+  if (!Z1.on) return;
+  Z1.on = false; Z1.cool = now + 500; Z1.h.length = 0; Z1.f.reset(); Z1.bad = 0;
+  showZoom(false); S.fresh = true; S.freezeUntil = now + 150; cursorState('point');
+}
+function zoom1(h, now) {                                  // true while a one-hand pinch zoom is going on (the cursor holds still meanwhile)
+  var a = h.a, lm = h.lm, gf = zoomGap(a), t = now / 1000;
+  if (!gf) {
+    if (Z1.on) { if (!Z1.bad) Z1.bad = now; if (now - Z1.bad > 220) { endZoom1(now); return false; } return true; }
+    Z1.h.length = 0; Z1.f.reset(); return false;
+  }
+  Z1.bad = 0;
+  var sm = Z1.f.f(Math.log(clamp(gf[0], .1, 1.6)), t), cn = anchorN(lm), s2 = dd(lm[0], lm[9]) || .001;
+  var lift = (cn.y - (lm[4].y + lm[TIPS[gf[1]]].y) / 2) / s2;           // fingertips above the palm = positive
+  if (!Z1.on) {
+    if (now < Z1.cool) return false;
+    Z1.h.push([now, sm, lift, cn.x, cn.y]); while (Z1.h.length && now - Z1.h[0][0] > 600) Z1.h.shift();
+    if (Z1.h.length < 4) return false;
+    var p = Z1.h[0], d = sm - p[1], dl = lift - p[2], mv = Math.hypot((cn.x - p[3]) * S.AR, cn.y - p[4]) / s2;
+    var gNow = Math.exp(sm), gPast = Math.exp(p[1]), out = d > 0;
+    var rises = out ? dl > .12 : dl < -.12, need = rises ? .30 : .46;     // fingers moving up while opening (or down while closing) = clearly a zoom
+    var fromPinch = out ? gPast < .5 : gNow < .6;                          // zoom in starts touching, zoom out ends touching
+    if (Math.abs(d) < need || Math.abs(gNow - gPast) < .22 || !fromPinch || mv > .7) return false;
+    releaseAll();
+    Z1.on = true; Z1.acc = clamp(d, -3 * ZOOM_STEP, 3 * ZOOM_STEP); Z1.prev = sm; Z1.t = now - ZOOM_GAP; Z1.last = now; Z1.lastSm = sm; Z1.lt = 0; Z1.lab = 'ZOOM'; Z1.h.length = 0;
+    S.pp = null; S.pa = null; cursorState('zoom');
+  } else { Z1.acc += sm - Z1.prev; Z1.prev = sm; }
+  if (Math.abs(sm - Z1.lastSm) > .03) { Z1.lastSm = sm; Z1.last = now; }
+  if (Math.abs(Z1.acc) > ZOOM_STEP && now - Z1.t >= ZOOM_GAP) {
+    var dir = Z1.acc > 0 ? 1 : -1;
+    zoomBy(dir); Z1.acc -= dir * ZOOM_STEP; Z1.t = now; Z1.lt = now; Z1.lab = dir > 0 ? '＋ ZOOM IN' : '－ ZOOM OUT';
+    if (Math.abs(Z1.acc) > ZOOM_STEP) Z1.acc = dir * ZOOM_STEP;
+  }
+  if (now - Z1.lt > 600) Z1.lab = 'ZOOM';
+  S.freezeUntil = now + 200;
+  if (now - Z1.last > 450) { endZoom1(now); return false; }                // fingers stopped moving: zoom is finished
+  zoomSolo(true);
+  return true;
 }
 
 /* ================================================================ two hands: zoom + turn the body
@@ -568,10 +636,10 @@ function endZoom() { if (Z.on) { Z.on = false; Z.bad = 0; showZoom(false); S.fre
 
 /* ================================================================ cursor + per-frame logic */
 function cursorState(s) { S.state = s; if (U.cur) U.cur.dataset.s = s; }
-function stableTo(raw) {                                  // a pose has to be seen for 3 frames before it counts (pinch is instant)
-  if (raw === 'pinch') { S.cand = 'pinch'; S.cnt = 9; return 'pinch'; }
+function stableTo(raw) {                                  // a pose has to be seen for 2 frames before it counts (squeeze is instant)
+  if (raw === 'squeeze') { S.cand = 'squeeze'; S.cnt = 9; return 'squeeze'; }
   if (raw === S.cand) S.cnt++; else { S.cand = raw; S.cnt = 1; }
-  return S.cnt >= 3 ? raw : (S.pose === 'pinch' ? raw : S.pose || raw);
+  return S.cnt >= 2 ? raw : (S.pose === 'squeeze' ? raw : S.pose || raw);
 }
 function holdTime(pose, now) {
   if (pose !== S.hp) { S.hp = pose; S.hpT = now; S.holdDone = false; }
@@ -583,8 +651,10 @@ function drawCursor(now) {                                // label + dwell ring 
   U.dw.style.strokeDasharray = (clamp(S.prog, 0, 1) * 138).toFixed(1) + ' 200';
   var lab = '';
   if (now < S.noteT) lab = S.note;
-  else if (S.state === 'pinch' || S.state === 'grab') lab = PINCH_LABEL[PN.finger] || '';
-  else if (S.state === 'paused') lab = 'PAUSED · SHOW PALM 1s';
+  else if (S.state === 'pinch') lab = 'SQUEEZE';
+  else if (S.state === 'grab') lab = 'MOVE PANEL';
+  else if (S.state === 'zoom') lab = '';
+  else if (S.state === 'paused') lab = 'PAUSED · OPEN PALM 1s';
   else if (S.state === 'lost') lab = 'NO HAND';
   else if (S.state === 'scroll') lab = 'SCROLL';
   else if (S.state === 'drag') lab = PN.mode === 'scroll' ? 'SCROLL' : 'DRAG';
@@ -596,7 +666,7 @@ function rloop(now) {                                     // cursor glides betwe
   if (!U.cur) return;
   var dt = Math.min(64, now - (S.rt || now)); S.rt = now;
   if (S.rx === null || Math.hypot(S.cx - S.rx, S.cy - S.ry) > 260) { S.rx = S.cx; S.ry = S.cy; }
-  else { var a = 1 - Math.exp(-dt / 20); S.rx += (S.cx - S.rx) * a; S.ry += (S.cy - S.ry) * a; }
+  else { var lead = S.state === 'point' ? .03 : 0, tx = S.cx + clamp(S.vx * lead, -45, 45), ty = S.cy + clamp(S.vy * lead, -45, 45), a = 1 - Math.exp(-dt / 9); S.rx += (tx - S.rx) * a; S.ry += (ty - S.ry) * a; }
   U.cur.style.transform = 'translate3d(' + S.rx.toFixed(1) + 'px,' + S.ry.toFixed(1) + 'px,0)';
 }
 function pause() {
@@ -607,16 +677,19 @@ function resume() {
   S.paused = false; S.fresh = true; cursorState('point'); status('LIVE'); U.cam.classList.remove('pause'); U.cam.classList.add('live'); note('RESUMED');
 }
 function moveCursor(lm, t, now) {
-  var p = mapXY(lm[8].x, lm[8].y), k = ksc();
-  if (S.fresh) { FX.reset(); FY.reset(); S.hist.length = 0; S.fresh = false; }
+  var p = anchorXY(lm), k = ksc(), ox = S.cx, oy = S.cy;
+  if (S.fresh) { FX.reset(); FY.reset(); S.hist.length = 0; S.fresh = false; S.vx = 0; S.vy = 0; S.mt = t; ox = null; }
   S.cx = FX.f(p[0] * k, t) / k; S.cy = FY.f(p[1] * k, t) / k;
+  var dt = Math.max(.008, t - S.mt); S.mt = t;
+  if (ox !== null) { S.vx = S.vx * .6 + (S.cx - ox) / dt * .4; S.vy = S.vy * .6 + (S.cy - oy) / dt * .4; }
   S.hist.push([now, S.cx, S.cy]); if (S.hist.length > 18) S.hist.shift();
-  if (Math.hypot(S.cx - S.lx, S.cy - S.ly) > 1.5) {
-    S.lx = S.cx; S.ly = S.cy;
+  if (now - S.mvT > 40 && Math.hypot(S.cx - S.lx, S.cy - S.ly) > 1.5) {
+    S.mvT = now; S.lx = S.cx; S.ly = S.cy;
     var tg = elAt(S.cx, S.cy); if (tg) { ptr('pointermove', tg, S.cx, S.cy, 0, -1); mse('mousemove', tg, S.cx, S.cy, 0, 0); }
   }
 }
 function hoverDwell(now) {
+  if (!P.dwell && now - S.hvT < 70) return; S.hvT = now;
   var tg = smart(S.cx, S.cy), it = tg && tg.closest ? tg.closest(INTERACT) : null;
   setHot(it);
   var typed = it && (it.tagName === 'TEXTAREA' || it.tagName === 'CANVAS' || (it.tagName === 'INPUT' && /^(text|search|number|password|email|url|tel|range)$/.test(it.type)));
@@ -629,26 +702,45 @@ function hoverDwell(now) {
     }
   } else S.dw.el = null;
 }
+function curlOf(a) { return (a.rt[0] + a.rt[1] + a.rt[2] + a.rt[3]) / 4; }       // ~1.8 open hand, ~1.1 closed fist
+var POSE_NAME = { squeeze: 'SQUEEZE', other: 'HAND', point: 'POINT', palm: 'PALM', peace: '2 FINGERS', three: '3 FINGERS', fist: 'FIST', up: '👍', down: '👎' };
+function jarvisOpen() {
+  var jp = $('jv-panel');
+  if (jp && !jp.hidden) { note('JARVIS IS OPEN'); return; }
+  talkJarvis();
+}
+function pinchLike(a) { var g = zoomGap(a); return !!g && g[0] < .5 && a.rt[g[1]] > 1.4; }   // thumb touching a finger that is still out = zoom pinch, not a squeeze
 function primary(h, now) {
-  var a = h.a, lm = h.lm, t = now / 1000;
+  var a = h.a, lm = h.lm, t = now / 1000, cv = curlOf(a), i;
   S.prog = 0;
-  var pf = pinchState(a, PN.on ? PN.finger : -1);
-  if (PN.on && pf < 0) { if (++S.pmiss < 2) pf = PN.finger; } else S.pmiss = 0;      // one noisy frame does not drop a pinch / drag
-  var pose = stableTo(pf >= 0 ? 'pinch' : a.pose); S.pose = pose;
+  S.ch.push([now, cv]); while (S.ch.length && now - S.ch[0][0] > 550) S.ch.shift();
+  var wasOpen = false; for (i = 0; i < S.ch.length; i++) if (S.ch[i][1] > 1.45) wasOpen = true;
+  var sq;                                                  // SQUEEZE = the hand was open a moment ago and is now closing fast / is closed
+  if (PN.on) { S.pmiss = cv > 1.5 ? S.pmiss + 1 : 0; sq = S.pmiss < 2; }
+  else sq = !S.paused && !Z1.on && wasOpen && cv < 1.32 && a.pose !== 'up' && a.pose !== 'down' && a.pose !== 'point' && a.pose !== 'peace' && a.pose !== 'three' && !pinchLike(a) && now >= S.squeezeCool;
+  var pose = stableTo(sq ? 'squeeze' : a.pose); S.pose = pose;
   var hold = holdTime(pose, now);
-  if (U.pose) U.pose.textContent = pose === 'pinch' ? 'PINCH · ' + (PINCH_LABEL[pf >= 0 ? pf : PN.finger] || '') : pose === 'other' ? 'HAND' : pose.toUpperCase();
+  if (U.pose) U.pose.textContent = POSE_NAME[pose] || pose.toUpperCase();
   if (S.paused) {
     cursorState('paused'); S.prog = pose === 'palm' ? hold / 1 : 0;
     if (pose === 'palm' && hold >= 1 && !S.holdDone) { S.holdDone = true; resume(); }
     drawCursor(now); return;
   }
-  if (pf >= 0 || PN.on) { pinchStep(h, pf, now); drawCursor(now); return; }
-  var pointing = pose === 'point' || pose === 'other';
-  if (pointing && now >= S.freezeUntil) { moveCursor(lm, t, now); cursorState('point'); hoverDwell(now); }
-  else if (!pointing) { S.fresh = true; if (pose !== 'peace' && pose !== 'palm') cursorState('idle'); }
-  if (pose === 'peace') { peaceScroll(lm, now); cursorState('scroll'); } else S.pp = null;
-  if (pose === 'palm') { swipe(lm, now); cursorState('idle'); } else S.ph.length = 0;
-  if (pose === 'fist') { S.prog = hold / 1.2; if (hold >= 1.2 && !S.holdDone) { S.holdDone = true; pause(); } }
+  if (sq || PN.on) { if (sq) squeezeStep(h, now); else endSqueeze(now); drawCursor(now); return; }
+  if (zoom1(h, now)) { drawCursor(now); return; }
+  var moving = pose === 'point' || pose === 'other' || pose === 'palm';              // any relaxed hand moves the cursor: no pointing needed
+  if (moving && now >= S.freezeUntil) { moveCursor(lm, t, now); cursorState('point'); hoverDwell(now); }
+  else if (!moving) { S.fresh = true; if (pose !== 'peace') cursorState('idle'); }
+  if (pose === 'peace') { peaceScroll(lm, now); cursorState('scroll'); } else { if (S.pp) peaceEnd(); S.pp = null; S.ph.length = 0; }
+  if (pose === 'palm') {                                                              // open hand held still = open Jarvis
+    var c = anchorN(lm);
+    if (!S.pa || Math.hypot((c.x - S.pa.x) * S.AR, c.y - S.pa.y) > .05) { S.pa = c; S.paT = now; S.paDone = false; }
+    var ph = now - S.paT;
+    if (ph > 500) S.prog = clamp((ph - 500) / (JARVIS_HOLD - 500), 0, 1);
+    if (ph >= JARVIS_HOLD && !S.paDone) { S.paDone = true; jarvisOpen(); }
+  } else S.pa = null;
+  if (pose === 'three') { S.prog = hold / .7; if (hold >= .7 && !S.holdDone) { S.holdDone = true; goBack(); } }
+  if (pose === 'fist') { S.prog = hold / 3; if (hold >= 3 && !S.holdDone) { S.holdDone = true; pause(); } }
   if (pose === 'up' || pose === 'down') {
     S.prog = hold / .8;
     if (hold >= .8 && !S.holdDone) {
@@ -657,15 +749,16 @@ function primary(h, now) {
       else note('OPEN JARVIS FIRST');
     }
   }
-  if (!pointing && pose !== 'peace') setHot(null);
+  if (!moving && pose !== 'peace') setHot(null);
   drawCursor(now);
 }
 function lost(now) {
   if (!S.lostAt) S.lostAt = now;
-  if (now - S.lostAt > 260) { if (PN.on || MV) releaseAll(); endZoom(); S.fresh = true; S.pose = ''; S.hp = ''; S.pmiss = 0; setHot(null); if (!S.paused) cursorState('lost'); }
+  if (now - S.lostAt > 260) { if (PN.on || MV) releaseAll(); endZoom(); endZoom1(now); S.fresh = true; S.pose = ''; S.hp = ''; S.pmiss = 0; S.ch.length = 0; S.pa = null; setHot(null); if (!S.paused) cursorState('lost'); }
   if (U.hands) U.hands.textContent = 'NO HAND'; if (U.pose) U.pose.textContent = '—';
   drawCursor(now);
 }
+
 function process(res, now) {
   var L = res.landmarks || [], WL = res.worldLandmarks || [], HD = res.handednesses || res.handedness || [], hands = [], i;
   for (i = 0; i < L.length; i++) {
@@ -676,7 +769,6 @@ function process(res, now) {
   S.nHands = hands.length;
   if (!hands.length) { lost(now); return; }
   S.lostAt = 0; if (U.hands) U.hands.textContent = hands.length + (hands.length > 1 ? ' HANDS' : ' HAND');
-  if (hands.length === 2 && !S.paused && zoomStep(hands, now)) { drawCursor(now); if (U.pose) U.pose.textContent = 'ZOOM'; return; }
   endZoom();
   var prim = hands[0];
   if (hands.length === 2) {
@@ -696,7 +788,7 @@ function drawSkeleton(hands) {
   var c = U.cx, T = THEME, u = vw / 200, glow = !lite();
   c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, vw, vh); c.lineCap = 'round'; c.lineJoin = 'round';
   hands.forEach(function (h) {
-    var lm = h.lm, pf = pinchState(h.a, PN.on && h.key === S.pk ? PN.finger : -1), i;
+    var lm = h.lm, pf = -1, i;
     var X = function (n) { return (1 - lm[n].x) * vw; }, Y = function (n) { return lm[n].y * vh; };
     c.beginPath(); [0, 1, 5, 9, 13, 17].forEach(function (n, k) { if (k) c.lineTo(X(n), Y(n)); else c.moveTo(X(n), Y(n)); }); c.closePath();   // soft palm fill
     c.fillStyle = T.palm; c.fill();
@@ -721,7 +813,10 @@ function drawSkeleton(hands) {
 function loop() {
   if (!S.on) return;
   S.raf = requestAnimationFrame(loop);
-  if (D.hidden) return;
+  tick();
+}
+function tick() {
+  if (!S.on || D.hidden) return;
   var v = S.video, now = performance.now();
   if (!S.lm || v.readyState < 2 || now - S.lastDet < S.minDt || v.currentTime === S.lastVT) return;   // only a NEW camera frame is processed, never skipped
   S.lastVT = v.currentTime; S.lastDet = now;
@@ -736,7 +831,7 @@ async function loadLandmarker() {
   for (i = 0; i < LIBS.length; i++) {
     try {
       var mod = await import(LIBS[i]), fs = await mod.FilesetResolver.forVisionTasks(WASM[i]);
-      var mk = function (del) { return mod.HandLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MODEL, delegate: del }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: .5, minHandPresenceConfidence: .5, minTrackingConfidence: .45 }); };
+      var mk = function (del) { return mod.HandLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MODEL, delegate: del }, runningMode: 'VIDEO', numHands: 1, minHandDetectionConfidence: .5, minHandPresenceConfidence: .5, minTrackingConfidence: .45 }); };
       try { return await mk('GPU'); } catch (e) { return await mk('CPU'); }
     } catch (e) { err = e; }
   }
@@ -749,7 +844,7 @@ async function start() {
   var tok = ++S.tok;                                        // stop() bumps this, so a Stop pressed while the camera or model is still loading cancels cleanly
   S.loading = true; fabState(); buildUI(); U.cam.classList.add('show'); status('STARTING…');
   try {
-    var st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, audio: false });
+    var st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60, min: 24 } }, audio: false });
     if (tok !== S.tok) { st.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { } }); return; }
     S.stream = st;
     S.video = U.video; S.video.srcObject = S.stream; await S.video.play();
@@ -759,10 +854,12 @@ async function start() {
     if (tok !== S.tok) return;
     S.on = true; S.paused = false; S.fresh = true; S.errs = 0; S.lastVT = -1; S.fpsT = performance.now(); S.pmiss = 0; S.rx = null;
     try { if (W.perf && W.perf.pause) W.perf.pause(); } catch (e) { }          // perf.js: hand tracking is heavy on purpose, do not mistake it for a struggling phone
-    S.minDt = (W.perf && typeof W.perf.level === 'number' && W.perf.level >= 1) ? 45 : 0;
+    S.minDt = (W.perf && typeof W.perf.level === 'number' && W.perf.level >= 2) ? 33 : 0;
     status('LIVE'); U.cam.classList.add('live'); U.cam.classList.remove('pause'); cursorState('idle'); prefsUI(); drawCursor(performance.now());
-    S.raf = requestAnimationFrame(loop); S.rraf = requestAnimationFrame(rloop);
-    if (lsGet('fg_seen') !== '1') { lsSet('fg_seen', '1'); guide(true); } else toast('Finger mode on. Point to move, pinch to click.');
+    if (S.video.requestVideoFrameCallback) { var vf = function () { if (tok !== S.tok || !S.on) return; tick(); S.video.requestVideoFrameCallback(vf); }; S.video.requestVideoFrameCallback(vf); }
+    else S.raf = requestAnimationFrame(loop);
+    S.rraf = requestAnimationFrame(rloop);
+    if (lsGet('fg_seen') !== '1') { lsSet('fg_seen', '1'); guide(true); } else toast('Finger mode on. Relax your hand to move, squeeze to click.');
   } catch (e) {
     if (tok !== S.tok) return;
     var msg = e && e.name === 'NotAllowedError' ? 'Camera permission was denied. Allow the camera for this site and try again.' : e && e.name === 'NotFoundError' ? 'No camera found on this device.' : 'Finger mode could not start: ' + ((e && e.message) || e);
@@ -773,13 +870,13 @@ async function start() {
 function stop(silent) {
   var was = S.on && !silent; S.tok++; S.on = false; S.loading = false; cancelAnimationFrame(S.raf); cancelAnimationFrame(S.rraf); cancelAnimationFrame(S.momRaf); S.momRaf = 0; S.rraf = 0;
   try { releaseAll(); } catch (e) { }
-  endZoom(); showZoom(false); setHot(null); clearLayoutDom();
+  endZoom(); endZoom1(performance.now()); showZoom(false); setHot(null); clearLayoutDom();
   if (S.stream) { S.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { } }); S.stream = null; }
   if (S.video) { try { S.video.pause(); S.video.srcObject = null; } catch (e) { } }
   if (U.cam) { U.cam.classList.remove('show', 'live', 'pause', 'open'); }
   if (U.cur) U.cur.classList.remove('on');
   if (U.guide) U.guide.classList.remove('show');
-  S.paused = false; PN.on = false; fabState();
+  S.paused = false; PN.on = false; S.ch.length = 0; S.pa = null; fabState();
   try { if (W.perf && W.perf.resume) W.perf.resume(); } catch (e) { }
   if (was) toast('Finger mode off.');
 }
@@ -795,5 +892,5 @@ D.addEventListener('visibilitychange', function () { if (D.hidden && S.on) { rel
 function boot() { fab(); setInterval(applyLayout, 2500); }
 if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', boot); else boot();
 
-W.FINGER = { version: 3, start: start, stop: function () { stop(); }, toggle: toggle, status: statusInfo, guide: guide, resetLayout: resetLayout, _t: { analyse: analyse, pinchState: pinchState, mapXY: mapXY } };
+W.FINGER = { version: 4, start: start, stop: function () { stop(); }, toggle: toggle, status: statusInfo, guide: guide, resetLayout: resetLayout, _t: { analyse: analyse, pinchState: pinchState, mapXY: mapXY, process: process, state: S } };
 })();
