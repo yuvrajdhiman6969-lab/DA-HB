@@ -1,6 +1,6 @@
 // Bump this string whenever you push a new version of index.html
 // so phones/laptops pick up the update instead of serving the old cache.
-const CACHE_NAME = 'discipline-os-v3';
+const CACHE_NAME = 'discipline-os-v4';
 const CORE_FILES = [
   './index.html',
   './manifest.json',
@@ -34,7 +34,9 @@ self.addEventListener('activate', (event) => {
    - this app's own scripts, styles, sounds and images (network first, so an update always wins when you are online)
    - the small, version-pinned Jarvis libraries on esm.run / cdn.jsdelivr.net (they never change, so cache first)
    The AI model weights are NOT touched here: they are huge and the AI library already keeps them in its own cache. */
-const LIB_HOSTS = /^(esm\.run|cdn\.jsdelivr\.net)$/;
+const LIB_HOSTS = /^(esm\.run|cdn\.jsdelivr\.net|unpkg\.com)$/;
+/* Finger mode: the ~8 MB hand-tracking model lives on Google's public MediaPipe bucket. Cache just that path, so Finger mode also starts offline. */
+const MODEL_HOST = /^storage\.googleapis\.com$/, MODEL_PATH = '/mediapipe-models/';
 const ASSET = /\.(?:js|css|mp3|wav|ogg|png|jpg|jpeg|svg|webp|woff2?|json)$/i;
 
 function keep(request, response) {
@@ -62,7 +64,7 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  if (LIB_HOSTS.test(url.hostname)) {
+  if (LIB_HOSTS.test(url.hostname) || (MODEL_HOST.test(url.hostname) && url.pathname.indexOf(MODEL_PATH) === 0)) {
     event.respondWith(
       caches.match(req).then((cached) => cached || fetch(req).then((res) => keep(req, res)))
     );

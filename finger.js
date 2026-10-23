@@ -1,4 +1,4 @@
-/* finger.js v1 — FINGER MODE for Discipline OS.
+/* finger.js v2 — FINGER MODE for Discipline OS.
    Control the whole app with your hand in front of the webcam. Nothing in the app is changed: this file only adds a layer on top.
    It sends the same events a mouse would, so every button, tab, canvas (Muscle Map / Holo body), slider and scroll area just works.
 
@@ -64,7 +64,7 @@ var P = {                                                  // saved preferences
 var S = {
   on: false, loading: false, paused: false, lm: null, stream: null, video: null, raf: 0, lastDet: 0, lastVT: -1, minDt: 33, errs: 0, AR: 4 / 3,
   cx: innerWidth / 2, cy: innerHeight / 2, lx: 0, ly: 0, hist: [], fresh: true, freezeUntil: 0, prog: 0, state: 'idle', note: '', noteT: 0,
-  pose: '', cand: '', cnt: 0, hp: '', hpT: 0, holdDone: false, lostAt: 0, nHands: 0, pk: '', actT: 0, lastClick: 0, lastCP: [0, 0],
+  pose: '', cand: '', cnt: 0, hp: '', hpT: 0, holdDone: false, lostAt: 0, nHands: 0, pk: '', actT: 0, lastClick: 0, lastCP: [0, 0], tok: 0,
   dw: { el: null, x: 0, y: 0, t: 0, done: false }, hot: null, pp: null, ph: [], fps: 0, fpsN: 0, fpsT: 0, pz: 1, vel: [0, 0], momRaf: 0, momTgt: null
 };
 var PN = { on: false, finger: -1, t0: 0, c0: [0, 0], m0: [0, 0], dragging: false, mode: '', tgt: null, last: [0, 0], vel: [0, 0], vt: 0, cancel: false };
@@ -196,7 +196,7 @@ function fab() {
   if ($('fg-fab')) return;
   css();
   var b = el('button', null, '✋'); b.id = 'fg-fab'; b.type = 'button'; b.title = 'Finger mode (Shift+F): control the app with your hand'; b.setAttribute('aria-label', 'Toggle finger mode');
-  b.addEventListener('click', toggle); D.body.appendChild(b);
+  b.addEventListener('click', function () { toggle(); }); D.body.appendChild(b);
 }
 function fabState() { var b = $('fg-fab'); if (!b) return; b.classList.toggle('on', S.on); b.classList.toggle('load', S.loading); }
 function status(t) { if (U.st) U.st.textContent = t; }
@@ -303,19 +303,6 @@ function doScroll(t, dx, dy) {
   var s = scroller(t || D.body, dx, dy);
   try { if (s === pageEl()) W.scrollBy({ left: dx, top: dy, behavior: 'instant' }); else s.scrollBy({ left: dx, top: dy, behavior: 'instant' }); }
   catch (e) { s.scrollTop += dy; s.scrollLeft += dx; }
-}
-function momentum() {
-  if (S.momRaf) return;
-  var last = performance.now();
-  (function step(now) {
-    var dt = Math.min(50, now - last); last = now;
-    var k = Math.pow(.94, dt / 16.7); S.vel[0] *= k; S.vel[1] *= k;
-    if (Math.abs(S.vel[0]) < 18 && Math.abs(S.vel[1]) < 18 || !S.on) { S.momRaf = 0; return; }
-    doScroll(S.momTgt, S.vel[0] * dt / 1000, S.vel[1] * dt / 1000);
-    S.momRaf = requestAnimationFrame(step);
-  })(last);
-  S.momRaf = requestAnimationFrame(function (n) { S.momRaf = 0; S.momRaf = 0; momentumRun(); });
-  cancelAnimationFrame(S.momRaf); S.momRaf = 0; momentumRun();
 }
 function momentumRun() {
   if (S.momRaf) return;
@@ -661,25 +648,32 @@ async function start() {
   if (S.on || S.loading) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('This browser cannot open the camera.', 'danger'); return; }
   if (W.isSecureContext === false) { toast('The camera needs a secure (https) address.', 'danger'); return; }
+  var tok = ++S.tok;                                        // stop() bumps this, so a Stop pressed while the camera or model is still loading cancels cleanly
   S.loading = true; fabState(); buildUI(); U.cam.classList.add('show'); status('STARTING CAMERA…');
   try {
-    S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, audio: false });
+    var st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } }, audio: false });
+    if (tok !== S.tok) { st.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { } }); return; }
+    S.stream = st;
     S.video = U.video; S.video.srcObject = S.stream; await S.video.play();
+    if (tok !== S.tok) return;
     if (S.video.videoWidth) { S.AR = S.video.videoWidth / S.video.videoHeight; U.cam.querySelector('.vw').style.aspectRatio = S.video.videoWidth + ' / ' + S.video.videoHeight; }
     if (!S.lm) { status(lsGet('fg_seen') === '1' ? 'LOADING MODEL…' : 'DOWNLOADING MODEL (ONCE)…'); if (lsGet('fg_seen') !== '1') toast('Downloading the hand-tracking model, about 8 MB, one time only.'); S.lm = await loadLandmarker(); }
+    if (tok !== S.tok) return;
     S.on = true; S.paused = false; S.fresh = true; S.errs = 0; S.lastVT = -1; S.fpsT = performance.now();
+    try { if (W.perf && W.perf.pause) W.perf.pause(); } catch (e) { }          // perf.js: hand tracking is heavy on purpose, do not mistake it for a struggling phone
     S.minDt = (W.perf && typeof W.perf.level === 'number' && W.perf.level >= 1) ? 50 : 33;
     status('LIVE'); U.cam.classList.add('live'); U.cam.classList.remove('pause'); cursorState('idle'); prefsUI(); drawCursor(performance.now());
     S.raf = requestAnimationFrame(loop);
     if (lsGet('fg_seen') !== '1') { lsSet('fg_seen', '1'); guide(true); } else toast('Finger mode on. Point to move, pinch to click.');
   } catch (e) {
+    if (tok !== S.tok) return;
     var msg = e && e.name === 'NotAllowedError' ? 'Camera permission was denied. Allow the camera for this site and try again.' : e && e.name === 'NotFoundError' ? 'No camera found on this device.' : 'Finger mode could not start: ' + ((e && e.message) || e);
-    toast(msg, 'danger'); S.loading = false; S.on = true; stop(); return;
+    toast(msg, 'danger'); stop(true); return;
   }
   S.loading = false; fabState();
 }
-function stop() {
-  var was = S.on; S.on = false; S.loading = false; cancelAnimationFrame(S.raf); cancelAnimationFrame(S.momRaf); S.momRaf = 0;
+function stop(silent) {
+  var was = S.on && !silent; S.tok++; S.on = false; S.loading = false; cancelAnimationFrame(S.raf); cancelAnimationFrame(S.momRaf); S.momRaf = 0;
   try { releaseAll(); } catch (e) { }
   endZoom(); setHot(null); clearLayoutDom();
   if (S.stream) { S.stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { } }); S.stream = null; }
@@ -688,6 +682,7 @@ function stop() {
   if (U.cur) U.cur.classList.remove('on');
   if (U.guide) U.guide.classList.remove('show');
   S.paused = false; PN.on = false; fabState();
+  try { if (W.perf && W.perf.resume) W.perf.resume(); } catch (e) { }
   if (was) toast('Finger mode off.');
 }
 function toggle() { if (S.on || S.loading) stop(); else start(); }
@@ -702,5 +697,5 @@ D.addEventListener('visibilitychange', function () { if (D.hidden && S.on) { rel
 function boot() { fab(); setInterval(applyLayout, 2500); }
 if (D.readyState === 'loading') D.addEventListener('DOMContentLoaded', boot); else boot();
 
-W.FINGER = { version: 1, start: start, stop: stop, toggle: toggle, status: statusInfo, guide: guide, resetLayout: resetLayout, _t: { analyse: analyse, pinchState: pinchState, mapXY: mapXY } };
+W.FINGER = { version: 2, start: start, stop: function () { stop(); },  toggle: toggle, status: statusInfo, guide: guide, resetLayout: resetLayout, _t: { analyse: analyse, pinchState: pinchState, mapXY: mapXY } };
 })();

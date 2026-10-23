@@ -2798,7 +2798,9 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
            - list-type data (punishments, AAR, timer log, custom events) is merged, not overwritten
            - first connection uploads everything that only exists on this device
            - old single-document data is imported once automatically            */
-        const SYNC_LOCAL_ONLY = new Set(['sync_code', 'sync_ts', 'sync_legacy_done', 'theme', 'last_active_date', 'timer_state', 'last_backup_iso', 'fx_lite', 'qotd_seen', 'qp_volume']);
+        const SYNC_LOCAL_ONLY = new Set(['sync_code', 'sync_ts', 'sync_legacy_done', 'theme', 'last_active_date', 'timer_state', 'last_backup_iso', 'fx_lite', 'qotd_seen', 'qp_volume',
+            /* device-only: performance governor (perf.js) and finger mode (finger.js) settings must not follow you to another phone/laptop */
+            'perf_level', 'perf_auto', 'perf_ts', 'perf_lite_own', 'perf_debug', 'fg_dwell', 'fg_cam', 'fg_size', 'fg_sens', 'fg_layout', 'fg_seen']);
         // Hook Storage.prototype (assigning localStorage.setItem directly is not reliable across browsers).
         const _protoSet = Storage.prototype.setItem, _protoRemove = Storage.prototype.removeItem;
         const _rawSet = (k, v) => _protoSet.call(localStorage, k, v);
@@ -9786,10 +9788,11 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
-<script src="jarvis/jarvis.js?v=17" defer></script>
+<script src="jarvis/jarvis.js?v=18" defer></script>
 <script src="jarvis/holo.js?v=3" defer></script>
 <script src="jarvis/musclemap.js?v=4" defer></script>
 <script src="jarvis/suggest.js?v=2" defer></script>
+<script src="jarvis/finger.js?v=2" defer></script>
 
 </body>
 </html>
