@@ -2026,6 +2026,7 @@ function screenParse(n0) {
   if (!n || n.split(' ').length > 12) return null;
   if (SC.auto && /^(?:ok |okay )?(?:stop|halt|hold|hold on|enough|pause|freeze|thats enough|that is enough|thats good|that is good)(?: scrolling| the scrolling| it| there| here)?$/.test(n)) return { k: 'stop' };
   if (/^(?:stop|halt|cancel) (?:scrolling|the scroll|the scrolling)$/.test(n)) return { k: 'stop' };
+  const fg = fingerParse(n); if (fg) return { k: 'finger', act: fg };            // v18: “turn on finger mode” / “turn off finger mode”
   /* the 3D body */
   if ((m = /^(?:turn|rotate|spin|swing|swivel)(?: the| my)?(?: body| model| figure| hologram| avatar| it| me)?(?: to the| to| towards| toward)? ?(left|right|around|back|front)$/.exec(n))) return { k: 'body', act: m[1] };
   if ((m = /^(?:show|see|face|display|flip to)(?: me)?(?: my| the)? (back|front|rear)(?: view| side)?$/.exec(n))) return { k: 'body', act: m[1] === 'front' ? 'front' : 'back' };
@@ -2039,7 +2040,25 @@ function screenCmd(n) {
   if (a.k === 'scroll') return scDo(a);
   if (a.k === 'zoom') return scZoom(a);
   if (a.k === 'body') return scBody(a);
+  if (a.k === 'finger') return scFinger(a);
   return null;
+}
+/* v18: FINGER MODE (jarvis/finger.js) by voice */
+function fingerParse(n) {
+  if (!/\b(finger|hand|gesture|gestures)\b/.test(n) || !/\b(mode|control|controls|tracking)\b/.test(n)) return null;
+  if (n.split(' ').length > 7 || /^(how|what|why|where|when|which|can|is|does|do|tell|explain)\b/.test(n)) return null;
+  if (/^(?:(?:turn|switch|shut|close|power) (?:off|down)|stop|disable|deactivate|end|exit|kill|quit)\b/.test(n) || /\b(?:off|stop|disable)$/.test(n)) return 'off';
+  if (/^(?:(?:turn|switch|put|power) (?:on|up)|start|enable|activate|begin|launch|open|run|use)\b/.test(n) || /\bon$/.test(n)) return 'on';
+  if (/^toggle\b/.test(n)) return 'toggle';
+  return null;
+}
+function scFinger(a) {
+  const F = window.FINGER;
+  if (!F) return R('Finger mode is not installed, sir.', 'err');
+  const on = !!F.status().on;
+  if (a.act === 'off' || (a.act === 'toggle' && on)) { F.stop(); return R(on ? 'Finger mode off, sir.' : 'Finger mode is off, sir.'); }
+  if (on) return R('Finger mode is already on, sir.');
+  F.start(); return R('Finger mode starting, sir. Allow the camera if your browser asks.');
 }
 
 /* =====================================================================
