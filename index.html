@@ -2076,6 +2076,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 @media (max-height: 640px) { .dr-jarvis small { display: none; } .dr-group { margin-top: 8px; } }
 </style>
 <link rel="stylesheet" href="jarvis/jarvis.css?v=15">
+<link rel="stylesheet" href="jarvis/mk7hud.css?v=1">
 </head>
 <body>
     <div id="login-screen">
@@ -9890,10 +9891,12 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
 })();
 </script>
 <script src="jarvis/jarvis.js?v=18" defer></script>
-<script src="jarvis/holo.js?v=3" defer></script>
-<script src="jarvis/musclemap.js?v=4" defer></script>
+<script src="jarvis/holo.js?v=4" defer></script>
+<script src="jarvis/holobody.js?v=1" defer></script>
+<script src="jarvis/musclemap.js?v=5" defer></script>
 <script src="jarvis/suggest.js?v=2" defer></script>
 <script src="jarvis/finger.js?v=2" defer></script>
+<script src="jarvis/mk7hud.js?v=1" defer></script>
 
 <script id="login3-script">
 /* LOGIN v3 driver: compass tape, reactor ticks, live clock, boot log, HUD canvas, sound, WELCOME BACK SIR sequence.
@@ -9971,8 +9974,8 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
     }, true);
     inp.addEventListener('input', function () { var n = inp.value.length; if (n > lastLen) beep(680 + n * 90, .05, .02); lastLen = n; prog(n); });
     function granted() {
-        inp.blur(); inp.readOnly = true; ls.classList.remove('denied'); ls.classList.add('granted'); readRgb();
-        var q = calm() ? 1200 : 2700, st = $('lg-stt'), f = $('lgw-fill'), sb = $('lgw-s');
+        inp.blur(); inp.readOnly = true; ls.classList.remove('denied'); readRgb();   /* no ACCESS GRANTED screen any more: straight into the mask animation */
+        var q = 140, st = $('lg-stt'), f = $('lgw-fill'), sb = $('lgw-s');
         if (st) st.textContent = 'UNLOCKED'; if (f) f.style.animationDuration = (q - 400) + 'ms';
         if (sb) sb.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() + '  \u00B7  ALL SYSTEMS NOMINAL';
         chime(); if (window.navigator && navigator.vibrate) try { navigator.vibrate([20, 40, 20]); } catch (e) { }
@@ -9991,6 +9994,8 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
     if (live()) boot();
 })();
 </script>
+
+<style id="no-granted-style">#lg-welcome,#login-screen.granted::after{display:none!important}</style>
 
 <style id="fx3-style">
 /* ===== FX3: three smooth motion layers (no flicker): card rise + sheen, bar grow-in, tap ripple + tab beam ===== */
