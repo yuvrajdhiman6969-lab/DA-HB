@@ -1,0 +1,194 @@
+/* mk7hud.css v1 — Mark VII helmet-HUD header for Discipline OS.
+   Additive layer. Only active when <html data-theme="mark7"> AND mk7hud.js has built the HUD (html.mk7-on),
+   so if the script ever fails to load, nothing here hides or changes the old UI.
+   Motion rules: transform / opacity / stroke-dashoffset only, all paused by Lite mode, the perf governor
+   (html.fx-mid), reduced-motion, and a hidden tab. */
+
+html[data-theme="mark7"] {
+    --k7-cy: 79, 216, 255;      /* cyan line work */
+    --k7-ice: 207, 238, 255;    /* label white */
+    --k7-or: 255, 106, 61;      /* alert / lock-on accent (used sparingly) */
+    --k7-h: 44px;               /* tab bar height */
+    --k7-c: 18px;               /* tab bar end chamfer */
+    --k7-pad: 28px;             /* nav side padding, so the rails can reach the screen edge */
+    --k7-hud: 'Chakra Petch', 'Oswald', ui-monospace, Menlo, Consolas, sans-serif;
+}
+
+/* nothing shows until the script has built it, and never in other themes */
+#mk7-dome, #mk7-tabs, #mk7-beam { display: none; }
+html.mk7-on[data-theme="mark7"] #mk7-dome { display: block; }
+html.mk7-on[data-theme="mark7"] #mk7-tabs { display: flex; }
+html.mk7-on[data-theme="mark7"] #mk7-beam { display: block; }
+
+/* the old strip tape + readouts are replaced by the dome */
+html.mk7-on[data-theme="mark7"] .vz-top { display: none !important; }
+
+/* =====================================================================
+   1. COMPASS DOME (top of page, scrolls away; the tab bar below stays)
+===================================================================== */
+#mk7-dome {
+    position: relative; z-index: 101; pointer-events: none; overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
+    background: linear-gradient(180deg, rgba(var(--k7-cy), .09), rgba(var(--k7-cy), .02) 70%, transparent);
+}
+#mk7-dome .mk7-in { position: relative; height: 46px; }
+#mk7-dome canvas, #mk7-dome svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#mk7-dome svg { overflow: visible; filter: drop-shadow(0 0 4px rgba(var(--k7-cy), .55)); }
+#mk7-dome svg path { fill: none; stroke: rgba(var(--k7-cy), .92); stroke-width: 1.2; vector-effect: non-scaling-stroke; stroke-linejoin: bevel; }
+#mk7-dome svg .b { stroke: rgba(var(--k7-cy), .38); stroke-width: 1; }
+#mk7-dome svg .p { stroke: rgb(var(--k7-ice)); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 60 940; stroke-dashoffset: 60; opacity: 0; }
+#mk7-dome svg .caret { fill: rgb(var(--k7-ice)); stroke: none; filter: drop-shadow(0 0 5px rgba(var(--k7-cy), 1)); animation: k7Caret 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0; }
+#mk7-dome svg .cap { stroke: rgba(var(--k7-or), .9); stroke-width: 1.4; }
+@keyframes k7Caret { 0%, 100% { transform: scaleY(1); opacity: 1; } 50% { transform: scaleY(.72); opacity: .7; } }
+
+/* energy pulse that travels the frame line every few seconds */
+html:not(.fx-lite):not(.fx-mid):not(.fx-paused) #mk7-dome svg .p { animation: k7Pulse 9s linear infinite; }
+@keyframes k7Pulse { 0% { stroke-dashoffset: 60; opacity: 0; } 4% { opacity: 1; } 46% { opacity: 1; } 50%, 100% { stroke-dashoffset: -940; opacity: 0; } }
+
+/* boot: the frame draws itself, once per session */
+#mk7-dome.boot svg .a { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: k7Draw 1.15s cubic-bezier(.5, 0, .2, 1) forwards; }
+@keyframes k7Draw { to { stroke-dashoffset: 0; } }
+
+.mk7-fl { position: absolute; top: calc(50% - 17px); z-index: 1; font: 600 9.5px/1 var(--k7-hud); letter-spacing: .2em; color: rgba(var(--k7-ice), .6); white-space: nowrap; text-transform: uppercase; }
+.mk7-fl b { color: rgb(var(--k7-ice)); font-weight: 600; text-shadow: 0 0 8px rgba(var(--k7-cy), .7); }
+.mk7-fl.l { left: 24px; } .mk7-fl.r { right: 24px; }
+.mk7-fl i { display: inline-block; width: 5px; height: 5px; margin-right: 7px; vertical-align: 1px; background: rgb(var(--k7-or)); box-shadow: 0 0 7px rgb(var(--k7-or)); animation: k7Blink 1.8s steps(2) infinite; }
+@keyframes k7Blink { 50% { opacity: .15; } }
+
+/* =====================================================================
+   2. TAB BAR (lives inside the sticky <nav>, on its own row)
+===================================================================== */
+html.mk7-on[data-theme="mark7"] nav { flex-wrap: wrap; row-gap: 6px; }
+html.mk7-on[data-theme="mark7"] nav #mk7-tabs {
+    order: 3; flex: 0 0 calc(100% + var(--k7-pad) * 2); margin: 0 calc(var(--k7-pad) * -1) 2px;
+    align-items: center; position: relative; min-width: 0;
+}
+@media (max-width: 654px) { html[data-theme="mark7"] { --k7-pad: 14px; } }
+@media (max-width: 640px) {
+    html[data-theme="mark7"] { --k7-pad: 12px; --k7-h: 40px; --k7-c: 14px; }
+    html.mk7-on[data-theme="mark7"] nav { padding-top: 8px; }       /* the dome above already clears the notch */
+    #mk7-dome .mk7-in { height: 40px; }
+}
+
+.mk7-glow { flex: 0 1 auto; min-width: 0; max-width: 100%; filter: drop-shadow(0 0 7px rgba(var(--k7-cy), .30)); }
+.mk7-shell { position: relative; height: var(--k7-h); display: flex; min-width: 0; max-width: 100%; }
+/* hairline border + fill, both cut to the same hexagonal outline (the border is the larger shape showing 1.5px past the fill) */
+.mk7-shell::before, .mk7-shell::after { content: ""; position: absolute; pointer-events: none;
+    --c: var(--k7-c); }
+.mk7-shell::before { inset: 0;
+    background: linear-gradient(180deg, rgba(150, 232, 255, .9), rgba(var(--k7-cy), .38) 40%, rgba(var(--k7-cy), .75));
+    clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% 50%, calc(100% - var(--c)) 100%, var(--c) 100%, 0 50%); }
+.mk7-shell::after { inset: 0;
+    background:
+        radial-gradient(60% 120% at 0% 50%, rgba(var(--k7-cy), .22), transparent 70%),
+        radial-gradient(60% 120% at 100% 50%, rgba(var(--k7-cy), .14), transparent 70%),
+        linear-gradient(180deg, rgba(14, 44, 82, .94), rgba(4, 16, 34, .96));
+    clip-path: polygon(calc(var(--c) + .7px) 1.5px, calc(100% - var(--c) - .7px) 1.5px, calc(100% - 1.9px) 50%, calc(100% - var(--c) - .7px) calc(100% - 1.5px), calc(var(--c) + .7px) calc(100% - 1.5px), 1.9px 50%); }
+
+.mk7-bar { position: relative; z-index: 1; flex: 1 1 auto; min-width: 0; height: 100%; display: flex; align-items: stretch; overflow-x: auto; overflow-y: hidden;
+    padding: 0 calc(var(--k7-c) + 4px); scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.mk7-bar::-webkit-scrollbar { display: none; }
+/* soft shine that crosses the bar now and then */
+.mk7-shine { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden;
+    clip-path: polygon(var(--k7-c) 0, calc(100% - var(--k7-c)) 0, 100% 50%, calc(100% - var(--k7-c)) 100%, var(--k7-c) 100%, 0 50%); }
+.mk7-shine::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 38%; opacity: 0;
+    background: linear-gradient(100deg, transparent, rgba(var(--k7-ice), .13) 50%, transparent); transform: translateX(-120%) skewX(-18deg); }
+html:not(.fx-lite):not(.fx-mid):not(.fx-paused) .mk7-shine::before { animation: k7Shine 9s ease-in-out 2s infinite; }
+@keyframes k7Shine { 0% { transform: translateX(-120%) skewX(-18deg); opacity: 0; } 8% { opacity: 1; } 24% { transform: translateX(330%) skewX(-18deg); opacity: 0; } 100% { transform: translateX(330%) skewX(-18deg); opacity: 0; } }
+
+.mk7-tab { appearance: none; -webkit-appearance: none; background: none; border: 0; margin: 0; border-radius: 0; cursor: pointer; flex: none;
+    position: relative; display: flex; align-items: center; justify-content: center; padding: 0 clamp(13px, 1.9vw, 30px);
+    font: 600 12.5px/1 var(--k7-hud); letter-spacing: .17em; text-transform: uppercase; white-space: nowrap;
+    color: rgba(var(--k7-ice), .78); transition: color .2s, background .25s; touch-action: manipulation; }
+.mk7-tab span { position: relative; display: block; transition: transform .15s, text-shadow .2s; }
+.mk7-tab:focus-visible { outline: 1px solid rgb(var(--k7-ice)); outline-offset: -4px; }
+.mk7-tab.on { color: #fff; background: linear-gradient(0deg, rgba(var(--k7-cy), .20), rgba(var(--k7-cy), .04) 60%, transparent); }
+.mk7-tab.on span { text-shadow: 0 0 10px rgba(var(--k7-cy), .95), 0 0 22px rgba(var(--k7-cy), .45); }
+.mk7-tab:active span { transform: scale(.95); }
+.mk7-tab small { display: inline-block; margin-left: 6px; font-size: 8px; opacity: .7; transform: translateY(-1px); }
+.mk7-tab .bd { position: absolute; top: 9px; right: 6px; min-width: 7px; height: 7px; border-radius: 50%; background: rgb(var(--k7-or)); box-shadow: 0 0 8px rgb(var(--k7-or)); }
+
+/* lock-on brackets that close in on a tab you hover or press */
+.mk7-tab::before, .mk7-tab::after { content: ""; position: absolute; width: 7px; height: 7px; opacity: 0; pointer-events: none;
+    transition: opacity .18s, transform .18s; border: 0 solid rgb(var(--k7-ice)); }
+.mk7-tab::before { left: 5px; top: 7px; border-width: 1px 0 0 1px; transform: translate(-4px, -4px); }
+.mk7-tab::after { right: 5px; bottom: 7px; border-width: 0 1px 1px 0; transform: translate(4px, 4px); }
+@media (hover: hover) { .mk7-tab:not(.on):hover { color: #fff; } .mk7-tab:hover::before, .mk7-tab:hover::after { opacity: .85; transform: none; } .mk7-tab:not(.on):hover span { text-shadow: 0 0 10px rgba(var(--k7-cy), .7); } }
+.mk7-tab:active::before, .mk7-tab:active::after { opacity: 1; transform: none; }
+
+/* the gliding underline */
+.mk7-ind { position: absolute; left: 0; bottom: 6px; height: 2px; width: 0; z-index: 1; pointer-events: none; opacity: 0;
+    background: linear-gradient(90deg, rgb(var(--k7-ice)), rgb(var(--k7-cy)) 45%, rgba(var(--k7-cy), .75));
+    box-shadow: 0 0 9px rgba(var(--k7-cy), .95), 0 0 20px rgba(var(--k7-cy), .5);
+    transition: transform .42s cubic-bezier(.3, 1.35, .4, 1), width .42s cubic-bezier(.3, 1.35, .4, 1), opacity .3s; will-change: transform, width; }
+.mk7-ind.ready { opacity: 1; }
+.mk7-ind::before { content: ""; position: absolute; left: -15px; top: 0; width: 9px; height: 2px; background: rgb(var(--k7-cy)); box-shadow: 0 0 7px rgba(var(--k7-cy), .95); }
+.mk7-ind::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 30%, #fff 50%, transparent 70%); background-size: 220% 100%; background-position: 130% 0; mix-blend-mode: overlay; }
+html:not(.fx-lite):not(.fx-mid):not(.fx-paused) .mk7-ind::after { animation: k7Run 2.6s linear infinite; }
+@keyframes k7Run { to { background-position: -130% 0; } }
+
+/* side rails: thin lines that run out to the screen edge, with a data packet flowing along them */
+.mk7-rail { flex: 1 1 0; min-width: 8px; height: var(--k7-h); position: relative; overflow: hidden; }
+.mk7-rail::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--k7-cy), .6)); }
+.mk7-rail.r::before { background: linear-gradient(270deg, transparent, rgba(var(--k7-cy), .6)); }
+.mk7-rail::after { content: ""; position: absolute; top: calc(50% - 8px); width: 58px; height: 16px; opacity: .9;
+    background:
+        linear-gradient(rgb(var(--k7-cy)), rgb(var(--k7-cy))) 0 100% / 22px 2px no-repeat,
+        linear-gradient(rgb(var(--k7-cy)), rgb(var(--k7-cy))) 30px 0 / 14px 2px no-repeat,
+        linear-gradient(rgba(var(--k7-cy), .6), rgba(var(--k7-cy), .6)) 50px 40% / 8px 1px no-repeat,
+        linear-gradient(rgba(var(--k7-cy), .5), rgba(var(--k7-cy), .5)) 22px 100% / 1px 8px no-repeat; }
+.mk7-rail.l::after { right: 8px; } .mk7-rail.r::after { left: 8px; transform: scaleX(-1); }
+.mk7-rail > i { position: absolute; inset: 0; transform: translateX(-101%); pointer-events: none; }
+.mk7-rail > i::after { content: ""; position: absolute; right: 0; top: calc(50% - 1px); width: 42px; height: 3px;
+    background: linear-gradient(90deg, transparent, rgb(var(--k7-ice))); box-shadow: 0 0 9px rgb(var(--k7-cy)); }
+html:not(.fx-lite):not(.fx-mid):not(.fx-paused) .mk7-rail > i { animation: k7Packet 5.2s cubic-bezier(.4, 0, .6, 1) infinite; }
+html:not(.fx-lite):not(.fx-mid):not(.fx-paused) .mk7-rail.r > i { animation-delay: 1.1s; }
+@keyframes k7Packet { 0% { transform: translateX(-101%); } 55%, 100% { transform: translateX(0); } }
+
+/* boot: the bar unfolds from the centre, then the labels decode in */
+.mk7-glow.boot { animation: k7Unfold .95s cubic-bezier(.2, .8, .2, 1) backwards; }
+@keyframes k7Unfold { from { clip-path: inset(0 50% 0 50%); opacity: 0; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+.mk7-rail.boot { animation: k7RailIn .9s ease .25s backwards; }
+@keyframes k7RailIn { from { opacity: 0; transform: scaleX(.2); } }
+.mk7-rail.l.boot { transform-origin: 100% 50%; } .mk7-rail.r.boot { transform-origin: 0 50%; }
+
+/* =====================================================================
+   3. TOOL BUTTONS (Sync / Lock / Theme / Lite) — same cut-corner language
+===================================================================== */
+html.mk7-on[data-theme="mark7"] nav .theme-toggle {
+    border-radius: 0; font-family: var(--k7-hud); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600;
+    border-color: rgba(var(--k7-cy), .45);
+    background: linear-gradient(180deg, rgba(14, 44, 82, .7), rgba(4, 16, 34, .85));
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    box-shadow: inset 0 0 14px rgba(var(--k7-cy), .12);
+}
+html.mk7-on[data-theme="mark7"] nav .theme-toggle:hover { transform: none; background: linear-gradient(180deg, rgba(24, 78, 138, .8), rgba(6, 26, 54, .9)); box-shadow: inset 0 0 18px rgba(var(--k7-cy), .3); }
+html.mk7-on[data-theme="mark7"] nav .brand-logo { letter-spacing: .16em; }
+
+/* =====================================================================
+   4. SCAN BEAM on every tab change
+===================================================================== */
+#mk7-beam { position: fixed; left: 0; right: 0; top: 0; height: 2px; z-index: 59; pointer-events: none; opacity: 0;
+    background: linear-gradient(90deg, transparent, rgba(var(--k7-cy), .9) 18%, rgb(var(--k7-ice)) 50%, rgba(var(--k7-cy), .9) 82%, transparent);
+    box-shadow: 0 0 14px rgba(var(--k7-cy), .9), 0 0 40px rgba(var(--k7-cy), .45); }
+#mk7-beam.run { animation: k7Beam .75s cubic-bezier(.4, 0, .2, 1); }
+@keyframes k7Beam { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: .95; } 100% { transform: translateY(100vh); opacity: 0; } }
+
+/* =====================================================================
+   5. LOW-POWER / ACCESSIBILITY: kill all of it
+===================================================================== */
+html.fx-lite .mk7-glow, html.fx-mid .mk7-glow, html.fx-lite #mk7-dome svg, html.fx-mid #mk7-dome svg { filter: none; }
+html.fx-lite #mk7-beam, html.fx-mid #mk7-beam, html.fx-lite .mk7-rail > i, html.fx-mid .mk7-rail > i { display: none !important; }
+html.fx-lite #mk7-dome svg .caret, html.fx-mid #mk7-dome svg .caret, html.fx-lite .mk7-fl i, html.fx-mid .mk7-fl i { animation: none; }
+html.fx-lite .mk7-ind, html.fx-mid .mk7-ind { transition-duration: .01s; }
+@media (prefers-reduced-motion: reduce) {
+    #mk7-dome svg .p, #mk7-dome svg .caret, .mk7-shine::before, .mk7-ind::after, .mk7-rail > i, .mk7-fl i, #mk7-beam, .mk7-glow.boot, .mk7-rail.boot, #mk7-dome.boot svg .a { animation: none !important; }
+    #mk7-dome.boot svg .a { stroke-dashoffset: 0; }
+    .mk7-ind { transition: none; }
+}
+/* the readouts need a wide rail; on smaller screens they are dropped */
+@media (max-width: 1100px) { .mk7-fl { display: none; } }
+@media (max-width: 640px) { .mk7-tab { font-size: 11px; letter-spacing: .13em; padding: 0 13px; } .mk7-rail::after { display: none; } }
+
+/* keep the app's tab callout under the taller header */
+html.mk7-on[data-theme="mark7"] #m7x-call { top: var(--k7-call-top, 128px) !important; }
