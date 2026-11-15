@@ -2380,6 +2380,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                             <button class="btn-exception" onclick="openCustomEventModal('study')">+ Study session</button>
                             <button class="btn-exception" onclick="openCustomEventModal('exception')">+ Time exception</button>
                             <button class="btn-exception" onclick="openCustomEventModal('movie')">+ Movie slot (2x/week)</button>
+                            <button class="btn-exception" onclick="openReschModal()">+ Reschedule class</button>
                         </div>
                     </div>
                     <div class="bunk-bank-card">
@@ -2625,6 +2626,42 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
         </div>
     </div>
 
+    <!-- RESCHEDULED / EXTRA CLASS MODAL -->
+    <div id="resch-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-bottom:6px; font-size:22px;">Reschedule class</h3>
+            <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">Adds the class to that day. It only counts toward attendance once you tick ✓ (attended) or ✗ (missed) it, so an extra class you skip still shows up as a miss, and one you never mark changes nothing.</p>
+            <div class="form-group">
+                <label for="rs-sub">Which class?</label>
+                <select id="rs-sub" onchange="reschRefreshOrig()"></select>
+            </div>
+            <div class="form-group">
+                <label for="rs-date">New date</label>
+                <input type="date" id="rs-date" />
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label for="rs-start">Start (optional)</label><input type="time" id="rs-start" value="10:00"/></div>
+                <div class="form-group" style="flex:1;"><label for="rs-end">End (optional)</label><input type="time" id="rs-end" value="10:55"/></div>
+            </div>
+            <div class="form-group">
+                <label for="rs-room">Room (optional)</label>
+                <input type="text" id="rs-room" placeholder="e.g. 4004" />
+            </div>
+            <div class="form-group">
+                <label for="rs-orig-date">Replaces a cancelled class? Date it was originally on (leave empty for an extra class)</label>
+                <input type="date" id="rs-orig-date" onchange="reschRefreshOrig()" />
+            </div>
+            <div class="form-group" id="rs-orig-wrap" style="display:none;">
+                <label for="rs-orig">Which one was cancelled?</label>
+                <select id="rs-orig"></select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+                <button class="btn-exception muted" onclick="closeReschModal()">Cancel</button>
+                <button class="btn-exception" onclick="saveResched()">Add class</button>
+            </div>
+        </div>
+    </div>
+
     <!-- GYM LOG MODAL -->
     <div id="gym-log-modal" class="modal-overlay">
         <div class="modal-card gym-modal-card">
@@ -2798,7 +2835,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 { id: "mon_1", time: "08:00-08:30", title: "Wake Up, Fresh Up & 🍎 Fruit", type: "routine" },
                 { id: "mon_gym", time: "08:30-10:00", title: "🏋️ Morning Gym", type: "gym" },
                 { id: "mon_4", time: "11:00-11:55", title: "Operating Systems", room: "10204", type: "class", subCode: "OS" },
-                { id: "mon_online", time: "16:00-17:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "mon_online", time: "16:00-16:55", title: "💻 Leading Conversations", room: "MS Teams", type: "class", subCode: "LC" },
                 { id: "mon_6", time: "17:30-19:00", title: "📚 90 Min Self Study", type: "study" },
                 { id: "mon_7", time: "20:40-21:10", title: "Night Routine (Read/No Screens) -> Sleep at 21:10", type: "routine" }
             ],
@@ -2807,7 +2844,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 { id: "tue_2", time: "05:45-07:00", title: "🏋️ Morning Gym", type: "gym" },
                 { id: "tue_4", time: "08:00-08:55", title: "Frontend Development", room: "4003", type: "class", subCode: "Frontend" },
                 { id: "tue_5", time: "14:00-14:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
-                { id: "tue_online", time: "16:00-17:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "tue_online", time: "16:00-16:55", title: "💻 Leading Conversations", room: "MS Teams", type: "class", subCode: "LC" },
                 { id: "tue_8", time: "21:40-22:10", title: "Night Routine (Read/No Screens) -> Sleep at 22:10", type: "routine" }
             ],
             "Wednesday": [
@@ -2824,7 +2861,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 { id: "thu_4", time: "08:00-08:55", title: "Frontend Development", room: "2004", type: "class", subCode: "Frontend" },
                 { id: "thu_5", time: "09:00-09:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
                 { id: "thu_6", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
-                { id: "thu_online", time: "13:00-14:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "thu_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
                 { id: "thu_8", time: "15:00-15:55", title: "Operating Systems", room: "9201", type: "class", subCode: "OS" },
                 { id: "thu_9", time: "16:00-16:55", title: "DCN", room: "4002", type: "class", subCode: "DCN" },
                 { id: "thu_11", time: "22:40-23:10", title: "Night Routine (Read/No Screens) -> Sleep at 23:10", type: "routine" }
@@ -2834,7 +2871,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 { id: "fri_2", time: "07:45-09:00", title: "🏋️ Morning Gym", type: "gym" },
                 { id: "fri_4", time: "10:00-11:55", title: "Frontend (Lab)", room: "IT 201", type: "class", subCode: "Frontend" },
                 { id: "fri_5", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
-                { id: "fri_online", time: "13:00-14:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "fri_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
                 { id: "fri_7", time: "14:00-15:55", title: "DCN (Lab)", room: "AB-11 L-006", type: "class", subCode: "DCN" },
                 { id: "fri_8", time: "16:00-16:55", title: "Operating Systems", room: "9205", type: "class", subCode: "OS" },
                 { id: "fri_10", time: "20:40-21:10", title: "Night Routine (Read/No Screens) -> Sleep at 21:10", type: "routine" }
@@ -2844,7 +2881,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 { id: "sat_2", time: "05:45-07:00", title: "🏋️ Morning Gym", type: "gym" },
                 { id: "sat_4", time: "08:00-08:55", title: "Frontend Development", room: "2004", type: "class", subCode: "Frontend" },
                 { id: "sat_5", time: "10:00-11:55", title: "DAA", room: "11104", type: "class", subCode: "DAA" },
-                { id: "sat_online", time: "13:00-14:00", title: "💻 Online Class", room: "MS Teams", type: "class" },
+                { id: "sat_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
                 { id: "sat_7", time: "14:00-14:55", title: "DCN", room: "4003", type: "class", subCode: "DCN" },
                 { id: "sat_8", time: "15:00-15:55", title: "COA", room: "4003", type: "class", subCode: "COA" },
                 { id: "sat_10", time: "23:10-23:40", title: "Night Routine (Read/No Screens) -> Sleep at 23:40", type: "routine" }
@@ -2856,10 +2893,113 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             ]
         };
 
-        const BASE_ATTENDANCE = {
-            "OS": { attended: 17, total: 18 }, "COA": { attended: 14, total: 19 },
-            "DAA": { attended: 18, total: 23 }, "Frontend": { attended: 23, total: 30 }, "DCN": { attended: 21, total: 21 }
+
+        /* Dated class schedule from the university scheduler PDFs (16 Nov – 2 Dec 2026).
+           On these dates the weekly class pattern is replaced by the real timetable; every
+           non-class block (gym, study, routines) is untouched. Ids that match the weekly
+           pattern are reused so marks you already made keep working. */
+        const TT_CLASS_OVERRIDES = {
+            "2026-11-16": [
+                { id: "mon_4", time: "11:00-11:55", title: "Operating Systems", room: "10204", type: "class", subCode: "OS" },
+                { id: "mon_online", time: "16:00-16:55", title: "💻 Leading Conversations", room: "MS Teams", type: "class", subCode: "LC" }
+            ],
+            "2026-11-17": [
+                { id: "tue_5", time: "14:00-14:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
+                { id: "tue_online", time: "16:00-16:55", title: "💻 Leading Conversations", room: "MS Teams", type: "class", subCode: "LC" }
+            ],
+            "2026-11-18": [
+                { id: "wed_5", time: "11:00-11:55", title: "DCN", room: "4001", type: "class", subCode: "DCN" },
+                { id: "wed_6", time: "16:00-16:55", title: "DAA", room: "9208", type: "class", subCode: "DAA" }
+            ],
+            "2026-11-19": [
+                { id: "thu_5", time: "09:00-09:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
+                { id: "thu_6", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
+                { id: "thu_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
+                { id: "thu_8", time: "15:00-15:55", title: "Operating Systems", room: "9201", type: "class", subCode: "OS" },
+                { id: "thu_9", time: "16:00-16:55", title: "DCN", room: "4002", type: "class", subCode: "DCN" }
+            ],
+            "2026-11-20": [
+                { id: "fri_5", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
+                { id: "fri_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
+                { id: "fri_7", time: "14:00-15:55", title: "DCN (Lab)", room: "AB-11 L-006", type: "class", subCode: "DCN" }
+            ],
+            "2026-11-21": [
+                { id: "sat_5", time: "10:00-11:55", title: "DAA", room: "11104", type: "class", subCode: "DAA" },
+                { id: "sat_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
+                { id: "sat_7", time: "14:00-14:55", title: "DCN", room: "4003", type: "class", subCode: "DCN" },
+                { id: "sat_8", time: "15:00-15:55", title: "COA", room: "4003", type: "class", subCode: "COA" }
+            ],
+            "2026-11-23": [
+                { id: "mon_4", time: "11:00-11:55", title: "Operating Systems", room: "10204", type: "class", subCode: "OS" },
+                { id: "mon_online", time: "16:00-16:55", title: "💻 Leading Conversations", room: "MS Teams", type: "class", subCode: "LC" }
+            ],
+            "2026-11-24": [
+                { id: "tue_4", time: "08:00-08:55", title: "Frontend Development", room: "4003", type: "class", subCode: "Frontend" },
+                { id: "tue_5", time: "14:00-14:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
+                { id: "tue_online", time: "16:00-16:55", title: "💻 Leading Conversations", room: "MS Teams", type: "class", subCode: "LC" }
+            ],
+            "2026-11-25": [
+                { id: "wed_4", time: "09:00-09:55", title: "Frontend Development", room: "4004", type: "class", subCode: "Frontend" },
+                { id: "ov_1125_frontend1", time: "10:00-10:55", title: "Frontend Development", room: "5004", type: "class", subCode: "Frontend" },
+                { id: "wed_5", time: "11:00-11:55", title: "DCN", room: "4001", type: "class", subCode: "DCN" },
+                { id: "wed_6", time: "16:00-16:55", title: "DAA", room: "9208", type: "class", subCode: "DAA" }
+            ],
+            "2026-11-26": [
+                { id: "thu_4", time: "08:00-08:55", title: "Frontend Development", room: "2004", type: "class", subCode: "Frontend" },
+                { id: "thu_5", time: "09:00-09:55", title: "COA", room: "4004", type: "class", subCode: "COA" },
+                { id: "thu_6", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
+                { id: "thu_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
+                { id: "thu_8", time: "15:00-15:55", title: "Operating Systems", room: "9201", type: "class", subCode: "OS" },
+                { id: "thu_9", time: "16:00-16:55", title: "DCN", room: "4002", type: "class", subCode: "DCN" }
+            ],
+            "2026-11-27": [
+                { id: "fri_4", time: "10:00-11:55", title: "Frontend (Lab)", room: "IT 201", type: "class", subCode: "Frontend" },
+                { id: "fri_5", time: "12:00-12:55", title: "DAA", room: "4004", type: "class", subCode: "DAA" },
+                { id: "fri_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
+                { id: "fri_7", time: "14:00-15:55", title: "DCN (Lab)", room: "AB-11 L-006", type: "class", subCode: "DCN" },
+                { id: "ov_1127_frontend4", time: "15:00-15:55", title: "Frontend Development", room: "9101", type: "class", subCode: "Frontend" },
+                { id: "fri_8", time: "16:00-16:55", title: "Operating Systems", room: "9205", type: "class", subCode: "OS" }
+            ],
+            "2026-11-28": [
+                { id: "sat_4", time: "08:00-08:55", title: "Frontend Development", room: "2004", type: "class", subCode: "Frontend" },
+                { id: "sat_5", time: "10:00-11:55", title: "DAA", room: "11104", type: "class", subCode: "DAA" },
+                { id: "sat_online", time: "13:00-13:55", title: "💻 Embedded System & IoT", room: "MS Teams", type: "class", subCode: "IoT" },
+                { id: "sat_7", time: "14:00-14:55", title: "DCN", room: "4003", type: "class", subCode: "DCN" },
+                { id: "sat_8", time: "15:00-15:55", title: "COA", room: "4003", type: "class", subCode: "COA" }
+            ],
+            "2026-11-30": [
+                { id: "mon_4", time: "11:00-11:55", title: "Operating Systems", room: "10204", type: "class", subCode: "OS" }
+            ],
+            "2026-12-01": [
+                { id: "tue_4", time: "08:00-08:55", title: "Frontend Development", room: "4003", type: "class", subCode: "Frontend" },
+                { id: "tue_5", time: "14:00-14:55", title: "COA", room: "4004", type: "class", subCode: "COA" }
+            ],
+            "2026-12-02": [
+                { id: "wed_4", time: "09:00-09:55", title: "Frontend Development", room: "4004", type: "class", subCode: "Frontend" },
+                { id: "wed_5", time: "11:00-11:55", title: "DCN", room: "4001", type: "class", subCode: "DCN" },
+                { id: "wed_6", time: "16:00-16:55", title: "DAA", room: "9208", type: "class", subCode: "DAA" }
+            ]
         };
+
+        const SUBJECTS = [
+            { code: "OS", name: "Operating Systems" }, { code: "COA", name: "Computer Organization and Architecture" },
+            { code: "DAA", name: "Design and Analysis of Algorithms" }, { code: "Frontend", name: "Frontend Development" },
+            { code: "DCN", name: "Data Communication and Networks" }, { code: "IoT", name: "Embedded System and IoT" },
+            { code: "LC", name: "Leading Conversations" }
+        ];
+
+        /* Portal attendance as of 15 Nov 2026 (from your Attendance Summary screenshots).
+           Everything ticked / crossed in the timetable AFTER this date is added on top. */
+        const BUNK_SNAPSHOT = {
+            iso: "2026-11-15",
+            counts: {
+                "OS": { attended: 29, total: 34 }, "COA": { attended: 29, total: 35 },
+                "DAA": { attended: 34, total: 43 }, "Frontend": { attended: 46, total: 59 },
+                "DCN": { attended: 34, total: 40 }, "IoT": { attended: 19, total: 23 },
+                "LC": { attended: 6, total: 8 }
+            }
+        };
+        const BASE_ATTENDANCE = BUNK_SNAPSHOT.counts;
 
         /* =====================================================
            HELPERS
@@ -3688,8 +3828,10 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 
         // Timetable blocks done vs due on one day
         function eventsFor(dt, custom) {
-            const bp = TT_BLUEPRINT[DAY_NAMES[dt.getDay()]] || [];
-            return bp.concat(custom[isoDate(dt)] || []);
+            const iso = isoDate(dt);
+            let bp = TT_BLUEPRINT[DAY_NAMES[dt.getDay()]] || [];
+            if (TT_CLASS_OVERRIDES[iso]) bp = bp.filter(e => e.type !== "class").concat(TT_CLASS_OVERRIDES[iso]);
+            return bp.concat(custom[iso] || []);
         }
         // Gym blocks in the timetable are the same thing as the Gym tab: one status, shared by both.
         const GYM_TT_IDS = new Set(["mon_gym", "tue_2", "wed_2", "thu_2", "fri_2", "sat_2"]);
@@ -4366,9 +4508,59 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             renderTimetableSection();
         }
 
+
+        /* ---------- Rescheduled / extra class ---------- */
+        function openReschModal() {
+            $("rs-sub").innerHTML = SUBJECTS.map(s => `<option value="${s.code}">${esc(s.name)}</option>`).join("");
+            $("rs-date").value = isoDate(activeDate);
+            $("rs-orig-date").value = ""; $("rs-room").value = "";
+            reschRefreshOrig();
+            $("resch-modal").classList.add("show");
+        }
+        function closeReschModal() { $("resch-modal").classList.remove("show"); }
+        // lists that subject's classes on the original date, so the cancelled one can be excused
+        function reschRefreshOrig() {
+            const d = $("rs-orig-date").value, sub = $("rs-sub").value, wrap = $("rs-orig-wrap"), sel = $("rs-orig");
+            if (!d) { wrap.style.display = "none"; sel.innerHTML = ""; return; }
+            const evs = eventsFor(parseISO(d), readJSON('custom_tt_events', {})).filter(e => e.subCode === sub).sort((a, b) => a.time.localeCompare(b.time));
+            wrap.style.display = "block";
+            sel.innerHTML = evs.length
+                ? evs.map(e => `<option value="${e.id}">${esc(e.title)} · ${esc(e.time)}</option>`).join("")
+                : `<option value="">No ${esc(sub)} class on that date</option>`;
+        }
+        function saveResched() {
+            const sub = $("rs-sub").value, dt = $("rs-date").value;
+            if (!dt) { toast("Pick the new date first.", "danger"); return; }
+            const meta = SUBJECTS.find(s => s.code === sub);
+            const start = $("rs-start").value || "10:00", end = $("rs-end").value || "10:55";
+            const room = $("rs-room").value.trim();
+            const ev = { id: `resch_${Date.now()}`, time: `${start}-${end}`, title: `${sub === "Frontend" ? "Frontend Development" : sub === "OS" ? "Operating Systems" : sub === "IoT" ? "Embedded System & IoT" : sub === "LC" ? "Leading Conversations" : sub} · Rescheduled`, type: "class", subCode: sub, custom: true, resched: true };
+            if (room) ev.room = room;
+            let note = "";
+            const od = $("rs-orig-date").value, oid = $("rs-orig").value;
+            if (od && oid) {
+                const k = `tt_state_${od}_${oid}`;
+                if ((localStorage.getItem(k) || "pending") === "pending") localStorage.setItem(k, "excepted");   // cancelled class is not counted
+                ev.movedFrom = { date: od, id: oid };
+                note = " The cancelled one is excused.";
+            }
+            const list = readJSON('custom_tt_events', {});
+            (list[dt] = list[dt] || []).push(ev);
+            writeJSON('custom_tt_events', list);
+            closeReschModal();
+            activeDate = parseISO(dt); saveActiveDate();
+            renderTimetableSection();
+            toast(`${meta ? meta.name : sub} added on ${dt}. Tick ✓ or ✗ to count it.${note}`, "info");
+        }
+
         function deleteCustomEvent(dt, id) {
             const list = readJSON('custom_tt_events', {});
             if (!list[dt]) return;
+            const gone = list[dt].find(e => e.id === id);
+            if (gone && gone.movedFrom) {                       // un-cancel the class this one replaced
+                const k = `tt_state_${gone.movedFrom.date}_${gone.movedFrom.id}`;
+                if (localStorage.getItem(k) === "excepted") localStorage.removeItem(k);
+            }
             list[dt] = list[dt].filter(e => e.id !== id);
             if (!list[dt].length) delete list[dt];
             writeJSON('custom_tt_events', list);
@@ -6048,13 +6240,21 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 function lockApp() { try { sessionStorage.removeItem('pin_ok'); sessionStorage.removeItem('boot_done'); } catch (e) { } location.reload(); }
 
 /* ---------- Bunk bank: derived from timetable marks, so two devices can never overwrite each other's counters ---------- */
-function bunkSubMap() { const m = {}; Object.values(TT_BLUEPRINT).forEach(a => a.forEach(e => { if (e.subCode) m[e.id] = e.subCode; })); return m; }
+function bunkSubMap() {
+    const m = {};
+    Object.values(TT_BLUEPRINT).forEach(a => a.forEach(e => { if (e.subCode) m[e.id] = e.subCode; }));
+    Object.values(TT_CLASS_OVERRIDES).forEach(a => a.forEach(e => { if (e.subCode) m[e.id] = e.subCode; }));
+    const c = readJSON('custom_tt_events', {});            // rescheduled / extra classes
+    Object.keys(c).forEach(d => (c[d] || []).forEach(e => { if (e.subCode) m[e.id] = e.subCode; }));
+    return m;
+}
 function bunkTallies() {
     const sm = bunkSubMap(), out = {};
     for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i), m = /^tt_state_\d{4}-\d{2}-\d{2}_(.+)$/.exec(k || '');
-        if (!m || !sm[m[1]]) continue;
-        const o = out[sm[m[1]]] || (out[sm[m[1]]] = { attended: 0, total: 0 }), v = localStorage.getItem(k);
+        const k = localStorage.key(i), m = /^tt_state_(\d{4}-\d{2}-\d{2})_(.+)$/.exec(k || '');
+        if (!m || !sm[m[2]]) continue;
+        if (m[1] <= BUNK_SNAPSHOT.iso) continue;           // already inside the portal snapshot
+        const o = out[sm[m[2]]] || (out[sm[m[2]]] = { attended: 0, total: 0 }), v = localStorage.getItem(k);
         if (v === 'completed') { o.attended++; o.total++; } else if (v === 'missed') o.total++;
     }
     return out;
@@ -6066,10 +6266,12 @@ function bunkMigrate() {
     writeJSON('bunk_base_v2', base);
 }
 function bunkData() {
-    const base = readJSON('bunk_base_v2', null);
-    if (!base) return readJSON('bunk_bank_data', BASE_ATTENDANCE);
+    // portal snapshot (15 Nov 2026) + every class marked after it, including rescheduled / extra ones
     const t = bunkTallies(), out = {};
-    Object.keys(base).forEach(s => { const x = t[s] || { attended: 0, total: 0 }; out[s] = { attended: base[s].attended + x.attended, total: base[s].total + x.total }; });
+    Object.keys(BUNK_SNAPSHOT.counts).forEach(s => {
+        const b = BUNK_SNAPSHOT.counts[s], x = t[s] || { attended: 0, total: 0 };
+        out[s] = { attended: b.attended + x.attended, total: b.total + x.total };
+    });
     return out;
 }
 
@@ -9890,7 +10092,7 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
-<script src="jarvis/jarvis.js?v=18" defer></script>
+<script src="jarvis/jarvis.js?v=19" defer></script>
 <script src="jarvis/holo.js?v=4" defer></script>
 <script src="jarvis/holobody.js?v=1" defer></script>
 <script src="jarvis/musclemap.js?v=5" defer></script>
