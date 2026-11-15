@@ -2694,6 +2694,9 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 <button class="btn-exception muted" onclick="exportData()">⬇ Export backup</button>
                 <label class="btn-exception muted" style="cursor:pointer;">⬆ Import backup<input type="file" accept="application/json,.json" style="display:none" onchange="importData(this)"></label>
             </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                <button class="btn-exception muted" onclick="freshStart()">🧹 Fresh start from 16 Nov</button>
+            </div>
             <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button class="btn-exception muted" onclick="closeSyncModal()">Close</button>
                 <button class="btn-exception" onclick="submitSyncCode()">Save code</button>
@@ -3411,6 +3414,8 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 
             const savedDate = localStorage.getItem('last_active_date');
             if (savedDate) { const d = new Date(savedDate); if (!isNaN(d)) activeDate = d; }
+            // Always open on TODAY. A date saved on an older visit used to drag the Time Table, Daily Grid and Gym back to that old month.
+            activeDate = new Date(); saveActiveDate();
 
             $("pin-input").addEventListener("input", (e) => {
                 const v = e.target.value;
@@ -3419,6 +3424,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                     $("login-screen").classList.add("unlocking");
                     setTimeout(() => { $("login-screen").style.display = "none"; }, 500);
                     try { sessionStorage.setItem('pin_ok', '1'); } catch (e) { }
+                    setTimeout(() => { try { freshStartPrompt(); } catch (e) { console.warn(e); } }, 6000);      // one-time fresh-start offer, after the unlock animation
                     if (typeof bootWillRun === 'function' && bootWillRun()) {
                         // Home renders while the boot is still pure black (see ironBoot) so it can't hitch the animation
                         window.__bootHome = () => { window.__bootHome = null; switchTab('home'); };
@@ -3490,6 +3496,52 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
         });
 
         function saveActiveDate() { localStorage.setItem('last_active_date', activeDate.toISOString()); }
+
+        /* ---------- If the app stays open past midnight, snap back to today when you return to it ---------- */
+        let _dayStamp = isoDate(new Date());
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return;
+            const n = isoDate(new Date());
+            if (n === _dayStamp) return;
+            _dayStamp = n; activeDate = new Date(); saveActiveDate();
+            try { const s = document.querySelector('.section.active'); if (s && s.id.indexOf('tab-') === 0) renderTabContent(s.id.slice(4), false); } catch (e) { }
+        });
+
+        /* ---------- FRESH START: clears every tick / mark dated BEFORE a chosen day. Nothing on or after that day is touched.
+           Never touched: wardrobe + laundry, attendance (it is anchored to the 15 Nov portal snapshot), gym set logs (your lifting history),
+           exceptions, custom timetable events, AAR notes, themes, sync settings. A backup file is downloaded first. ---------- */
+        const FRESH_ISO = '2026-11-16', FRESH_FLAG = 'fresh_start_' + FRESH_ISO;
+        function freshStartKeys() {
+            const out = [], p2 = n => String(n).padStart(2, '0');
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i); if (!k) continue;
+                let m, iso = null;
+                if ((m = /^habit_(\d{4})_(\d{1,2})_\d+_(\d{1,2})$/.exec(k))) iso = `${m[1]}-${p2(+m[2] + 1)}-${p2(+m[3])}`;      // habit ticks (month is 0-based in the key)
+                else if ((m = /^tt_state_(\d{4}-\d{2}-\d{2})_/.exec(k))) iso = m[1];                                              // timetable marks
+                else if ((m = /^gym_(?:status|extra|snap|phase|add|skip)_(\d{4}-\d{2}-\d{2})$/.exec(k))) iso = m[1];              // gym done / missed marks (NOT gym_sets_)
+                if (iso && iso < FRESH_ISO) out.push(k);
+            }
+            return out;
+        }
+        function freshStart() {
+            const keys = freshStartKeys();
+            const msg = 'FRESH START from Monday 16 Nov 2026\n\nThis will:\n• download a backup file first\n• clear ' + keys.length + ' habit / timetable / gym tick entries dated before 16 Nov, plus old penalties and old focus-timer log entries\n• set the tracking start date to 16 Nov 2026\n\nKept: wardrobe, laundry, attendance, gym lift logs, exceptions, notes.\n\nContinue?';
+            if (!confirm(msg)) return false;
+            try { exportData(); } catch (e) { if (!confirm('The backup could not be downloaded. Clear anyway?')) return false; }
+            keys.forEach(k => localStorage.removeItem(k));
+            const t0 = parseISO(FRESH_ISO).getTime();
+            try { const pl = readJSON('punishment_list', []), keep = pl.filter(p => { const ts = +String((p && p.id) || '').replace(/^pun_/, ''); return ts && ts >= t0; }); if (keep.length !== pl.length) writeJSON('punishment_list', keep); } catch (e) { }
+            try { const tl = readJSON('timer_log', []), keep = tl.filter(l => l && l.date && new Date(l.date).getTime() >= t0); if (keep.length !== tl.length) writeJSON('timer_log', keep); } catch (e) { }
+            localStorage.setItem('system_start_iso', FRESH_ISO);
+            localStorage.setItem(FRESH_FLAG, '1');
+            toast('Fresh start done. Tracking begins Monday 16 Nov.', 'win');
+            setTimeout(() => location.reload(), 900);
+            return true;
+        }
+        function freshStartPrompt() {                      // offered once per session until it has been done (or use the button in the Sync / Backup window)
+            try { if (localStorage.getItem(FRESH_FLAG) || sessionStorage.getItem('fresh_asked')) return; sessionStorage.setItem('fresh_asked', '1'); } catch (e) { return; }
+            freshStart();
+        }
 
 
         /* =====================================================
@@ -10092,7 +10144,7 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
-<script src="jarvis/jarvis.js?v=19" defer></script>
+<script src="jarvis/jarvis.js?v=20" defer></script>
 <script src="jarvis/holo.js?v=4" defer></script>
 <script src="jarvis/holobody.js?v=1" defer></script>
 <script src="jarvis/musclemap.js?v=5" defer></script>
