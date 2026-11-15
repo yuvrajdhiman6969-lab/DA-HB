@@ -749,7 +749,7 @@ function setScroll(n) {
   if (n > 0) { const made = assignPunishment(`Level ${n} slip — Urge Control`, SCROLL_SENTENCES[n], `pun_scroll${n}_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`); extra = made ? ` Penalty assigned: ${SCROLL_SENTENCES[n]}` : ' That penalty was already issued today.'; }
   return n === 0 ? 'Scrolling control back to level 0.' : `Scrolling logged at level ${n}.${extra}`;
 }
-const SUBJ = { OS: /\b(os|operating systems?)\b/, COA: /\b(coa|computer organi[sz]ation|architecture)\b/, DAA: /\b(daa|algorithms?|algo)\b/, Frontend: /\b(front ?end|web dev\w*)\b/, DCN: /\b(dcn|data communications?|networks?|networking)\b/ };
+const SUBJ = { OS: /\b(os|operating systems?)\b/, COA: /\b(coa|computer organi[sz]ation|architecture)\b/, DAA: /\b(daa|algorithms?|algo)\b/, Frontend: /\b(front ?end|web dev\w*)\b/, DCN: /\b(dcn|data communications?|networks?|networking)\b/, IoT: /\b(iot|embedded( systems?)?)\b/, LC: /\b(lc|leading conv\w*)\b/ };
 function markClass(n, state) {
   const sub = Object.keys(SUBJ).find(k => SUBJ[k].test(n)); if (!sub) return null;
   const iso = isoDate(today()), evs = ttToday().filter(x => x.ev.subCode === sub);
@@ -3425,5 +3425,46 @@ function nudge(msg) {
   return true;
 }
 window.__jarvis = { brain: { smartVoice, jbPlan, jbBrief, jbNight, jbNav }, nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { screenParse, screenCmd, SC, VSLOTS, pickVoice, setVoiceByWord, cycleVoice, ensureAI, excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
+/* =====================================================================
+   v20 — ONE VOICE PER ANSWER  (added patch: nothing above this block was changed or removed)
+   Why Jarvis used to switch voices and repeat: with the AI brain (FAST / SMART) loaded, the neural voice renders each
+   sentence slowly. After 9 s the engine gave up on THAT sentence and said it with the browser voice, then the next
+   sentence came out neural again, so one answer was spoken in two or three different voices. A browser voice that
+   was slow to start was also retried with the device's DEFAULT voice, which is a third voice.
+   Now: an answer is spoken by ONE engine from start to finish. If the neural voice is too slow, the rest of that
+   answer (and every answer while the AI brain is thinking) uses the browser voice; after two slow answers in a row
+   the neural voice is parked until you reload the page. A slow browser voice is retried once in the SAME voice.
+   ===================================================================== */
+(function () {
+  try {
+    const _begin = speakBegin, _neural = neuralSay, _browser = browserSay, _done = ttsDone;
+    NEURAL.slowRuns = 0; NEURAL.sessionOff = false; TTS.stick = false; TTS.fellBack = false;
+    speakBegin = function () {
+      const ok = _begin.apply(this, arguments);
+      TTS.stick = !!(NEURAL.sessionOff || aiBusy);               // brain is thinking (or neural is parked): browser voice for the whole answer
+      TTS.fellBack = false;
+      return ok;
+    };
+    neuralSay = function (x, tok, mark, nxt) {
+      if (TTS.stick) { browserSay(x, tok, mark, nxt); return; }
+      return _neural.apply(this, arguments);
+    };
+    browserSay = function (x, tok, mark, nxt, retry) {
+      if (NEURAL.on && NEURAL.eng && !retry && !TTS.stick) {     // the neural voice was too slow for this sentence: finish the answer in one voice
+        TTS.stick = true; NEURAL.pre = null;
+        if (!TTS.fellBack) {
+          TTS.fellBack = true;
+          if (++NEURAL.slowRuns >= 2 && !NEURAL.sessionOff) { NEURAL.sessionOff = true; try { showReply('The neural voice is too slow on this device right now, sir, so I will use the browser voice until you reload the page.'); } catch (e) { } }
+        }
+      }
+      if (retry === true && !mark.rv) { mark.rv = 1; return _browser.call(this, x, tok, mark, nxt, false); }    // first retry keeps the SAME voice
+      return _browser.apply(this, arguments);
+    };
+    ttsDone = function () {
+      if (NEURAL.on && NEURAL.eng && !TTS.fellBack && !TTS.stick) NEURAL.slowRuns = 0;
+      return _done.apply(this, arguments);
+    };
+  } catch (e) { console.warn('Jarvis v20 voice patch', e); }
+})();
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
