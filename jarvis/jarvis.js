@@ -69,6 +69,11 @@
      falls back to command mode and tells you, instead of silently fetching 1 GB again. (The service worker used to wipe it on every
      update: fixed in sw.js.)
    --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   v15 (the brain) — see the “THE BRAIN” section before WIRING. Plan / briefing / nightly review, tasks, shopping list,
+   assignments, water log, custom-length study sessions (real Soul Timer), outfits + laundry, late-wake gym move to the
+   afternoon, home-aware screen opening, and idle-only nudges. Nothing existing was removed.
+   --------------------------------------------------------------------- */
 (function () {
 'use strict';
 if (window.__jarvis) return;
@@ -1011,7 +1016,7 @@ function exec(n) {
     focusStart(min, kind);
     return R(kind === 'focus' ? `Focus engaged, sir. ${plural(min, 'minute')}. Alerts are muted. I will check in when it ends.` : `Break started, ${plural(min, 'minute')}. Rest properly, sir.`);
   }
-  if (/\b(help|what can you do|commands)\b/.test(n)) return R('Tick or untick habits, even several at once: “tick gym and study”, “tick everything except water”, “tick the first one”, “undo that”. Create exceptions: “create an exception from the 20th to the 25th of October because of a wedding”, “I am sick tomorrow”, “extend my leave till the 28th”, “delete the wedding exception”, “list my exceptions”. Skip or attend classes in plain English (“I am not going to the DCN lab”, “I am going to OS”, “which classes can I skip today”) and I will check the subject against 75 percent and tell you to go when it matters. Open any tab, run the Soul Timer or a focus session, set reminders: “remind me in 10 minutes to drink water”. Say “use the girl voice”, “use the Vision voice”, “next voice”, “mute”, or “turn on the AI brain”. Control the screen: “scroll down”, “scroll to the top”, “keep scrolling”, “stop”, “zoom in”, “zoom out”, “reset zoom”; with the muscle map open, “turn left”, “show my back”, “spin”. Ask what’s left, how you are doing, your streak, attendance, weakest habit, next class, penalties. And ask me anything else: maths, conversions, dates, time zones, weather, facts, or just chat.');
+  if (/\b(help|what can you do|commands)\b/.test(n)) return R('Tick or untick habits, even several at once: “tick gym and study”, “tick everything except water”, “tick the first one”, “undo that”. Create exceptions: “create an exception from the 20th to the 25th of October because of a wedding”, “I am sick tomorrow”, “extend my leave till the 28th”, “delete the wedding exception”, “list my exceptions”. Skip or attend classes in plain English (“I am not going to the DCN lab”, “I am going to OS”, “which classes can I skip today”) and I will check the subject against 75 percent and tell you to go when it matters. Open any tab, run the Soul Timer or a focus session, set reminders: “remind me in 10 minutes to drink water”. Say “use the girl voice”, “use the Vision voice”, “next voice”, “mute”, or “turn on the AI brain”. Control the screen: “scroll down”, “scroll to the top”, “keep scrolling”, “stop”, “zoom in”, “zoom out”, “reset zoom”; with the muscle map open, “turn left”, “show my back”, “spin”. Ask what’s left, how you are doing, your streak, attendance, weakest habit, next class, penalties. Also: “what’s my plan for tomorrow”, “morning briefing”, “nightly review”, “add buy detergent to my shopping list”, “add a task”, “add an assignment physics due Friday”, “what assignments are due this week”, “I drank 500 ml”, “start a 50 minute study session”, “how many hours did I study today”, “what should I wear”, “change the t shirt”, “what options do I have in this colour”, “how many clean shirts”, “remind me tomorrow to call mom at 8 PM”, “this is my home”. And ask me anything else: maths, conversions, dates, time zones, weather, facts, or just chat.');
   if (/^(hi|hello|hey|yo|are you there|you there|you up)$/.test(n)) return R('For you, sir, always.', 'wake');
   // soul timer
   if (/\b(timer|soul|session|deep work)\b/.test(n) && !/^(open|go to|show|take me)/.test(n)) {
@@ -1178,6 +1183,8 @@ function run(n, raw, src) {
     try { const parts = splitCmds(n).map(p => p.trim()).filter(Boolean); if (parts.length && parts.every(p => screenParse(p))) scr = parts.map(p => exec(p)); } catch (e) { console.error(e); }
     if (scr && scr.length) { present(scr); return; }
   }
+  { let sv = null; try { sv = pendingAct ? null : smartVoice(n, raw || n); } catch (e) { console.error(e); }        // v15: the brain (plan, briefing, tasks, water, study, outfits…)
+    if (sv) { if (sv.then) viaGeneral(sv, rid); else present([sv]); return; } }
   const g = pendingAct ? null : general(n, raw || n);          // maths, chat, dates, weather, facts, reminders…
   if (g) { if (g.then) viaGeneral(g, rid); else present([g]); return; }
   if (aiOn && AI_FIRST.test(n) && !ACT_WORD.test(n)) { viaAI(raw || n, rid); return; }
@@ -2750,14 +2757,520 @@ function evaluate() {
         const i = attInfo(x.ev.subCode); if (i && i.below) add('goclass_' + iso + x.ev.id, 'bad', '🎓', `${x.name} ${mins > 0 ? 'in ' + mins + ' min' : 'is on now'}`, `Attendance is ${i.p}%, under 75. Go, sir.`);
       });
     } catch (e) { }
+    try { smartEval(add, d, iso, hr); } catch (e) { console.warn('Jarvis brain', e); }                  // v15: water pace, laundry, assignments, nightly review, late-wake gym
   } catch (e) { console.warn('Jarvis evaluate', e); }
   const keys = Object.keys(seen); if (keys.length > 400) keys.slice(0, keys.length - 300).forEach(k => delete seen[k]);
   lsSet('jv_seen', JSON.stringify(seen));
   out.slice(0, 3).forEach(o => popup(...o));
-  if (!out.length) { try { const pt = patternScan(); if (pt) jvSay(patternAsk(pt), true); } catch (e) { console.warn('Jarvis pattern', e); } }
+  if (!out.length && !JB.spoke) { try { const pt = patternScan(); if (pt) jvSay(patternAsk(pt), true); } catch (e) { console.warn('Jarvis pattern', e); } }
   if (out.length && touched && !muted) { if (TTS.full && canSpeak()) speakText(out.slice(0, 2).map(o => o[2] + '. ' + o[3]).join(' ')); else say(out.some(o => o[0] === 'bad') ? 'warn' : 'cheer'); }   // spoken in full, at most two items
 }
 function schedEval(ms) { clearTimeout(evalT); evalT = setTimeout(() => idle(evaluate, 5000), ms); }
+
+/* =====================================================================
+   v15 — THE BRAIN: Jarvis knows the time, the day, what you did and did not do, and acts on it.
+   • Voice: plan for tomorrow, full morning briefing (classes, tasks, weather, grid), nightly review,
+     tasks, shopping list, assignments, water log, custom-length study sessions on the real Soul Timer,
+     “how many hours did I study”, outfits (“what should I wear”, “change the t shirt”, “options in black”),
+     clean-clothes / laundry answers, reminders with a day (“remind me tomorrow to…”), late-wake gym move.
+   • Nudges (through evaluate(), only while idle): water pace, low clean shirts, due assignments / tasks,
+     nightly review, gym moved to the afternoon when you start the day late (never evening, unless you allow it).
+   • Context navigation: at home in the morning with no outfit locked -> opens the Wardrobe. Say “this is my home”
+     once so he can tell; “stop auto navigation” switches it off.
+   • Everything is small, cached and idle-scheduled. No timers faster than 15 s, no DOM scans.
+   ===================================================================== */
+const JB = { ask: null, wear: { iso: '', opts: [], slot: '', at: 0 }, homeAt: 0, homeVal: null, wx: null, navAt: 0, spoke: false };
+const jbSet = (k, v) => lsSet(k, JSON.stringify(v));
+const jbWhen = d => { const k = dayDiff(dayStart(), d); return k === 0 ? 'today' : k === 1 ? 'tomorrow' : k === -1 ? 'yesterday' : k > 1 && k < 7 ? 'on ' + DOW_NAME[d.getDay()] : 'on ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()]; };
+const jbLit = ml => ml >= 1000 ? plural(+(ml / 1000).toFixed(1), 'litre') : ml + ' millilitres';
+const jbHM = m => { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; return !h ? plural(r, 'minute') : plural(h, 'hour') + (r ? ' ' + plural(r, 'minute') : ''); };
+const jbNow = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+const jbDue = n => {                                         // a date from words: tomorrow, friday, next friday, 20th, 20 november, in 3 days
+  const t0 = dayStart(); let m;
+  if (/\bday after tomorrow\b/.test(n)) return addDays(t0, 2);
+  if (/\btomorrow\b/.test(n)) return addDays(t0, 1);
+  if (/\b(today|tonight)\b/.test(n)) return t0;
+  if ((m = /\bin (\d+) days?\b/.exec(n))) return addDays(t0, +m[1]);
+  if (/\bnext week\b/.test(n)) return addDays(t0, 7);
+  if ((m = DOWRX.exec(n))) { const w = ({ su: 0, mo: 1, tu: 2, we: 3, th: 4, fr: 5, sa: 6 })[m[1].slice(0, 2)]; let k = (w - t0.getDay() + 7) % 7; if (k === 0 && /\bnext\b/.test(n)) k = 7; return addDays(t0, k); }
+  try { const pd = parseDay(n); if (pd) return pd; } catch (e) { }
+  if ((m = /\b(\d{1,2})(?:st|nd|rd|th)\b/.exec(n))) { let d = new Date(t0.getFullYear(), t0.getMonth(), +m[1]); if (d < t0) d = new Date(t0.getFullYear(), t0.getMonth() + 1, +m[1]); return d; }
+  return null;
+};
+const jbNoDate = s => s.replace(DOWRX, ' ').replace(/\b(day after tomorrow|tomorrow|today|tonight|next week|this week|in \d+ days?)\b/g, ' ').replace(new RegExp('\\b\\d{1,2}(?:st|nd|rd|th)?(?: of)? ' + MRE + '\\b', 'g'), ' ').replace(/\b\d{1,2}(?:st|nd|rd|th)\b/g, ' ').replace(/\b(due|by|before|on|till|until|submit\w*|deadline|next)\b/g, ' ').replace(/\s+/g, ' ').trim();
+const jbItems = s => s.split(/,| and | & /).map(x => x.replace(/^(?:some |a |an |the |buy |get |pick up |more )+/, '').trim()).filter(Boolean);
+
+/* ---------- stores (all in localStorage, tiny) ---------- */
+const jbTasks = () => jget('jv_tasks', []), jbShop = () => jget('jv_shop', []), jbAsg = () => jget('jv_asg', []);
+const jbWater = () => (jget('jv_water', {})[isoOf(dayStart())] || 0);
+function jbAddWater(ml) { const w = jget('jv_water', {}), k = isoOf(dayStart()); w[k] = (w[k] || 0) + ml; const ks = Object.keys(w).sort(); while (ks.length > 30) delete w[ks.shift()]; jbSet('jv_water', w); return w[k]; }
+function jbStudyMin(from, to) {                              // minutes: finished Soul Timer sessions + the one running now + what you logged by hand
+  let m = 0, a = +from, b = +to;
+  try { readJSON('timer_log', []).forEach(e => { const t = +new Date(e.date); if (t >= a && t < b) m += +e.minutes || 0; }); } catch (e) { }
+  try { if (timerStarted && Date.now() >= a && Date.now() < b) m += Math.max(0, (timerTotalSec - timerRemainingSec) / 60); } catch (e) { }
+  const man = jget('jv_study', {}); for (let d = new Date(a); +d < b; d = addDays(d, 1)) m += man[isoOf(d)] || 0;
+  return m;
+}
+const jbStudyToday = () => jbStudyMin(dayStart(), addDays(dayStart(), 1));
+
+/* ---------- weather (short, never blocks longer than 4 s) ---------- */
+async function jbWx() {
+  if (JB.wx && Date.now() - JB.wx.at < 1800000) return JB.wx.s;
+  const h = jget('jv_home', null); let g = h ? { lat: h.lat, lon: h.lon } : null;
+  if (!g) g = await Promise.race([here(), new Promise(r => setTimeout(() => r(null), 3000))]);
+  if (!g) return '';
+  const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,precipitation_probability_max&timezone=auto&forecast_days=1`, 4000);
+  if (!j || !j.current) return '';
+  const c = j.current, dd = j.daily || {}, rain = dd.precipitation_probability_max && dd.precipitation_probability_max[0], hi = dd.temperature_2m_max && dd.temperature_2m_max[0];
+  const s = `${Math.round(c.temperature_2m)} degrees and ${WX[c.weather_code] || 'unsettled'}${hi != null ? ', high of ' + Math.round(hi) : ''}${rain != null ? (rain >= 50 ? `, ${rain} percent chance of rain, take an umbrella` : `, ${rain} percent chance of rain`) : ''}`;
+  JB.wx = { at: Date.now(), s, t: c.temperature_2m }; return s;
+}
+
+/* ---------- plan for a day / morning briefing / nightly review ---------- */
+function jbGymMoved(d) { const m = jget('jv_gymmv', null); return m && m.iso === isoOf(d) ? m : null; }
+function jbDayLines(d) {                                     // the facts of one day, as short spoken sentences
+  const iso = isoOf(d), out = [];
+  try { const ei = excInfo(iso); if (ei) out.push(`You are marked away: ${list(ei.list.map(e => e.label || 'Away'))}.`); } catch (e) { }
+  let ev = []; try { ev = eventsFor(d, readJSON('custom_tt_events', {})).slice().sort((a, b) => a.time.localeCompare(b.time)); } catch (e) { }
+  const cls = ev.filter(e => e.subCode), gym = ev.find(e => e.type === 'gym'), mv = jbGymMoved(d);
+  if (cls.length) out.push(`${plr(cls.length, 'class', 'classes')}: ${list(cls.slice(0, 6).map(e => `${e.subCode}${/\blab\b/i.test(e.title) ? ' lab' : ''} at ${hm12(e.time.split('-')[0])}`))}.`); else out.push('No classes.');
+  if (gym) out.push(mv ? `Gym moved to ${mv.label}.` : `Gym at ${hm12(gym.time.split('-')[0])}.`);
+  const others = ev.filter(e => !e.subCode && e.type !== 'gym' && e.type !== 'routine').slice(0, 3); if (others.length) out.push(`Also: ${list(others.map(e => e.title.replace(/^[^\w(]+/, '').replace(/ ->.*/, '') + ' at ' + hm12(e.time.split('-')[0])))}.`);
+  const tk = jbTasks().filter(x => !x.done && x.due && x.due <= iso); if (tk.length) out.push(`Tasks: ${list(tk.slice(0, 4).map(x => x.t))}.`);
+  const as = jbAsg().filter(x => !x.done && x.due === iso); if (as.length) out.push(`Due: ${list(as.map(x => x.sub + ' assignment'))}.`);
+  try { const lk = wdS.locked[iso]; if (lk) out.push(`Outfit locked.`); else if (!wdIsHoliday(d) && dayDiff(dayStart(), d) <= 1) out.push('Outfit not chosen yet.'); } catch (e) { }
+  return out;
+}
+function jbPlan(d) {
+  const w = jbWhen(d), head = w === 'today' ? 'Today' : w === 'tomorrow' ? 'Tomorrow' : cap(w.replace(/^on /, ''));
+  return Object.assign(R(`${head}, ${DOW_NAME[d.getDay()]}. ` + jbDayLines(d).join(' ')), { nocut: true });
+}
+async function jbBrief() {
+  const d = today(), base = briefing(), parts = [base.t];
+  const tk = jbTasks().filter(x => !x.done && (!x.due || x.due <= isoOf(d))); if (tk.length) parts.push(`Tasks: ${list(tk.slice(0, 4).map(x => x.t))}.`);
+  const as = jbAsg().filter(x => !x.done && x.due && dayDiff(d, isoToDate(x.due)) <= 3).sort((a, b) => a.due.localeCompare(b.due));
+  if (as.length) parts.push(`Assignments: ${list(as.slice(0, 3).map(x => x.sub + ' ' + (x.due < isoOf(d) ? 'overdue' : jbWhen(isoToDate(x.due)))))}.`);
+  const mv = jbGymMoved(d); if (mv) parts.push(`Gym is at ${mv.label} today.`);
+  try { const w = await jbWx(); if (w) parts.push(`Weather: ${w}.`); } catch (e) { }
+  try { const lk = wdS.locked[isoOf(d)]; if (!lk && !wdIsHoliday(d)) parts.push('Today\u2019s outfit is not chosen. Ask me what to wear.'); const lc = jbClean(); if (lc.dirty && lc.tops <= 2) parts.push(`Only ${plural(lc.tops, 'clean shirt')} left. Laundry soon.`); } catch (e) { }
+  const sm = summary(); parts.push(`Grid: ${sm.t.done.length} of ${sm.tot} done, ${sm.s.hasData ? sm.s.hPct + ' percent this month' : 'month just starting'}.`);
+  return Object.assign(R(parts.join(' '), base.c), { nocut: true });
+}
+function jbNightShort() {
+  const d = today(), iso = isoOf(d), { t, tot } = summary(), tk = jbTasks(), dueOpen = tk.filter(x => !x.done && x.due && x.due <= iso), doneT = tk.filter(x => x.done && x.doneAt === iso);
+  const done = t.done.length + doneT.length, total = tot + dueOpen.length + doneT.length, miss = t.left.concat(t.missed).map(i => HN[i]).concat(dueOpen.map(x => x.t));
+  return { done, total, miss, s: `Today you completed ${done} of ${total} tasks.` + (miss.length ? ` Missed: ${list(miss.slice(0, 5))}.` : ' Nothing missed.') };
+}
+function jbNight() {
+  const n = jbNightShort(), tm = addDays(dayStart(), 1), parts = [n.s], st = jbStudyToday(), w = jbWater();
+  parts.push(`Study ${st ? jbHM(st) : 'none logged'}, water ${w ? jbLit(w) : 'none logged'}.`);
+  try { const s = getComputedStats(); if (s.streak > 0) parts.push(`Streak ${plural(s.streak, 'day')}.`); if (s.activePenalties) parts.push(`${plural(s.activePenalties, 'penalty')} waiting.`); } catch (e) { }
+  const as = jbAsg().filter(x => !x.done && x.due && dayDiff(dayStart(), isoToDate(x.due)) <= 2); if (as.length) parts.push(`Due soon: ${list(as.map(x => x.sub + ' ' + jbWhen(isoToDate(x.due))))}.`);
+  const first = jbDayLines(tm).slice(0, 2).join(' '); parts.push('Tomorrow: ' + first);
+  parts.push(HARD() ? (n.miss.length ? 'That is on you. Fix it tomorrow.' : 'Good. Do it again tomorrow.') : (n.miss.length ? 'We will do better tomorrow, sir.' : 'A flawless day, sir. Rest well.'));
+  return Object.assign(R(parts.join(' '), n.miss.length > 2 ? 'warn' : 'cheer'), { nocut: true });
+}
+
+/* ---------- wardrobe + laundry (reads the app's own wardrobe data) ---------- */
+const jbSlotOf = n => /\b(shoes?|sneakers?|footwear|slides|boots?|trainers?)\b/.test(n) ? 'shoes' : /\b(pants?|jeans|trousers?|bottoms?|cargos?|shorts|joggers)\b/.test(n) ? 'bottom' : /\b(t ?shirts?|tees?|shirts?|tops?|polos?|jerseys?|hoodies?|sweatshirts?)\b/.test(n) ? 'top' : '';
+const JB_COL = { black: /black/, white: /white|cream/, grey: /grey|gray|charcoal/, gray: /grey|gray|charcoal/, blue: /blue|navy|denim/, navy: /navy/, green: /green|olive/, brown: /brown|tan|beige/, red: /red|maroon/, orange: /orange/, yellow: /yellow/, purple: /purple/, pink: /pink/, cream: /cream/, denim: /denim/, tan: /tan/, beige: /beige|cream/ };
+const jbColWord = n => { const k = Object.keys(JB_COL).find(w => new RegExp('\\b' + w + '\\b').test(n)); return k || ''; };
+const jbSameCol = (n, slot, iso) => { if (!/\b(this|same|that|current|the same) colou?r\b/.test(n)) return ''; try { const c = jbCur(iso), it = c && c.items[slot]; if (!it) return ''; const nm = jbItemCol(it); return Object.keys(JB_COL).find(k => JB_COL[k].test(nm)) || ''; } catch (e) { return ''; } };
+const jbItemCol = it => { try { return wdColorName(it.color).toLowerCase(); } catch (e) { return ''; } };
+const jbSlotName = { top: 'shirt', bottom: 'bottoms', shoes: 'shoes' };
+function jbClean() {
+  const tops = wdItems.filter(i => i.cat === 'top' && !wdS.disabled[i.id]), bot = wdItems.filter(i => i.cat === 'bottom' && !wdS.disabled[i.id]);
+  return { tops: tops.filter(i => !wdDirty(i)).length, bottoms: bot.filter(i => !wdDirty(i)).length, dirty: wdItems.filter(wdDirty).length };
+}
+function jbCur(iso) {                                         // { top, bottom, shoes } as item objects + where they came from
+  const lk = wdS.locked[iso], dr = wdDrafts[iso], src = lk || dr; if (!src) return null;
+  return { items: { top: src.top ? wdItem(src.top) : null, bottom: src.bottom ? wdItem(src.bottom) : null, shoes: src.shoes ? wdItem(src.shoes) : null }, locked: !!lk };
+}
+const jbNames = it => WD_SLOTS.map(c => it[c] && it[c].name).filter(Boolean);
+function jbLockOutfit(iso, dr) {
+  const d = { top: dr.top || null, bottom: dr.bottom || null, shoes: dr.shoes || null }; wdS.locked[iso] = d;
+  WD_SLOTS.forEach(c => { const id = d[c]; if (!id) return; if (iso === wdToday() && !wdS.counted[iso]) wdS.wears[id] = (wdS.wears[id] || 0) + 1; wdS.lastWorn[id] = iso; });
+  if (iso <= wdToday()) wdS.counted[iso] = true;
+  wdSave(); delete wdDrafts[iso];
+  try { const b = document.querySelector(`.wd-date[data-k="${iso}"]`); if (b) b.classList.add('locked'); if (curTab() === 'wardrobe' && wdSel === iso) wdSelect(iso); } catch (e) { }
+}
+function jbSwapLocked(iso, slot, newId) {                     // change one piece of an outfit that is already locked (wear counts stay honest)
+  const l = wdS.locked[iso], old = l[slot];
+  if (wdS.counted[iso] && iso >= wdToday()) { if (old && wdS.wears[old] > 0) wdS.wears[old]--; if (newId) wdS.wears[newId] = (wdS.wears[newId] || 0) + 1; }
+  if (old && wdS.lastWorn[old] === iso) delete wdS.lastWorn[old];
+  l[slot] = newId; if (newId) wdS.lastWorn[newId] = iso; wdSave();
+  try { if (curTab() === 'wardrobe' && wdSel === iso) wdSelect(iso); } catch (e) { }
+}
+function jbSetPiece(iso, slot, it) {                          // apply a piece to the draft or the locked outfit
+  const cur = jbCur(iso);
+  if (cur && cur.locked) jbSwapLocked(iso, slot, it.id);
+  else { wdDrafts[iso] = wdDrafts[iso] || { top: null, bottom: null, shoes: null }; wdDrafts[iso][slot] = it.id; try { if (curTab() === 'wardrobe' && wdSel === iso) wdRenderCards(); } catch (e) { } }
+}
+function jbOfferLock(iso) {
+  const go = () => { const c = jbCur(iso); if (!c) return R('There is no outfit to lock, sir.', 'err'); if (c.locked) return R('Already locked, sir.'); jbLockOutfit(iso, { top: c.items.top && c.items.top.id, bottom: c.items.bottom && c.items.bottom.id, shoes: c.items.shoes && c.items.shoes.id }); return R(`Locked, sir. ${list(jbNames(c.items))}. Looking sharp.`, 'done'); };
+  pendingFn = go; setTimeout(() => { if (pendingFn === go) pendingFn = null; }, 150000);
+}
+function jbWear(n) {
+  const d = classDay(n), iso = isoOf(d), w = jbWhen(d);
+  if (!wdItems || !wdItems.length) return R('Your wardrobe is empty, sir. Add some clothes first.', 'err');
+  try { if (wdIsHoliday(d)) return R(`${cap(w)} is a no-outfit holiday, sir.`); } catch (e) { }
+  JB.wear.iso = iso; JB.wear.at = Date.now();
+  let c = jbCur(iso);
+  if (c && c.locked) return R(`${cap(w)} you are wearing ${list(jbNames(c.items))}. Say “change the shirt” if you want something else.`);
+  if (!c) { const res = wdGenerate(iso, {}, {}); wdDrafts[iso] = { top: res.top && res.top.id, bottom: res.bottom && res.bottom.id, shoes: res.shoes && res.shoes.id }; c = jbCur(iso); }
+  const sc = (() => { try { return wdScore(WD_SLOTS.map(k => c.items[k])).score; } catch (e) { return 0; } })();
+  jbOfferLock(iso);
+  return Object.assign(R(`${cap(w)} I would go with ${list(jbNames(c.items))}${sc ? `, a ${sc} percent colour match` : ''}. Say “lock it”, or “change the shirt” for another.`), { nocut: true });
+}
+function jbChange(n) {
+  const d = classDay(n), iso = isoOf(d); let slot = jbSlotOf(n); const col = jbColWord(n);
+  if (!wdItems.length) return R('Your wardrobe is empty, sir.', 'err');
+  let c = jbCur(iso); if (!c) { jbWear(n); c = jbCur(iso); }
+  if (!c) return R('I could not build an outfit, sir.', 'err');
+  const col2 = col || (slot ? jbSameCol(n, slot, iso) : '');
+  const all = !slot || /\b(everything|entire|whole|full|outfit|all of it)\b/.test(n);
+  const slots = all ? WD_SLOTS.slice() : [slot], done = [];
+  if (all) { const cur0 = {}; WD_SLOTS.forEach(k => cur0[k] = c.items[k]); const r = wdGenerate(iso, {}, cur0); WD_SLOTS.forEach(k => { if (r[k]) { jbSetPiece(iso, k, r[k]); done.push(r[k].name); } }); c = jbCur(iso); slots.length = 0; }
+  slots.forEach(s => {
+    const cur = {}; WD_SLOTS.forEach(k => cur[k] = c.items[k]);
+    const keep = {}; WD_SLOTS.forEach(k => keep[k] = k !== s && !all);
+    let pick = null;
+    if (col2 && !all) {                                        // “change the shirt to black”: best-matching clean piece in that colour
+      const ok = wdItems.filter(i => i.cat === s && !wdS.disabled[i.id] && !wdDirty(i) && i.id !== (cur[s] && cur[s].id) && JB_COL[col2].test(jbItemCol(i)));
+      ok.sort((a, b) => { const sa = wdScore(WD_SLOTS.map(k => k === s ? a : cur[k])).score, sb = wdScore(WD_SLOTS.map(k => k === s ? b : cur[k])).score; return sb - sa; });
+      pick = ok[0] || null; if (!pick) { done.push(`no clean ${col2} ${jbSlotName[s]}`); return; }
+    } else { const r = wdGenerate(iso, keep, cur); pick = r[s]; }
+    if (!pick || (cur[s] && pick.id === cur[s].id && wdItems.filter(i => i.cat === s).length > 1)) { done.push(`nothing else clean for the ${jbSlotName[s]}`); return; }
+    jbSetPiece(iso, s, pick); c = jbCur(iso); done.push(pick.name);
+  });
+  JB.wear.iso = iso; JB.wear.at = Date.now();
+  const fin = jbCur(iso); if (fin && !fin.locked) jbOfferLock(iso);
+  return Object.assign(R(`${all ? 'New outfit' : 'Changed'}: ${list(done)}. ${fin ? 'Now ' + list(jbNames(fin.items)) + '.' : ''}${fin && !fin.locked ? ' Lock it?' : ''}`), { nocut: true });
+}
+function jbOptions(n) {
+  const slot = jbSlotOf(n) || 'top', col = jbColWord(n) || jbSameCol(n, slot, isoOf(classDay(n))), pool = wdItems.filter(i => i.cat === slot && !wdS.disabled[i.id] && (!col || JB_COL[col].test(jbItemCol(i))));
+  if (!pool.length) return R(`You have no ${col ? col + ' ' : ''}${jbSlotName[slot]} in the wardrobe, sir.`, 'err');
+  const clean = pool.filter(i => !wdDirty(i)), dirty = pool.length - clean.length;
+  JB.wear.opts = clean.slice(0, 8); JB.wear.slot = slot; JB.wear.iso = isoOf(classDay(n)); JB.wear.at = Date.now();
+  if (!clean.length) return R(`All your ${col ? col + ' ' : ''}${jbSlotName[slot]} are in the laundry, sir.`, 'warn');
+  return Object.assign(R(`${plural(clean.length, 'clean ' + (col ? col + ' ' : '') + jbSlotName[slot])}: ${list(JB.wear.opts.map((i, k) => (k + 1) + ', ' + i.name))}.${dirty ? ` ${dirty} more in the wash.` : ''} Say “wear the second one” to pick.`), { nocut: true });
+}
+function jbPickOpt(n) {                                       // “wear the second one”, “go with the lacoste”
+  if (!JB.wear.opts.length || Date.now() - JB.wear.at > 180000 || !/\b(wear|take|go with|pick|choose|select|use|i will have|ill have|that one)\b/.test(n)) return null;
+  let it = null, m = new RegExp('\\b(' + ORDALT + '|\\d{1,2})\\b').exec(n);
+  if (m) { const k = ORDMAP[m[1]] || +m[1]; it = JB.wear.opts[k - 1]; }
+  if (!it) { const w = n.split(' ').filter(x => x.length > 3 && !/^(wear|take|with|pick|choose|select|that|this|will|have|the|one)$/.test(x)); it = JB.wear.opts.find(i => w.some(x => i.name.toLowerCase().includes(x))); }
+  if (!it) return null;
+  jbSetPiece(JB.wear.iso, JB.wear.slot, it); const c = jbCur(JB.wear.iso); if (c && !c.locked) jbOfferLock(JB.wear.iso);
+  return R(`${it.name}, ${jbWhen(isoToDate(JB.wear.iso))}. ${c ? 'The outfit is now ' + list(jbNames(c.items)) + '.' : ''}${c && !c.locked ? ' Lock it?' : ''}`, 'done');
+}
+function jbLaundry(n) {
+  const c = jbClean(), bin = wdItems.filter(wdDirty);
+  if (/\b(did|done|finished|washed|just washed|i washed)\b.*\b(laundry|clothes|wash)\b|\blaundry (is )?done\b|\bwashed (everything|all)\b/.test(n)) {
+    if (!bin.length) return R('The laundry bin is already empty, sir.'); bin.forEach(i => wdS.wears[i.id] = 0); wdSave();
+    try { if (curTab() === 'laundry') wdRenderLaundry(); } catch (e) { } return R(`${plural(bin.length, 'item')} back in rotation, sir. Fresh start.`, 'done');
+  }
+  if (/\b(how many|any|do i have|left)\b.*\b(clean|fresh)\b|\bclean (shirts?|tees?|t ?shirts?|tops?|clothes|pants|jeans)\b/.test(n)) {
+    const sl = jbSlotOf(n), cnt = sl === 'bottom' ? c.bottoms : c.tops, nm = sl === 'bottom' ? 'bottoms' : 'shirts';
+    return R(`You have ${plural(cnt, 'clean ' + (nm === 'shirts' ? 'shirt' : 'bottom'))} left, sir.` + (cnt <= 2 && c.dirty ? ' Time for laundry.' : '') + (c.dirty ? ` ${plural(c.dirty, 'item')} in the bin.` : ''), cnt <= 2 ? 'warn' : 'ok');
+  }
+  return R(c.dirty ? `${plural(c.dirty, 'item')} in the laundry bin, ${plural(c.tops, 'clean shirt')} and ${plural(c.bottoms, 'clean bottom')} left. ${c.tops <= 2 ? 'Do laundry soon, sir.' : 'Not urgent yet.'}` : `Nothing in the bin. ${plural(c.tops, 'clean shirt')} ready, sir.`, c.tops <= 2 && c.dirty ? 'warn' : 'ok');
+}
+function jbWardrobe(n) {
+  if (!/\b(wear|outfit|dress|shirt|tee|t ?shirt|top|pants?|jeans|trousers?|shoes?|sneakers?|laundry|clothes|wardrobe|wash\w*)\b/.test(n) && !(JB.wear.opts.length && Date.now() - JB.wear.at < 180000)) return null;
+  if (typeof wdItems === 'undefined' || !wdItems || typeof wdS === 'undefined') return null;
+  if (/\b(open|go to|show me the|take me to)\b.*\b(wardrobe|laundry|closet)\b/.test(n) && !/\boptions\b/.test(n)) return null;
+  let r; if ((r = jbPickOpt(n))) return r;
+  if (/\b(lock|confirm|finali[sz]e|keep)\b.*\b(it|outfit|this|that)\b|\bi will wear (this|that|it)\b|\bill wear (this|that|it)\b/.test(n) && !/\blocker\b/.test(n)) { const iso = JB.wear.iso || isoOf(dayStart()), c = jbCur(iso); if (c && !c.locked) { jbLockOutfit(iso, { top: c.items.top && c.items.top.id, bottom: c.items.bottom && c.items.bottom.id, shoes: c.items.shoes && c.items.shoes.id }); return R(`Locked, sir. ${list(jbNames(c.items))}.`, 'done'); } if (c) return R('It is already locked, sir.'); }
+  if (/\b(laundry|washed|clean (shirts?|clothes|tops?|pants|jeans|tees?)|how many (clean|shirts|tees|pants))\b/.test(n) && !/\b(wear|options?)\b/.test(n)) return jbLaundry(n);
+  if (/\b(change|swap|switch|replace|another|different|something else|re ?roll|new)\b/.test(n) && /\b(wear|outfit|shirt|tee|t ?shirt|top|pants?|jeans|trousers?|shoes?|sneakers?|everything)\b/.test(n)) return jbChange(n);
+  if ((jbColWord(n) || /\b(this|same|that) colou?r\b/.test(n)) && (jbSlotOf(n) || /\boptions?\b/.test(n)) && /\b(options?|what|which|show|list|any|do i have|have i)\b/.test(n)) return jbOptions(n);
+  if (/\boptions?\b/.test(n) && jbSlotOf(n)) return jbOptions(n);
+  if (/\b(what|which)\b.*\b(wear|outfit|dress)\b|\b(suggest|pick|choose|give me|plan)\b.*\b(outfit|something to wear)\b|\bwhat to wear\b|\bmy outfit\b/.test(n)) return jbWear(n);
+  return null;
+}
+
+/* ---------- gym that adapts (afternoon, never evening unless you say it is fine) ---------- */
+const jbGymEve = () => lsGet('jv_gymeve') === '1';
+function jbGymEv(d) { try { return eventsFor(d, readJSON('custom_tt_events', {})).find(e => e.type === 'gym') || null; } catch (e) { return null; } }
+function jbGymSlot(d, dur) {
+  const isT = isoOf(d) === isoOf(dayStart()), nowM = isT ? jbNow() + 20 : 0, eve = jbGymEve(), lim = eve ? 1260 : 1065, len = Math.min(dur || 75, 90);
+  let busy = []; try { busy = eventsFor(d, readJSON('custom_tt_events', {})).filter(e => e.type !== 'gym').map(e => { const a = e.time.split('-'); let x = mins(a[0]), y = mins(a[1]); if (y <= x) y += 1440; return [x, y]; }); } catch (e) { }
+  const cands = [900, 930, 870, 960, 840, 810, 990, 780, 750, 1020].concat(eve ? [1080, 1110, 1140] : []);
+  for (const c of cands) { if (c < nowM || c + len > lim) continue; if (!busy.some(b => c < b[1] + 10 && c + len > b[0] - 10)) { const lab = hm12(Math.floor(c / 60) + ':' + p2(c % 60)); return { label: lab, at: +new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(c / 60), c % 60) }; } }
+  return null;
+}
+function jbWake() { return jget('jv_wake', {})[isoOf(dayStart())] || null; }
+function jbGymAsk(force) {                                    // -> the line he says (and arms the “yes”), or null when there is nothing to ask
+  const d = today(), iso = isoOf(d), ev = jbGymEv(d); if (!ev) return null;
+  try { const p = gymPlanFor(iso); if (p && p.type !== 'workout') return null; } catch (e) { }
+  if (hState(d, habitIdx('gym')) === 'done' || jbGymMoved(d)) return null;
+  let st; try { st = getTTState(iso, ev.id); } catch (e) { } if (st === 'completed' || st === 'excepted') return null;
+  const asked = jget('jv_gymask', ''); if (asked === iso && !force) return null;
+  const a = ev.time.split('-'), s0 = mins(a[0]), e0 = mins(a[1]), slot = jbGymSlot(d, e0 - s0);
+  jbSet('jv_gymask', iso);
+  if (!slot) {
+    const tm = addDays(dayStart(), 1), go = () => { const l = remList().filter(r => r.at > Date.now() - 60000); l.push({ at: +new Date(tm.getFullYear(), tm.getMonth(), tm.getDate(), Math.floor(s0 / 60), s0 % 60), text: 'Gym. Today was missed, so this one counts.' }); remSave(l); return R(`Done, sir. Gym first thing tomorrow, ${hm12(a[0])}. I will remind you.`, 'done'); };
+    pendingFn = go; setTimeout(() => { if (pendingFn === go) pendingFn = null; }, 150000);
+    return `The ${hm12(a[0])} gym slot is gone and there is no sensible gap left today, sir${jbGymEve() ? '' : ', and you avoid evenings'}. Shall I put it first thing tomorrow?`;
+  }
+  const go = () => { const l = remList().filter(r => r.at > Date.now() - 60000); l.push({ at: slot.at, text: `Gym. Your new slot is ${slot.label}.` }); remSave(l); jbSet('jv_gymmv', { iso, label: slot.label }); return R(`Done, sir. Gym is at ${slot.label}. I will remind you. The Time Table block itself stays as it is.`, 'done'); };
+  pendingFn = go; setTimeout(() => { if (pendingFn === go) pendingFn = null; }, 150000);
+  return `${force ? 'Understood, sir.' : 'You started late today, sir, so the ' + hm12(a[0]) + ' gym slot is gone.'} Is it okay if I move gym to ${slot.label}, in the afternoon?`;
+}
+function jbWakeVoice(n) {
+  let m = /\b(?:i )?(?:woke|got up|got out of bed|wake)\b.*?\b(?:at|around|by)\s+(\d{1,2})(?: (\d{2}))?\s?(am|pm)?\b/.exec(n), h = 0, mi = 0;
+  if (m) { h = +m[1]; mi = +(m[2] || 0); if (m[3] === 'pm' && h < 12) h += 12; if (m[3] === 'am' && h === 12) h = 0; if (!m[3] && h < 5) h += 12; }
+  else if (/\b(woke|slept|got up|waking)\b.*\b(late|in)\b|\b(overslept|slept in|slept late|woke up late|got up late|started late)\b/.test(n)) { const d = new Date(); h = d.getHours(); mi = d.getMinutes(); }
+  else return null;
+  const w = jget('jv_wake', {}); w[isoOf(dayStart())] = p2(h) + ':' + p2(mi); jbSet('jv_wake', w);
+  if (h * 60 + mi < 9 * 60 && m) return R(`Noted, sir. Up at ${hm12(h + ':' + p2(mi))}. Good.`, 'ok');
+  const ask = jbGymAsk(true); return ask ? Object.assign(R(ask), { follow: true }) : R(`Noted, sir. You were up at ${hm12(h + ':' + p2(mi))}.`);
+}
+
+/* ---------- water ---------- */
+function jbWaterVoice(n) {
+  const drink = /\b(drank|drink|drunk|had|finished|downed|log|add|logged|sipped|gulped)\b/.test(n), q = /^(how|what|whats|did|have|am i|is)|\b(how much|how many)\b/.test(n);
+  if (/\bwater\b|\b(hydrat\w*|litres?|liters?|glass(es)?|bottles?)\b/.test(n) && q && /\b(water|hydrat\w*|drunk|drank|drink)\b/.test(n)) {
+    const w = jbWater(), left = Math.max(0, 3000 - w);
+    return R(w ? `${jbLit(w)} of water today, sir. ${left ? jbLit(left) + ' to go for your three litres.' : 'Your three litres are done.'}` : 'Nothing logged for water yet today, sir. Tell me when you drink.', w >= 3000 ? 'cheer' : w < 1000 && jbNow() > 14 * 60 ? 'warn' : 'ok');
+  }
+  if (/\b(reset|clear|undo|wrong)\b.*\bwater\b/.test(n)) { const w = jget('jv_water', {}); delete w[isoOf(dayStart())]; jbSet('jv_water', w); return R('Water log reset for today, sir.'); }
+  if (!drink || q) return null;
+  let ml = 0, m;
+  if ((m = /(\d+(?:\.\d+)?)\s*(ml|millilit\w+|l|lit\w+)\b/.exec(n))) { const v = parseFloat(m[1]); ml = /^m/.test(m[2]) ? v : v * 1000; }
+  else if ((m = /\bhalf (?:a |an )?(lit\w+|bottle)\b/.exec(n))) ml = m[1][0] === 'l' ? 500 : 375;
+  else if ((m = /(\d+|an?|one)?\s*(glass(?:es)?|cups?|mugs?|bottles?|lit\w+)\b/.exec(n)) && /\b(water|drank|drunk|glass|bottle|litre|liter|cup|mug)\b/.test(n)) { const c = /^an?$|^one$|^$/.test(m[1] || '') ? 1 : +m[1], u = m[2][0] === 'g' ? 250 : m[2][0] === 'b' ? 500 : m[2][0] === 'l' ? 1000 : m[2][0] === 'm' ? 300 : 200; ml = c * u; }
+  if (!ml || ml > 5000) return null;
+  const tot = jbAddWater(Math.round(ml)); let extra = '';
+  if (tot >= 3000) { try { const i = habitIdx('water'); if (i >= 0 && hState(today(), i) !== 'done') { setHabit(i, true); refresh(); extra = ' That completes your three litres, and I have ticked water.'; } else extra = ' Three litres done.'; } catch (e) { } }
+  return R(`${jbLit(Math.round(ml))} logged. ${jbLit(tot)} today.${extra || (tot < 3000 ? ' ' + jbLit(3000 - tot) + ' to go.' : '')}`, tot >= 3000 ? 'cheer' : 'ok');
+}
+
+/* ---------- study sessions + hours ---------- */
+function jbStudyVoice(n) {
+  const day = new Date(dayStart());
+  if (/\b(how (many|much)|total|did i|have i|what)\b.*\b(study|studied|studying|study time|hours?)\b|\bhow long (did|have) i (studied|study)\b|\bstudy (hours|time|total)\b/.test(n) && !/\b(start|begin|set)\b/.test(n)) {
+    const wk = /\b(week|weekly)\b/.test(n), a = wk ? addDays(day, -((day.getDay() + 6) % 7)) : day, m = jbStudyMin(a, addDays(day, 1));
+    const run = (() => { try { return timerStarted ? ` A session is running with ${Math.ceil(timerRemainingSec / 60)} minutes left.` : ''; } catch (e) { return ''; } })();
+    if (wk) return R(m ? `${jbHM(m)} of study this week, sir.${run}` : 'No study logged this week, sir.', m >= 600 ? 'cheer' : 'ok');
+    return R(m ? `${jbHM(m)} of study today, sir. ${m >= 90 ? 'The ninety minute target is met.' : jbHM(90 - m) + ' short of your ninety.'}${run}` : `No study time logged yet today, sir.${run}`, m >= 90 ? 'cheer' : m < 30 && jbNow() > 17 * 60 ? 'warn' : 'ok');
+  }
+  let m;
+  if ((m = /\b(?:start|begin|set|run|launch|give me|put on|kick off)\b.*?(?:(\d+(?:\.\d+)?)\s*(hours?|hrs?|minutes?|mins?)|\b(an|one) hour\b)/.exec(n)) && /\b(study|studying|session|timer|pomodoro|soul|deep work|revision|revise)\b/.test(n) && !(/\bfocus\b/.test(n) && !/\b(study|pomodoro|soul|timer)\b/.test(n))) {
+    let min = m[3] ? 60 : parseFloat(m[1]) * (/^h/.test(m[2]) ? 60 : 1); min = Math.max(5, Math.min(240, Math.round(min)));
+    if (timerStarted) return R(`A session is already ${timerRunning ? 'running' : 'paused'} with ${Math.ceil(timerRemainingSec / 60)} minutes left, sir. Finish or quit it first.`, 'err');
+    setTimerDuration(min); toggleTimer(); lsSet('jv_lastStudy', String(min)); JB.sessMin = min;
+    return R(`${plural(min, 'minute')} study session started on the Soul Timer, sir. I will log it and offer a break when it ends.`, 'done');
+  }
+  if (/\b(pomodoro|study session|study timer)\b/.test(n) && /\b(start|begin|set|run|launch)\b/.test(n)) {
+    const min = +(lsGet('jv_lastStudy') || 50); if (timerStarted) return R('A session is already on, sir.', 'err');
+    setTimerDuration(min); toggleTimer(); JB.sessMin = min; return R(`${plural(min, 'minute')} study session started, sir. Say “start a 25 minute study session” for another length.`, 'done');
+  }
+  if (!/^(how|what|whats|did|have)/.test(n) && (m = /\b(?:i )?(?:studied|revised|read|did|log|add|logged)\b.*?(\d+(?:\.\d+)?)\s*(hours?|hrs?|minutes?|mins?)\b/.exec(n)) && /\b(stud\w*|revis\w*|reading|self study|homework|log)\b/.test(n) && !/\bgym|water|sleep\b/.test(n)) {
+    const add = parseFloat(m[1]) * (/^h/.test(m[2]) ? 60 : 1); if (!add || add > 720) return null;
+    const s = jget('jv_study', {}), k = isoOf(dayStart()); s[k] = (s[k] || 0) + Math.round(add); jbSet('jv_study', s);
+    const tot = jbStudyToday(); let extra = '';
+    if (tot >= 90) { try { const i = habitIdx('study'); if (i >= 0 && hState(today(), i) !== 'done') { setHabit(i, true); refresh(); extra = ' That meets the ninety minute target, so I ticked self study.'; } } catch (e) { } }
+    return R(`${jbHM(add)} logged. ${jbHM(tot)} today.${extra}`, 'done');
+  }
+  return null;
+}
+
+/* ---------- tasks, shopping, assignments ---------- */
+function jbShopVoice(n) {
+  let m;
+  if ((m = /\b(?:add|put|buy|note|get|include)\b\s+(.+?)\s+(?:to|on|in|into)\s+(?:my |the |our )?(?:shopping|grocery|groceries|market|buy)(?: list)?$/.exec(n)) || (m = /\b(?:add|put)\s+(.+?)\s+(?:to|on|in) (?:my |the |our )?list$/.exec(n)) || (m = /^(?:i |we )?(?:need|have|want) to (?:buy|pick up) (.+)$/.exec(n)) || (m = /^(?:i am |im |we are |were )?(?:out of|ran out of|run out of|low on) (?!time|energy|patience|motivation|ideas|breath|options|mind|battery|data|storage|credit)(.+)$/.exec(n)) || (m = /^(?:add|buy|get) (.+?) (?:to )?(?:shopping|groceries)$/.exec(n))) {
+    const it = jbItems(m[1]); if (!it.length) return null; const l = jbShop(); it.forEach(x => { if (!l.some(y => y.t === x)) l.push({ t: x, at: Date.now() }); }); jbSet('jv_shop', l);
+    return R(`Added ${list(it)} to your shopping list, sir. ${plural(l.length, 'item')} on it now.`, 'done');
+  }
+  if (/\b(shopping|grocery|groceries)\b.*\b(list)\b|\bwhat (do i|should i) (need to )?(buy|get)\b/.test(n)) {
+    const l = jbShop();
+    if (/\b(clear|empty|delete|wipe|reset)\b/.test(n)) { jbSet('jv_shop', []); return R('Shopping list cleared, sir.'); }
+    if ((m = /\b(?:remove|delete|take off|cross off|strike)\s+(.+?)\s+(?:from|off)\b/.exec(n))) { const w = m[1].trim(), k = l.findIndex(x => x.t.includes(w) || w.includes(x.t)); if (k < 0) return R(`${cap(w)} is not on the list, sir.`, 'err'); const x = l.splice(k, 1)[0]; jbSet('jv_shop', l); return R(`Removed ${x.t}, sir.`, 'done'); }
+    return l.length ? R(`Shopping list: ${list(l.map(x => x.t))}.`) : R('Your shopping list is empty, sir.');
+  }
+  if ((m = /^(?:i )?(?:bought|got|picked up|purchased) (.+)$/.exec(n)) && jbShop().length) {
+    const l = jbShop(), it = jbItems(m[1]), gone = []; it.forEach(w => { const k = l.findIndex(x => x.t.includes(w) || w.includes(x.t)); if (k >= 0) gone.push(l.splice(k, 1)[0].t); });
+    if (gone.length) { jbSet('jv_shop', l); return R(`Crossed off ${list(gone)}, sir.`, 'done'); }
+  }
+  return null;
+}
+function jbTaskVoice(n) {
+  let m;
+  if ((m = /\b(?:add|create|new|note|save|put)\b (?:a |an |the )?(?:task|todo|to do)\b:?\s*(.+)$/.exec(n)) || (m = /\b(?:add|put)\s+(.+?)\s+(?:to|on|in|into) (?:my |the )?(?:to do|todo|tasks?)(?: list)?$/.exec(n))) {
+    const dd = jbDue(m[1]), t = (dd ? jbNoDate(m[1]) : m[1]).replace(/^(to|that)\s+/, '').trim(); if (!t) return null;
+    const l = jbTasks(); l.push({ id: 't' + Date.now(), t, due: dd ? isoOf(dd) : isoOf(dayStart()), done: false }); jbSet('jv_tasks', l);
+    return R(`Task added, sir: ${t}${dd ? ', ' + jbWhen(dd) : ', for today'}.`, 'done');
+  }
+  if (/\b(tasks?|to do list|todo list|to do)\b/.test(n) && /^(what|whats|which|list|show|read|any|do i have|tell me|how many)|\bmy tasks\b/.test(n) && !/\b(habits?|timetable)\b/.test(n)) {
+    const iso = isoOf(dayStart()), l = jbTasks().filter(x => !x.done).sort((a, b) => (a.due || '').localeCompare(b.due || ''));
+    if (!l.length) return R('No open tasks, sir.', 'cheer');
+    const od = l.filter(x => x.due && x.due < iso), td = l.filter(x => !x.due || x.due === iso), lt = l.filter(x => x.due > iso);
+    return R((td.length ? `Today: ${list(td.map(x => x.t))}. ` : '') + (od.length ? `Overdue: ${list(od.map(x => x.t))}. ` : '') + (lt.length ? `Later: ${list(lt.slice(0, 4).map(x => x.t + ' ' + jbWhen(isoToDate(x.due))))}.` : ''), od.length ? 'warn' : 'ok');
+  }
+  if ((m = /\b(?:mark|finished|completed|done with|did|complete|tick off|cross off|i did|i finished|i completed)\b\s+(?:the |my )?(?:task\s+)?(.+?)(?:\s+(?:task|is done|as done|as complete|done|complete|completed))?$/.exec(n)) && !habitsIn(n).length && jbTasks().some(x => !x.done)) {
+    const w = m[1].trim(), l = jbTasks(), k = l.findIndex(x => !x.done && w.length > 2 && (x.t.includes(w) || w.includes(x.t) || w.split(' ').some(z => z.length > 3 && x.t.includes(z))));
+    if (k >= 0) { l[k].done = true; l[k].doneAt = isoOf(dayStart()); jbSet('jv_tasks', l); const left = l.filter(x => !x.done).length; return R(`${cap(l[k].t)} done, sir. ${left ? plural(left, 'task') + ' left.' : 'That clears your list.'}`, 'cheer'); }
+  }
+  if (/\b(clear|delete|remove)\b.*\b(all )?(my )?(tasks|to do list|done tasks)\b/.test(n)) { jbSet('jv_tasks', jbTasks().filter(x => !x.done && !/\b(done)\b/.test(n))); return R(/\bdone\b/.test(n) ? 'Finished tasks cleared, sir.' : 'Open tasks cleared, sir.'); }
+  return null;
+}
+function jbAsgVoice(n) {
+  if (!/\b(assignments?|homework)\b/.test(n)) return null;
+  let m; const l = jbAsg(), iso = isoOf(dayStart());
+  if (/\b(add|new|create|note|log|save|set)\b|\bi (have|got)\b|\bhas been (given|assigned)\b/.test(n) && !/^(what|whats|which|how many|list|show)/.test(n)) {
+    const dd = jbDue(n), cut = n.split(/\bassignments?\b|\bhomework\b/), before = (cut[0] || '').replace(/\b(add|create|new|note|log|save|set|i have|i got|an?|my|the|jarvis|please|got|have)\b/g, ' ').trim(), after = jbNoDate((cut[1] || '').replace(/\bfor\b|\bof\b|\bin\b/, ' ')).replace(/\s+/g, ' ').trim();
+    let sub = (before || after || '').trim(); const key = Object.keys(SUBJ).find(k => SUBJ[k].test(sub)); sub = key || cap(sub);
+    if (!sub) return R('Which subject is the assignment for, sir?', 'huh');
+    if (!dd) { JB.ask = { sub, at: Date.now() }; return R(`${sub} assignment. When is it due, sir?`); }
+    l.push({ id: 'a' + Date.now(), sub, due: isoOf(dd), done: false }); jbSet('jv_asg', l);
+    return R(`Noted, sir. ${sub} assignment due ${jbWhen(dd)}.`, 'done');
+  }
+  if (/\b(submitted|finished|completed|done|handed in|turned in|delete|remove|cancel)\b/.test(n) && !/^(what|which|how many|any)/.test(n)) {
+    const key = Object.keys(SUBJ).find(k => SUBJ[k].test(n)), w = n.split(' ').filter(x => x.length > 2);
+    const k = l.findIndex(x => !x.done && ((key && x.sub === key) || w.some(z => x.sub.toLowerCase() === z)));
+    if (k < 0) return R('Which assignment, sir? I could not match one.', 'huh');
+    const del = /\b(delete|remove|cancel)\b/.test(n), a = l[k]; if (del) l.splice(k, 1); else { a.done = true; } jbSet('jv_asg', l);
+    return R(del ? `${a.sub} assignment removed, sir.` : `${a.sub} assignment marked submitted. Well done, sir.`, 'cheer');
+  }
+  const open = l.filter(x => !x.done).sort((a, b) => a.due.localeCompare(b.due));
+  const t0 = dayStart(), dow = (t0.getDay() + 6) % 7, wkEnd = isoOf(addDays(t0, 6 - dow)), all = /\b(all|every|pending|open|upcoming)\b/.test(n);
+  let pick = open, lab = '';
+  if (/\btoday\b/.test(n)) { pick = open.filter(x => x.due <= iso); lab = ' due today'; }
+  else if (/\btomorrow\b/.test(n)) { pick = open.filter(x => x.due === isoOf(addDays(t0, 1))); lab = ' due tomorrow'; }
+  else if (!all) { pick = open.filter(x => x.due <= wkEnd); lab = ' due this week'; }
+  if (!pick.length) return R(open.length && lab ? `Nothing${lab}, sir. ${plural(open.length, 'assignment')} later on.` : 'No assignments pending, sir.', 'cheer');
+  return R(`${plural(pick.length, 'assignment')}${lab}: ${list(pick.map(x => `${x.sub} ${x.due < iso ? 'overdue' : jbWhen(isoToDate(x.due))}`))}.`, pick.some(x => x.due <= iso) ? 'warn' : 'ok');
+}
+
+/* ---------- reminders with a day (“remind me tomorrow to call mom at 8”) ---------- */
+function jbRemind(n) {
+  if (!/\bremind me\b/.test(n) || !(/\b(tomorrow|tonight|this (morning|afternoon|evening)|day after tomorrow|next week|in \d+ days?)\b/.test(n) || DOWRX.test(n))) return null;
+  if (/\bin \d+ (seconds?|secs?|minutes?|mins?|hours?|hrs?)\b/.test(n)) return null;
+  const dd = jbDue(n) || dayStart(); let rest = n.replace(/^.*?\bremind me\b/, '').trim(), h = 9, mi = 0, m;
+  if ((m = /\bat (\d{1,2})(?: (\d{2}))?\s?(am|pm)?\b/.exec(rest))) { h = +m[1]; mi = +(m[2] || 0); if (m[3] === 'pm' && h < 12) h += 12; if (m[3] === 'am' && h === 12) h = 0; if (!m[3] && h < 7) h += 12; rest = rest.replace(m[0], ' '); }
+  else if (/\b(evening|tonight)\b/.test(rest)) h = 19; else if (/\bafternoon\b/.test(rest)) h = 15; else if (/\bnoon\b/.test(rest)) h = 12; else if (/\bmorning\b/.test(rest)) h = 8;
+  const text = jbNoDate(rest.replace(/\b(in the|this) (morning|afternoon|evening)\b/g, ' ').replace(/\b(tonight|morning|evening|afternoon)\b/g, ' ')).replace(/^(to|that|about)\s+/, '').trim() || 'the thing you asked about';
+  const at = +new Date(dd.getFullYear(), dd.getMonth(), dd.getDate(), h, mi); if (at < Date.now()) return R('That time has already passed, sir.', 'err');
+  const l = remList().filter(r => r.at > Date.now() - 60000); l.push({ at, text }); remSave(l);
+  return R(`Reminder set for ${jbWhen(dd)} at ${clk(at)}, sir: ${text}.`, 'done');
+}
+
+/* ---------- home + context navigation ---------- */
+const jbDist = (a, b, c, d) => { const r = Math.PI / 180, x = (c - a) * r, y = (d - b) * r, h = Math.sin(x / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(y / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(h)); };
+function jbAtHome() {                                          // Promise: true / false / null (unknown). Never prompts for location by itself.
+  const h = jget('jv_home', null); if (!h || !navigator.geolocation) return Promise.resolve(null);
+  if (Date.now() - JB.homeAt < 300000) return Promise.resolve(JB.homeVal);
+  const ask = () => new Promise(res => navigator.geolocation.getCurrentPosition(p => { JB.homeAt = Date.now(); res(JB.homeVal = jbDist(h.lat, h.lon, p.coords.latitude, p.coords.longitude) < 350); }, () => res(null), { timeout: 5000, maximumAge: 300000 }));
+  try { if (navigator.permissions && navigator.permissions.query) return navigator.permissions.query({ name: 'geolocation' }).then(s => s.state === 'granted' ? ask() : null, () => ask()); } catch (e) { }
+  return ask();
+}
+function jbSetHome() {
+  if (!navigator.geolocation) return R('This device cannot give me a location, sir.', 'err');
+  return new Promise(res => navigator.geolocation.getCurrentPosition(p => { jbSet('jv_home', { lat: p.coords.latitude, lon: p.coords.longitude }); JB.homeAt = Date.now(); JB.homeVal = true; res(R('Home saved, sir. From now on I will know when you are here, and open the right screen for the moment.', 'done')); }, () => res(R('I could not get your location, sir. Allow location for this site and try again.', 'err')), { timeout: 8000, maximumAge: 0 }));
+}
+function jbTell(icon, msg) { try { popup('info', icon, 'JARVIS', msg); } catch (e) { } histAdd('j', msg); if (muted || !touched || focusOn() || speaking || S.active) return; if (TTS.full && canSpeak()) speakText(msg); else say('ok'); }
+function jbNav(why) {                                          // opens the right screen for the moment (once per rule per day, never while you are busy elsewhere)
+  if (locked || document.hidden || lsGet('jv_autonav') === '0' || speaking || S.active || focusOn()) return;
+  const d = today(), iso = isoOf(d), hr = d.getHours(), seen = jget('jv_nav', {}), calm = curTab() === 'home' || why === 'open';
+  if (!calm) return; if (Object.keys(seen).length > 40) Object.keys(seen).sort().slice(0, 20).forEach(k => delete seen[k]);
+  const fire = (key, tab, line, icon) => { seen[key + iso] = 1; jbSet('jv_nav', seen); try { switchTab(tab); } catch (e) { } jbTell(icon, line); };
+  const home = jget('jv_home', null);
+  jbAtHome().then(at => {
+    if (at === false) return;                                  // away from home: leave the screen alone
+    const atTxt = at === null && !home;                        // no home saved yet: behave as if home, and mention how to teach him once
+    try {
+      if (hr >= 5 && hr < 12 && !seen['ward' + iso] && typeof wdS !== 'undefined' && !wdS.locked[iso] && !wdIsHoliday(d) && wdItems.length) {
+        fire('ward', 'wardrobe', `Good morning, sir. Today's outfit is not chosen yet. Wardrobe is open. Say “what should I wear” and I will pick.` + (atTxt && !jget('jv_homehint', 0) ? ' Say “this is my home” once, so I know when you are here.' : ''), '👔'); if (atTxt) jbSet('jv_homehint', 1); return;
+      }
+      if (hr >= 16 && hr < 21 && !seen['laun' + iso] && typeof wdItems !== 'undefined') { const c = jbClean(); if (c.dirty >= 5 && Date.now() - jget('jv_launAt', 0) > 2 * 86400000) { jbSet('jv_launAt', Date.now()); fire('laun', 'laundry', `${plural(c.dirty, 'item')} are in the laundry bin, sir. Laundry is open.`, '🧺'); return; } }
+      if (hr >= 21 && !seen['night' + iso] && summary().t.left.length) { fire('night', 'tick', `Evening, sir. ${plural(summary().t.left.length, 'habit')} still open. The grid is on screen.`, '🌙'); }
+    } catch (e) { console.warn('Jarvis nav', e); }
+  });
+}
+
+/* ---------- the dispatcher: run() calls this just before the general brain ---------- */
+function smartVoice(n, raw) {
+  let r;
+  if (JB.ask && Date.now() - JB.ask.at < 60000) {                                   // “When is it due?” -> “Friday”
+    const dd = jbDue(n), a = JB.ask; if (dd) { JB.ask = null; const l = jbAsg(); l.push({ id: 'a' + Date.now(), sub: a.sub, due: isoOf(dd), done: false }); jbSet('jv_asg', l); return R(`Noted, sir. ${a.sub} assignment due ${jbWhen(dd)}.`, 'done'); }
+    if (NO_RX.test(n)) { JB.ask = null; return R('Cancelled, sir.'); }
+  } else JB.ask = null;
+  if (/\b(this is (my )?home|set (my )?home|save (this )?(as )?(my )?home|remember (this )?(as )?(my )?home|i am home now|im home now)\b/.test(n)) return jbSetHome();
+  if (/\b(stop|disable|turn off|switch off|no more)\b.*\bauto ?(matic)? ?(nav\w*|open\w*)\b/.test(n)) { lsSet('jv_autonav', '0'); return R('Automatic screen changes are off, sir.'); }
+  if (/\b(start|enable|turn on|switch on|resume)\b.*\bauto ?(matic)? ?(nav\w*|open\w*)\b/.test(n)) { lsSet('jv_autonav', '1'); return R('Automatic screen changes are on, sir.'); }
+  if (/\b(gym)\b.*\b(evening|night)\b.*\b(fine|ok|okay|alright|allowed|good)\b|\b(i )?(am|im) (fine|ok|okay) with (an )?evening gym\b/.test(n)) { lsSet('jv_gymeve', '1'); return R('Understood, sir. Evening gym is allowed when the afternoon is full.'); }
+  if (/\b(no|never|dont|do not)\b.*\b(evening|night)\b.*\bgym\b|\bgym\b.*\b(not|never|avoid)\b.*\b(evening|night)\b/.test(n)) { lsSet('jv_gymeve', '0'); return R('Understood, sir. No evening gym. Afternoons only.'); }
+  if ((r = jbWakeVoice(n))) return r;
+  if (/\b(move|shift|reschedule|put|change)\b.*\bgym\b.*\b(afternoon|later|today|evening|noon|slot)\b|\bgym\b.*\b(afternoon|later)\b.*\b(please|instead)\b/.test(n) && !/\btomorrow\b/.test(n)) { const a = jbGymAsk(true); if (a) return R(a); return R('There is no gym block to move today, sir, or it is already done.', 'err'); }
+  if ((r = jbRemind(n))) return r;
+  if (/\b(plan|agenda|lineup|whats on|what do i have|whats happening|whats up|day look like|whats my day)\b/.test(n) && /\b(today|tomorrow|day after tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday|tonight)\b/.test(n) && !/\b(workout|gym plan|meal|diet|study plan|left|pending|remaining|yet to|to tick|habits?)\b/.test(n)) return jbPlan(classDay(n));
+  if (/\b(schedule)\b/.test(n) && /\b(tomorrow|day after tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/.test(n) && !/\b(class|classes|lab)\b/.test(n)) return jbPlan(classDay(n));
+  if (/\b(morning|daily|full)\s+(briefing|brief|report|update)\b|\b(brief me|briefing|catch me up|sitrep|status report)\b|^good (morning|afternoon|evening)( jarvis)?$/.test(n)) return jbBrief();
+  if (/\b(nightly|night|evening|end of day|daily|day)\s+(review|recap|summary|report|wrap up)\b|\bhow was my day\b|\breview (my|the) day\b|\bwrap up (my|the) day\b|\bend of the day\b/.test(n)) return jbNight();
+  if ((r = jbStudyVoice(n))) return r;
+  if ((r = jbWaterVoice(n))) return r;
+  if ((r = jbAsgVoice(n))) return r;
+  if ((r = jbShopVoice(n))) return r;
+  if ((r = jbTaskVoice(n))) return r;
+  try { if ((r = jbWardrobe(n))) return r; } catch (e) { console.warn('Jarvis wardrobe', e); return R('The wardrobe would not answer, sir. Try the Wardrobe tab.', 'err'); }
+  return null;
+}
+
+/* ---------- nudges (called from evaluate(): idle only, deduped through the same “seen” map) ---------- */
+function smartEval(add, d, iso, hr) {
+  const mn = d.getHours() * 60 + d.getMinutes(), clock = clk(+d);
+  if (hr >= 5 && hr < 11) add('morn_' + iso, 'win', '☀️', 'Morning briefing ready', 'Say “morning briefing” for classes, tasks, weather and the grid.', !touched);
+  try {                                                                                  // water pace: 3 L spread from 7 AM to 9 PM
+    const wi = habitIdx('water'), done = wi >= 0 && hState(d, wi) === 'done', ml = jbWater(), exp = Math.round(Math.max(0, Math.min(1, (mn / 60 - 7) / 14)) * 3000 / 50) * 50;
+    if (!done && hr >= 11 && hr < 22 && (exp - ml >= 700) && ml < exp * 0.65) {
+      const track = Object.keys(jget('jv_water', {})).length > 0;
+      if (track || hr >= 15) add('wat_' + iso + '_' + Math.floor(hr / 2), 'bad', '💧', ml ? 'Water is behind' : 'No water logged', ml ? `You have only had ${jbLit(ml)} of water and it is ${clock}. You should be near ${jbLit(exp)} by now, sir.` : `Nothing logged for water and it is ${clock}, sir. Drink up, then tell me how much.`);
+    }
+  } catch (e) { }
+  try { if (hr >= 16 && typeof wdItems !== 'undefined') { const c = jbClean(); if (c.dirty && (c.tops <= 2 || c.bottoms <= 1)) add('lau_' + iso, 'bad', '🧺', 'Laundry', c.tops <= 2 ? `You have ${plural(c.tops, 'clean shirt')} left. Do laundry tomorrow, sir.` : `Only ${plural(c.bottoms, 'clean bottom')} left. Do laundry tomorrow, sir.`); } } catch (e) { }
+  try {
+    const as = jbAsg().filter(x => !x.done && x.due), tm = isoOf(addDays(dayStart(), 1));
+    as.filter(x => x.due === iso).forEach(x => add('asg0_' + x.id + iso, 'bad', '📝', `${x.sub} assignment due today`, hr < 12 ? 'Get it done before the day runs out, sir.' : 'Today is the deadline, sir. Submit it.'));
+    if (hr >= 15) as.filter(x => x.due === tm).forEach(x => add('asg1_' + x.id, 'bad', '📝', `${x.sub} assignment due tomorrow`, 'Start tonight, sir. Do not leave it for the morning.'));
+    as.filter(x => x.due < iso).slice(0, 1).forEach(x => add('asgo_' + x.id + iso, 'bad', '📝', `${x.sub} assignment overdue`, `It was due ${jbWhen(isoToDate(x.due))}. Hand it in, sir.`));
+    if (hr >= 17) { const tk = jbTasks().filter(x => !x.done && x.due && x.due <= iso); if (tk.length) add('task_' + iso, 'bad', '✅', `${plural(tk.length, 'task')} open`, `${list(tk.slice(0, 3).map(x => x.t))}. The day is closing, sir.`); }
+  } catch (e) { }
+  try { if (hr >= 21 && mn >= 21 * 60 + 15) { const nt = jbNightShort(); add('night_' + iso, nt.miss.length > 2 ? 'bad' : 'win', '🌙', 'Nightly review', nt.s + ' Say “nightly review” for the rest.'); } } catch (e) { }
+  JB.spoke = false;
+  try {                                                                                  // started late -> offer the afternoon for gym (once a day)
+    const w = jbWake(), ev = jbGymEv(d);
+    if (w && ev && hr >= 8 && hr < 17 && !seenGym(iso)) { const wm = mins(w), sm = mins(ev.time.split('-')[0]); if (wm > sm) { const q = jbGymAsk(false); if (q) { JB.spoke = true; jvSay(q, true); } } }
+  } catch (e) { }
+}
+const seenGym = iso => jget('jv_gymask', '') === iso;
+
+/* ---------- light heartbeat (15 s): wake time, finished study sessions, context navigation ---------- */
+let jbBeat = 0, jbNavT = 0, jbWasLocked = true;
+function smartTick() {
+  if (locked) { jbWasLocked = true; return; }
+  if (jbWasLocked) { jbWasLocked = false; jbNavT = Date.now(); setTimeout(() => idle(() => jbNav('open'), 3000), 2500); } const d = new Date(), hr = d.getHours(), iso = isoOf(dayStart());
+  try { const w = jget('jv_wake', {}); if (!w[iso] && hr >= 4 && hr < 15) { w[iso] = p2(hr) + ':' + p2(d.getMinutes()); const ks = Object.keys(w).sort(); while (ks.length > 14) delete w[ks.shift()]; jbSet('jv_wake', w); } } catch (e) { }
+  try {                                                                                  // a Soul Timer session just finished
+    const tl = readJSON('timer_log', []), head = tl[0] && tl[0].date, seen = lsGet('jv_tl');
+    if (seen === null) lsSet('jv_tl', head || ''); else if (head && head !== seen) {
+      lsSet('jv_tl', head); const m = +tl[0].minutes || 0;
+      if (Date.now() - +new Date(head) < 300000 && !speaking && !S.active) {
+        const tot = jbStudyToday(), line = `${plural(m, 'minute')} session complete, sir. ${jbHM(tot)} today.`; jbTell('📚', line);
+        let ex = ''; if (tot >= 90) { try { const i = habitIdx('study'); if (i >= 0 && hState(today(), i) !== 'done') { setHabit(i, true); refresh(); ex = ' Self study ticked.'; } } catch (e) { } }
+        if (ex) jbTell('✅', ex.trim());
+        const brk = () => { focusStart(m >= 45 ? 10 : 5, 'break'); return R(`Break started, ${m >= 45 ? 10 : 5} minutes. Rest properly, sir.`); };
+        setTimeout(() => { if (!speaking && !S.active && !locked && !muted && touched) { pendingFn = brk; setTimeout(() => { if (pendingFn === brk) pendingFn = null; }, 120000); jvSay(`Shall I start a ${m >= 45 ? 'ten' : 'five'} minute break?`, true); } }, 6000);
+      }
+    } else if (!head && seen === null) lsSet('jv_tl', '');
+  } catch (e) { }
+  if (++jbBeat % 20 === 1 && Date.now() - jbNavT > 240000) { jbNavT = Date.now(); idle(() => jbNav('tick'), 4000); }
+}
+function smartInit() {
+  setInterval(smartTick, 15000); setTimeout(smartTick, 4000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - jbNavT > 60000) { jbNavT = Date.now(); idle(() => jbNav('open'), 3000); schedEval(4000); } });
+}
 
 /* =====================================================================
    WIRING
@@ -2893,6 +3406,7 @@ function init() {
   checkLock();
   if (locked) { lockPoll = setInterval(checkLock, 1500); }
   setInterval(() => schedEval(0), 180000);          // gentle re-check every 3 min, only while idle
+  try { smartInit(); } catch (e) { console.warn('Jarvis brain init', e); }
 }
 function applyModeLabels() { try { const sp = root.querySelector('.jv-sub span'); if (sp) sp.textContent = HARD() ? 'DISCIPLINE CORE // STAY HARD' : 'DISCIPLINE CORE // ONLINE'; } catch (e) { } }
 function announceMode(m) {                                // the theme was switched: he changes character, and says so
@@ -2910,6 +3424,6 @@ function nudge(msg) {
   if (TTS.full && canSpeak()) speakText(msg); else say('warn');
   return true;
 }
-window.__jarvis = { nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { screenParse, screenCmd, SC, VSLOTS, pickVoice, setVoiceByWord, cycleVoice, ensureAI, excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
+window.__jarvis = { brain: { smartVoice, jbPlan, jbBrief, jbNight, jbNav }, nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { screenParse, screenCmd, SC, VSLOTS, pickVoice, setVoiceByWord, cycleVoice, ensureAI, excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
