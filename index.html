@@ -2170,6 +2170,9 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 <button class="nav-btn" data-tab="hard-truth" data-ic="🔥" style="--i:11" onclick="switchTab('hard-truth')">Hard Truth</button>
                 <button class="nav-btn" data-tab="achievements" data-ic="🏆" style="--i:12" onclick="switchTab('achievements')">Achievements</button>
                 <button class="nav-btn" data-tab="aar" data-ic="📝" style="--i:13" onclick="switchTab('aar')">Weekly AAR</button>
+                <button class="nav-btn" data-tab="dates" data-ic="📅" style="--i:14" onclick="switchTab('dates')">Important Dates<span class="dr-bdg" id="dr-bdg-dates" hidden></span></button>
+                <div class="dr-group">Settings</div>
+                <button class="nav-btn" data-tab="settings" data-ic="⚙️" style="--i:15" onclick="switchTab('settings')">Settings</button>
             </div>
             <button type="button" class="dr-hist" id="dr-hist"><span aria-hidden="true">🗂️</span><span><b>Jarvis history</b><small>Past conversations with Jarvis</small></span></button>
             <div class="drawer-tools" id="drawer-tools"></div>
@@ -2404,7 +2407,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 <div class="dash-card">
                     <div class="dash-card-title"><span>🔥 Gym tracker</span><small id="gym-today-lbl"></small></div>
                     <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">
-                        Weekly split: Mon &amp; Thu = Chest (+ Triceps) &middot; Tue &amp; Fri = Bicep (+ Back) &middot; Wed &amp; Sat = Shoulder (+ Legs + Core). Sunday is rest by default — it only becomes a workout day if you opt in below. Miss it or excuse it, the day doesn't slide to tomorrow. No excuses, no mercy.
+                        Weekly split: Mon &amp; Thu = Bicep (+ Back) &middot; Tue &amp; Fri = Shoulder (+ Legs + Core) &middot; Wed &amp; Sat = Chest (+ Triceps). Sunday is rest by default — you can go for a jog or opt in to the gym below. Miss it or excuse it, the day doesn't slide to tomorrow. No excuses, no mercy.
                     </p>
                     <div class="gym-stats-bar" id="gym-stats-bar"></div>
                 </div>
@@ -2567,6 +2570,16 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             </div>
 
             <!-- 8. AAR -->
+            <!-- IMPORTANT DATES -->
+            <div id="tab-dates" class="section">
+                <div id="v3d-root"></div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div id="tab-settings" class="section">
+                <div id="v3s-root"></div>
+            </div>
+
             <div id="tab-aar" class="section">
                 <div class="dash-card">
                     <h3 style="font-size:24px; margin-bottom:16px;">📋 Weekly after action report</h3>
@@ -2708,7 +2721,8 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
         /* =====================================================
            CONFIG
         ===================================================== */
-        const CORRECT_PIN = "976084";
+        let CORRECT_PIN = (function () { try { var p = localStorage.getItem('app_pin'); return /^\d{6}$/.test(p || '') ? p : "011056"; } catch (e) { return "011056"; } })();
+        function setAppPin(p) { try { localStorage.setItem('app_pin', p); } catch (e) { return false; } CORRECT_PIN = p; return true; }
         const DEFAULT_START_ISO = "2026-08-20";   // first day counted in streaks and reports
         const STREAK_MIN_PCT = 70;                // a day counts toward the streak at this % of habits done
         const SCROLL_MONTHLY_BUDGET = 5;          // Level 1-3 slip-days allowed per month before Hard Truth calls it out
@@ -3047,7 +3061,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
            - list-type data (punishments, AAR, timer log, custom events) is merged, not overwritten
            - first connection uploads everything that only exists on this device
            - old single-document data is imported once automatically            */
-        const SYNC_LOCAL_ONLY = new Set(['sync_code', 'sync_ts', 'sync_legacy_done', 'theme', 'last_active_date', 'timer_state', 'last_backup_iso', 'fx_lite', 'qotd_seen', 'qp_volume',
+        const SYNC_LOCAL_ONLY = new Set(['sync_code', 'sync_ts', 'sync_legacy_done', 'theme', 'last_active_date', 'timer_state', 'last_backup_iso', 'fx_lite', 'qotd_seen', 'qp_volume', 'app_pin', 'dates_fired', 'pin_lock',
             /* device-only: performance governor (perf.js) and finger mode (finger.js) settings must not follow you to another phone/laptop */
             'perf_level', 'perf_auto', 'perf_ts', 'perf_lite_own', 'perf_debug', 'fg_dwell', 'fg_cam', 'fg_size', 'fg_sens', 'fg_layout', 'fg_seen']);
         // Hook Storage.prototype (assigning localStorage.setItem directly is not reliable across browsers).
@@ -3452,6 +3466,8 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 if (b.dataset.act === "log") openGymLogModal(b.dataset.date);
                 else if (b.dataset.act === "extra") { localStorage.setItem(`gym_extra_${b.dataset.date}`, "workout"); renderGymSection(); }
                 else if (b.dataset.act === "rest") { localStorage.removeItem(`gym_extra_${b.dataset.date}`); localStorage.removeItem(`gym_status_${b.dataset.date}`); renderGymSection(); }
+                else if (b.dataset.act === "jog") v3JogOpen(b.dataset.date);
+                else if (b.dataset.act === "jogdel") v3JogDelete(b.dataset.date);
                 else gymMark(b.dataset.act, b.dataset.date);
             });
             $("gym-modal-body").addEventListener("click", (e) => {
@@ -3797,6 +3813,8 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 }
                 renderGymSection();
             }
+            if (tabId === 'dates' && window.v3Dates) v3Dates.render();
+            if (tabId === 'settings' && window.v3S) v3S.render();
             if (tabId === 'punishment') lazyTab(tabId, renderPunishmentSection, soft);
             if (tabId === 'aar') lazyTab(tabId, renderAARSection, soft);
             if (tabId === 'wardrobe') lazyTab(tabId, wdOpen, soft);
@@ -4711,7 +4729,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 
         /* =====================================================
            GYM TRACKER
-           Fixed weekly split: Mon & Thu = Chest, Tue & Fri = Bicep, Wed & Sat = Shoulder.
+           Fixed weekly split: Mon & Thu = Bicep, Tue & Fri = Shoulder, Wed & Sat = Chest.
            Each slot alternates its A/B variant every time it comes back around.
            Sunday is rest unless you opt in. Done / missed / exception never shift the split.
            "Make exception" swaps the muscle group for that one date only.
@@ -4777,9 +4795,9 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
         GYM_ORDER[0].short = "Chest";    GYM_ORDER[0].also = "+ Triceps";
         GYM_ORDER[1].short = "Bicep";    GYM_ORDER[1].also = "+ Back";
         GYM_ORDER[2].short = "Shoulder"; GYM_ORDER[2].also = "+ Legs + Core";
-        // Fixed weekday split (index = Date.getDay()): Mon/Thu Chest, Tue/Fri Bicep, Wed/Sat Shoulder.
+        // Fixed weekday split (index = Date.getDay()): Mon/Thu Bicep, Tue/Fri Shoulder, Wed/Sat Chest.
         // Sunday is rest unless you opt in; an opted-in Sunday defaults to Chest.
-        const GYM_WEEKDAY_SLOT = [0, 0, 1, 2, 0, 1, 2];
+        const GYM_WEEKDAY_SLOT = [0, 1, 2, 0, 1, 2, 0];
 
         // Every exercise you can pull in as an "extra" — grouped by muscle, so a Chest + Triceps day
         // only ever offers chest and triceps work, Back + Biceps only back and biceps, and so on.
@@ -4790,13 +4808,31 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             Biceps: ["Incline DB Curl", "Preacher Curl", "Cable Hammer Curl", "Cable Curl", "Rope Hammer Curl", "Barbell Curl", "EZ-Bar Curl", "Dumbbell Curl", "DB Hammer Curl", "Concentration Curl", "Spider Curl", "Bayesian Cable Curl", "Reverse Curl", "Machine Preacher Curl"],
             Shoulders: ["Seated DB Press", "Lateral Raise", "Rear-Delt Fly", "Machine/DB Shoulder Press", "Cable Lateral Raise", "Face Pull", "Overhead Barbell Press", "Arnold Press", "Front Raise", "Reverse Pec Deck", "Upright Row", "Machine Lateral Raise", "Cable Rear-Delt Fly"],
             Legs: ["Leg Extension", "Seated/Lying Leg Curl", "Squats*", "Leg Curl", "Split Squat*", "Leg Press", "Hack Squat", "Romanian Deadlift", "Walking Lunges", "Bulgarian Split Squat", "Hip Thrust", "Goblet Squat", "Standing Calf Raise", "Seated Calf Raise", "Hip Abduction Machine", "Cable Glute Kickback", "Step-Ups"],
-            Core: ["Leg/Knee Raises", "Cable Crunch", "Plank", "Knee-to-Elbow", "Heel Touch", "Hanging Leg Raise", "Ab Wheel Rollout", "Russian Twist", "Side Plank", "Bicycle Crunch", "Decline Sit-Up", "Mountain Climbers", "Dead Bug", "Pallof Press", "Cable Woodchopper", "Machine Crunch", "Hollow Hold"]
+            Core: ["Leg/Knee Raises", "Cable Crunch", "Plank", "Knee-to-Elbow", "Heel Touch", "Hanging Leg Raise", "Ab Wheel Rollout", "Russian Twist", "Side Plank", "Bicycle Crunch", "Decline Sit-Up", "Mountain Climbers", "Dead Bug", "Pallof Press", "Cable Woodchopper", "Machine Crunch", "Hollow Hold", "Crunches", "Reverse Crunch", "Sit-Ups", "V-Ups", "Flutter Kicks", "Scissor Kicks", "Lying Leg Raises", "Leg Drops", "Toe Touches", "Jackknife Sit-Up", "Butterfly Sit-Up", "Oblique Crunch", "Elbow-to-Knee Crunch", "Cross-Body Crunch", "Windshield Wipers", "Frog Crunch", "Hip Dips", "Forearm Plank", "High Plank Hold", "Reverse Plank", "Plank Shoulder Taps", "Plank Jacks", "Plank Up-Downs", "Plank Hip Dips", "Spider Plank", "Side Plank Hip Raises", "Bird Dog", "Bear Hold", "Bear Crawl", "Superman", "Superman Hold", "Swimmers", "Boat Pose Hold", "V-Sit Hold", "L-Sit Hold", "Leg Raise Hold", "Tuck-Ups", "Single-Leg Stretch", "Double-Leg Stretch", "Leg Pull-Ins", "Standing Oblique Crunch", "Pilates Hundred", "Dragon Flag", "Hanging Knee Raise", "Body Saw"]
         };
         const GYM_EX_INFO = new Map();      // exercise name -> muscle group
         Object.keys(GYM_CATALOG).forEach(g => GYM_CATALOG[g].forEach(n => { if (!GYM_EX_INFO.has(n)) GYM_EX_INFO.set(n, g); }));
         GYM_ORDER.forEach(s => ["A", "B"].forEach(v => s[v].forEach(e => { if (!GYM_EX_INFO.has(e.name)) GYM_EX_INFO.set(e.name, e.group); })));
         const GYM_ALL_EXERCISES = [...GYM_EX_INFO.entries()].map(([name, group]) => ({ name, group }));
         const GYM_SLUG_INFO = new Map(GYM_ALL_EXERCISES.map(e => [slug(e.name), e]));
+
+        // How each exercise is logged: "w" = kg x reps (default), "r" = reps only (bodyweight core on the mat),
+        // "t" = a timed hold (plank etc. - you enter minutes + seconds). Cable/machine core moves keep their kg box.
+        const GYM_TIME_EX = new Set(["Plank", "Side Plank", "Hollow Hold", "Forearm Plank", "High Plank Hold", "Reverse Plank", "Bear Hold", "Bear Crawl", "Superman Hold", "Boat Pose Hold", "V-Sit Hold", "L-Sit Hold", "Leg Raise Hold", "Pilates Hundred"]);
+        const GYM_WEIGHTED_CORE = new Set(["Cable Crunch", "Machine Crunch", "Pallof Press", "Cable Woodchopper"]);
+        function gymMode(name) {
+            if (GYM_TIME_EX.has(name)) return "t";
+            if (GYM_EX_INFO.get(name) === "Core" && !GYM_WEIGHTED_CORE.has(name)) return "r";
+            return "w";
+        }
+        function gymFmtTime(sec) { sec = Math.round(sec); const m = Math.floor(sec / 60), r = sec % 60; return m ? `${m}m ${String(r).padStart(2, "0")}s` : `${r}s`; }
+        // best earlier mark for an exercise in its own unit (kg / reps / seconds)
+        function gymBestMark(exName, excludeIso, mode) {
+            const want = slug(exName), field = mode === "t" ? "maxT" : mode === "r" ? "maxR" : "maxW";
+            let best = null, date = null;
+            gymCollectLogs().forEach(l => { if (l.slug === want && l.iso !== excludeIso && l[field] > 0 && (best === null || l[field] > best)) { best = l[field]; date = l.iso; } });
+            return best === null ? null : { value: best, date };
+        }
 
         // Extra exercises added to one specific date (stored as names only).
         function getGymAdds(iso) { return readJSON(`gym_add_${iso}`, []); }
@@ -4909,6 +4945,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                     html += `<div class="gym-rest-card">
                         <div>😌 Rest day — recover hard, then go again</div>
                         <button class="btn-exception muted" style="padding:4px 10px; font-size:11.5px;" title="Turns today into a workout day instead of rest" data-act="extra" data-date="${iso}">🔥 Go anyway — stay hard?</button>
+                        ${dDt.getDay() === 0 && typeof v3JogBlock === "function" ? v3JogBlock(iso) : ""}
                     </div>`;
                 } else {
                     const isOptedIn = dDt.getDay() === 0 && getGymExtra(iso) === "workout";
@@ -4934,7 +4971,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 <div class="gym-stat-pill">✓ ${done} done</div>
                 <div class="gym-stat-pill ${missed ? 'warn' : ''}">✗ ${missed} missed</div>
                 <div class="gym-stat-pill">⚖️ ${excepted} exception</div>
-                <div class="gym-stat-pill ${scheduled >= 6 && done < 5 ? 'warn' : ''}">${scheduled} scheduled this week</div>`;
+                <div class="gym-stat-pill ${scheduled >= 6 && done < 5 ? 'warn' : ''}">${scheduled} scheduled this week</div>${typeof v3JogPill === "function" ? v3JogPill(isoDate(sow), isoDate(eow)) : ""}`;
             const todayCol = $("gym-grid-cols").querySelector(".is-today");
             if (todayCol) todayCol.scrollIntoView({ behavior: "instant", inline: "start", block: "nearest" });
             renderGymHUD();
@@ -4972,16 +5009,19 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 </div>`;
             }
             const sets = getGymSets(iso, ex.name);
-            const best = gymBestWeight(ex.name, iso);
-            const todayMax = sets.reduce((m, s) => (typeof s.weight === "number" && s.weight > m) ? s.weight : m, 0);
-            const isPR = best && todayMax > best.weight;
-            const rows = sets.length ? sets.map((s, i) => gymSetRowHTML(i, s)).join("") : `<div style="font-size:12px; color:var(--muted); margin-bottom:6px;">No sets logged yet.</div>`;
+            const mode = gymMode(ex.name);
+            const best = gymBestMark(ex.name, iso, mode);
+            const todayMax = sets.reduce((m, s) => { const v = mode === "t" ? s.time : mode === "r" ? s.reps : s.weight; return (typeof v === "number" && v > m) ? v : m; }, 0);
+            const isPR = best && todayMax > best.value;
+            const fmtV = v => mode === "t" ? gymFmtTime(v) : mode === "r" ? `${v} reps` : `${v}kg`;
+            const rows = sets.length ? sets.map((s, i) => gymSetRowHTML(i, s, mode)).join("") : `<div style="font-size:12px; color:var(--muted); margin-bottom:6px;">No sets logged yet.</div>`;
             const noteHTML = !best ? `<div class="gym-best-note">No previous log — set the bar today.</div>`
-                : isPR ? `<div class="gym-pr-note">🔥 NEW PR — you just beat ${best.weight}kg (${best.date}). You are not who you were last time.</div>`
-                    : `<div class="gym-best-note">Best so far: ${best.weight}kg (${best.date}). Beat it.</div>`;
+                : isPR ? `<div class="gym-pr-note">🔥 NEW PR — you just beat ${fmtV(best.value)} (${best.date}). You are not who you were last time.</div>`
+                    : `<div class="gym-best-note">Best so far: ${fmtV(best.value)} (${best.date}). Beat it.</div>`;
+            const modeHint = mode === "t" ? " · timed hold" : mode === "r" ? " · reps only" : "";
             return `<div class="gym-ex-block" data-ex="${esc(ex.name)}">
                 <h4>${esc(ex.name)}${ex.extra ? ' <span class="gym-ex-tag gym-ex-tag-extra">EXTRA</span>' : ''}</h4>
-                <div class="gym-ex-emphasis">${esc(ex.group)}</div>
+                <div class="gym-ex-emphasis">${esc(ex.group)}${modeHint}</div>
                 ${noteHTML}
                 <div class="gym-set-rows">${rows}</div>
                 <div class="gym-ex-actions">
@@ -4992,7 +5032,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
         }
         function gymPickerHTML(plan, list) {
             const have = new Set(list.map(e => e.name));
-            const groups = plan.groups || [];
+            const groups = (plan.groups || []).concat((plan.groups || []).includes("Core") ? [] : ["Core"]);
             const label = groups.join(" + ");
             let inner = "";
             if (gymPickerOpen) {
@@ -5010,18 +5050,39 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             document.querySelectorAll("#gym-modal-body .gym-pick-chip").forEach(c => { c.hidden = q && !c.dataset.name.toLowerCase().includes(q); });
             document.querySelectorAll("#gym-modal-body .gym-pick-group").forEach(g => { g.hidden = ![...g.querySelectorAll(".gym-pick-chip")].some(c => !c.hidden); });
         }
-        function gymSetRowHTML(idx, s) {
+        function gymSetRowHTML(idx, s, mode) {
+            const val = v => (v === '' || v == null) ? '' : v;
+            const del = `<button class="gym-set-del" data-act="delset" data-idx="${idx}" title="Remove set">✕</button>`;
+            if (mode === "r") {
+                return `<div class="gym-set-row">
+                <span>Set ${idx + 1}</span>
+                <input type="number" step="1" min="0" placeholder="reps" value="${val(s.reps)}" data-field="reps" data-idx="${idx}">
+                <span>reps</span>
+                ${del}
+            </div>`;
+            }
+            if (mode === "t") {
+                return `<div class="gym-set-row">
+                <span>Set ${idx + 1}</span>
+                <input type="number" step="1" min="0" placeholder="min" value="${val(s.tmin)}" data-field="tmin" data-idx="${idx}">
+                <span>min</span>
+                <input type="number" step="1" min="0" max="59" placeholder="sec" value="${val(s.tsec)}" data-field="tsec" data-idx="${idx}">
+                <span>sec</span>
+                ${del}
+            </div>`;
+            }
             return `<div class="gym-set-row">
                 <span>Set ${idx + 1}</span>
-                <input type="number" step="0.5" min="0" placeholder="kg" value="${s.weight === '' || s.weight == null ? '' : s.weight}" data-field="weight" data-idx="${idx}">
+                <input type="number" step="0.5" min="0" placeholder="kg" value="${val(s.weight)}" data-field="weight" data-idx="${idx}">
                 <span>kg ×</span>
-                <input type="number" step="1" min="0" placeholder="reps" value="${s.reps === '' || s.reps == null ? '' : s.reps}" data-field="reps" data-idx="${idx}">
-                <button class="gym-set-del" data-act="delset" data-idx="${idx}" title="Remove set">✕</button>
+                <input type="number" step="1" min="0" placeholder="reps" value="${val(s.reps)}" data-field="reps" data-idx="${idx}">
+                ${del}
             </div>`;
         }
         function gymAddSet(exName) {
             const sets = getGymSets(gymModalIso, exName);
-            sets.push({ weight: "", reps: "" });
+            const md = gymMode(exName);
+            sets.push(md === "t" ? { tmin: "", tsec: "", time: "" } : md === "r" ? { reps: "" } : { weight: "", reps: "" });
             saveGymSets(gymModalIso, exName, sets);
             gymRefreshExerciseBlock(exName);
         }
@@ -5035,6 +5096,10 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             const sets = getGymSets(gymModalIso, exName);
             if (!sets[idx]) return;
             sets[idx][field] = value === "" ? "" : parseFloat(value);
+            if (field === "tmin" || field === "tsec") {
+                const m = parseFloat(sets[idx].tmin) || 0, sc = parseFloat(sets[idx].tsec) || 0;
+                sets[idx].time = (m || sc) ? m * 60 + sc : "";
+            }
             saveGymSets(gymModalIso, exName, sets);
         }
         function gymRefreshExerciseBlock(exName) {
@@ -5044,7 +5109,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             const exObj = gymDayExerciseList(gymModalIso, plan).find(e => e.name === exName);
             if (exObj) old.outerHTML = gymExerciseBlockHTML(gymModalIso, exObj);
         }
-        function gymHasSets(iso, name) { return getGymSets(iso, name).some(s => typeof s.weight === "number" || typeof s.reps === "number"); }
+        function gymHasSets(iso, name) { return getGymSets(iso, name).some(s => typeof s.weight === "number" || typeof s.reps === "number" || typeof s.time === "number"); }
         function gymSkipEx(name) {
             if (gymHasSets(gymModalIso, name) && !confirm(`Mark "${name}" as not done? The sets you logged for it today will be cleared.`)) return;
             localStorage.removeItem(`gym_sets_${gymModalIso}_${slug(name)}`);
@@ -5106,16 +5171,17 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             for (let i = 0; i < localStorage.length; i++) {
                 const k = localStorage.key(i), p = gymParseSetKey(k);
                 if (!p) continue;
-                const sets = readJSON(k, []).filter(x => typeof x.weight === "number" || typeof x.reps === "number");
+                const sets = readJSON(k, []).filter(x => typeof x.weight === "number" || typeof x.reps === "number" || typeof x.time === "number");
                 if (!sets.length) continue;
                 const info = GYM_SLUG_INFO.get(p.slug);
-                let vol = 0, reps = 0, maxW = 0, e1 = 0, bw = 0, br = 0;
+                let vol = 0, reps = 0, maxW = 0, e1 = 0, bw = 0, br = 0, maxR = 0, maxT = 0, secs = 0;
                 sets.forEach(x => {
                     const w = typeof x.weight === "number" ? x.weight : 0, r = typeof x.reps === "number" ? x.reps : 0;
-                    reps += r; vol += w * r; if (w > maxW) maxW = w;
+                    const t = typeof x.time === "number" ? x.time : 0;
+                    reps += r; vol += w * r; if (w > maxW) maxW = w; if (r > maxR) maxR = r; if (t > maxT) maxT = t; secs += t;
                     if (w > 0) { const e = gymE1RM(w, r); if (e > e1) { e1 = e; bw = w; br = r; } }
                 });
-                out.push({ iso: p.iso, slug: p.slug, name: info ? info.name : p.slug, group: info ? info.group : "Other", sets: sets.length, vol, reps, maxW, e1rm: e1, bestW: bw, bestR: br });
+                out.push({ iso: p.iso, slug: p.slug, name: info ? info.name : p.slug, group: info ? info.group : "Other", sets: sets.length, vol, reps, maxW, e1rm: e1, bestW: bw, bestR: br, maxR, maxT, secs });
             }
             return out;
         }
@@ -5123,7 +5189,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             const m = new Map();
             logs.forEach(l => {
                 if (!m.has(l.slug)) m.set(l.slug, []);
-                m.get(l.slug).push({ iso: l.iso, maxW: l.maxW, reps: l.reps, setCount: l.sets, vol: l.vol, e1rm: l.e1rm, bestW: l.bestW, bestR: l.bestR });
+                m.get(l.slug).push({ iso: l.iso, maxW: l.maxW, reps: l.reps, setCount: l.sets, vol: l.vol, e1rm: l.e1rm, bestW: l.bestW, bestR: l.bestR, maxR: l.maxR, maxT: l.maxT, secs: l.secs });
             });
             m.forEach(a => a.sort((x, y) => x.iso < y.iso ? -1 : x.iso > y.iso ? 1 : 0));
             return m;
@@ -5248,16 +5314,17 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 gymHudEx = latest ? latest.name : GYM_ALL_EXERCISES[0].name;
             }
             const sessions = bySlug.get(slug(gymHudEx)) || [];
+            const lmode = gymMode(gymHudEx), lunit = lmode === "t" ? " sec" : lmode === "r" ? " reps" : " kg";
             const opts = Object.keys(GYM_CATALOG).map(g => `<optgroup label="${g}">${GYM_CATALOG[g].map(n => `<option value="${esc(n)}" ${n === gymHudEx ? "selected" : ""}>${bySlug.has(slug(n)) ? "● " : ""}${esc(n)}</option>`).join("")}</optgroup>`).join("");
             const tabs = Object.keys(GYM_METRICS).map(k => `<button class="gym-metric-btn ${k === gymHudMetric ? "active" : ""}" data-metric="${k}">${GYM_METRICS[k][1]}</button>`).join("");
-            const key = GYM_METRICS[gymHudMetric][0];
+            const key = lmode === "t" ? "maxT" : lmode === "r" ? "maxR" : GYM_METRICS[gymHudMetric][0];
             let chart;
             if (!sessions.length) chart = `<div class="gym-hud-empty">No sets logged for ${esc(gymHudEx)} yet — log it with 🧮 and this lights up.</div>`;
             else {
                 const c = gymLineChartSVG(sessions, key), vals = sessions.map(s => s[key]);
                 const first = vals[0], last = vals[vals.length - 1], d = last - first, pct = first > 0 ? d / first * 100 : 0;
                 const f = v => (Math.round(v * 10) / 10).toLocaleString();
-                chart = c.svg + `<div class="gym-chips"><span>BEST <b>${f(Math.max(...vals))} kg</b></span><span>LATEST <b>${f(last)} kg</b></span><span class="${d > 0 ? "up" : d < 0 ? "down" : ""}">CHANGE <b>${d >= 0 ? "+" : ""}${f(d)} kg${sessions.length > 1 ? ` (${pct >= 0 ? "+" : ""}${Math.round(pct)}%)` : ""}</b></span><span>SESSIONS <b>${sessions.length}</b></span><span>PRs <b>${c.prs}</b></span></div>
+                chart = c.svg + `<div class="gym-chips"><span>BEST <b>${f(Math.max(...vals))}${lunit}</b></span><span>LATEST <b>${f(last)}${lunit}</b></span><span class="${d > 0 ? "up" : d < 0 ? "down" : ""}">CHANGE <b>${d >= 0 ? "+" : ""}${f(d)}${lunit}${sessions.length > 1 ? ` (${pct >= 0 ? "+" : ""}${Math.round(pct)}%)` : ""}</b></span><span>SESSIONS <b>${sessions.length}</b></span><span>PRs <b>${c.prs}</b></span></div>
                     <div class="gym-legend"><i style="background:${GYM_HUD.gold}"></i> PR <i class="dash" style="border-color:${GYM_HUD.gold}"></i> trend</div>`;
             }
             const board = [];
@@ -5271,7 +5338,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             const boardHTML = top.length ? top.map(b => `<div class="gym-pr-row"><div class="gym-pr-top"><span class="gym-pr-name">${esc(b.info.name)}${b.n > 1 && b.best.iso >= recent ? ' <em>NEW PR</em>' : ''}</span><span class="gym-pr-set">${b.best.bestW}kg × ${b.best.bestR} · e1RM ${Math.round(b.best.e1rm)}</span><span class="gym-pr-gain ${b.gain > 0 ? "up" : ""}">${b.gain === null ? "—" : (b.gain >= 0 ? "+" : "") + Math.round(b.gain) + "%"}</span></div><div class="gym-pr-bar"><i style="width:${Math.round(b.best.e1rm / maxE * 100)}%"></i></div></div>`).join("")
                 : `<div class="gym-hud-empty">Your PR board fills in as you log lifts.</div>`;
             return `<select id="gym-hud-ex-select" class="gym-hud-select">${opts}</select>
-                <div class="gym-metric-tabs">${tabs}</div>
+                <div class="gym-metric-tabs">${lmode === "w" ? tabs : ""}</div>
                 ${chart}
                 <div class="hud-panel-title" style="margin-top:14px;">PR BOARD · BIGGEST GAINS SINCE FIRST LOG</div>
                 ${boardHTML}
@@ -5406,7 +5473,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
                 const k = localStorage.key(i);
                 if (!k.startsWith("gym_sets_")) continue;
                 readJSON(k, []).forEach(s => {
-                    if (typeof s.weight === "number" || typeof s.reps === "number") {
+                    if (typeof s.weight === "number" || typeof s.reps === "number" || typeof s.time === "number") {
                         totalSets++;
                         if (typeof s.reps === "number") totalReps += s.reps;
                     }
@@ -10302,6 +10369,445 @@ html.fx-lite :is(.section.fx3-go *,#fx3-beam,.fx3-rip),html.fx-mid .fx3-rip{anim
         var r = document.createElement('i'); r.className = 'fx3-rip'; r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
         document.body.appendChild(r); setTimeout(function () { r.remove(); }, 700);
     }, { passive: true });
+})();
+</script>
+
+<style id="v3-style">
+.v3-hint { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 0 0 12px; }
+.v3-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.v3-field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 150px; min-width: 130px; }
+.v3-field > label { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.v3-field input, .v3-field select, .v3-field textarea { background: var(--panel-2); border: 1.5px solid var(--border-strong); color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; font-family: inherit; width: 100%; box-sizing: border-box; min-height: 42px; }
+.v3-field input:focus, .v3-field select:focus, .v3-field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.v3-opt { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-top: 1px solid var(--border); }
+.v3-opt:first-of-type { border-top: 0; }
+.v3-opt b { display: block; font-size: 14px; }
+.v3-opt small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; line-height: 1.45; }
+.v3-opt select, .v3-opt input[type=number] { background: var(--panel-2); border: 1.5px solid var(--border-strong); color: var(--text); border-radius: 10px; padding: 8px 10px; font-size: 14px; min-height: 40px; }
+.v3-sw { position: relative; flex: none; width: 46px; height: 26px; }
+.v3-sw input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 2; }
+.v3-sw i { position: absolute; inset: 0; border-radius: 20px; background: var(--panel-2); border: 1.5px solid var(--border-strong); transition: background .2s, border-color .2s; }
+.v3-sw i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 17px; height: 17px; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; }
+.v3-sw input:checked + i { background: color-mix(in srgb, var(--primary) 30%, var(--panel-2)); border-color: var(--primary); }
+.v3-sw input:checked + i::after { transform: translateX(20px); background: var(--primary); }
+.v3-msg { font-size: 12.5px; margin-top: 10px; min-height: 18px; }
+.v3-msg.bad { color: var(--danger); }
+.v3-msg.good { color: var(--ok); }
+.v3-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.v3-split { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 820px) { .v3-split { grid-template-columns: 1fr; gap: 0; } }
+.v3-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.v3-cal-head h4 { margin: 0; font-size: 16px; }
+.v3-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.v3-cal-dow { text-align: center; font-size: 10.5px; color: var(--muted); letter-spacing: .06em; padding: 4px 0; }
+.v3-cal-day { position: relative; aspect-ratio: 1 / 1; min-height: 38px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); font-size: 13px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0; }
+.v3-cal-day:hover { border-color: var(--primary); }
+.v3-cal-day.off { opacity: .35; }
+.v3-cal-day.today { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); font-weight: 700; }
+.v3-cal-day.sel { background: color-mix(in srgb, var(--primary) 22%, var(--panel-2)); }
+.v3-cal-day.has::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.v3-cal-day.has.soon::after { background: var(--primary); box-shadow: 0 0 6px var(--primary); }
+.v3-ev { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.v3-ev:first-child { border-top: 0; }
+.v3-ev-date { flex: none; width: 48px; text-align: center; border: 1px solid var(--border-strong); border-radius: 10px; padding: 5px 0; background: var(--panel-2); }
+.v3-ev-date b { display: block; font-size: 18px; line-height: 1.1; }
+.v3-ev-date small { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.v3-ev-main { flex: 1; min-width: 0; }
+.v3-ev-main b { display: block; font-size: 14.5px; overflow-wrap: anywhere; }
+.v3-ev-main small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
+.v3-chip { display: inline-block; font: 700 10.5px/1 ui-monospace, Menlo, monospace; letter-spacing: .04em; padding: 4px 8px; border-radius: 20px; border: 1px solid var(--border-strong); color: var(--muted); margin-top: 5px; }
+.v3-chip.soon { color: var(--primary); border-color: var(--primary); }
+.v3-chip.now { color: #fff; background: var(--danger); border-color: var(--danger); }
+.v3-ev-btns { display: flex; gap: 6px; flex: none; }
+.v3-ev-btns button { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); cursor: pointer; font-size: 14px; }
+.v3-ev-btns button:hover { border-color: var(--primary); }
+.v3-soon { border: 1px solid var(--primary); background: color-mix(in srgb, var(--primary) 9%, var(--panel)); border-radius: 14px; padding: 14px 16px; margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
+.v3-jog { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--ok); border-radius: 10px; background: color-mix(in srgb, var(--ok) 10%, transparent); font-size: 12.5px; line-height: 1.5; }
+.v3-jog .v3-jog-b { display: flex; gap: 6px; margin-top: 6px; }
+.v3-jog button { padding: 3px 9px; font-size: 11.5px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); cursor: pointer; }
+.v3-set-time { display: inline-flex; align-items: center; gap: 4px; }
+</style>
+
+<script id="v3-features">
+(function () {
+    'use strict';
+    var $ = function (id) { return document.getElementById(id); };
+    var ES = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    var iso = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+    var parseIso = function (s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); };
+    var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var MONF = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    function jget(k, f) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : f; } catch (e) { return f; } }
+    function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+    function say(m, k) { try { if (typeof toast === 'function') toast(m, k || 'info'); } catch (e) { } }
+
+    /* ---------------- settings store ---------------- */
+    var DEF = { nDays: 3, nRandom: 2, nFixed: true, qStart: 23, qEnd: 7, jogSun: true, jogRemind: true, jogHour: 7 };
+    function S() { var s = jget('app_settings', {}) || {}, o = {}; for (var k in DEF) o[k] = (s[k] !== undefined && s[k] !== null) ? s[k] : DEF[k]; return o; }
+    function saveS(patch) { var s = jget('app_settings', {}) || {}; for (var k in patch) s[k] = patch[k]; jset('app_settings', s); }
+
+    /* ---------------- important dates: data ---------------- */
+    function events() { var a = jget('imp_dates', []); return Array.isArray(a) ? a : []; }
+    function saveEvents(a) { jset('imp_dates', a); }
+    function evTime(e) { var d = parseIso(e.date); if (e.time) { var p = e.time.split(':'); d.setHours(+p[0], +p[1] || 0, 0, 0); } else d.setHours(9, 0, 0, 0); return d; }
+    function fmtT(t) { var p = t.split(':'), h = +p[0], m = p[1] || '00', ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return h + ':' + m + ' ' + ap; }
+    function daysTo(e) { return Math.round((parseIso(e.date) - parseIso(iso(new Date()))) / 86400000); }
+    function until(e) {
+        var d = daysTo(e), tm = e.time ? ' · ' + fmtT(e.time) : '';
+        if (d < 0) return { t: 'Passed', cls: '', days: d };
+        if (d === 0) return { t: 'Today' + tm, cls: 'now', days: 0 };
+        if (d === 1) return { t: 'Tomorrow' + tm, cls: 'soon', days: 1 };
+        return { t: 'In ' + d + ' days', cls: d <= S().nDays ? 'soon' : '', days: d };
+    }
+    function sorted(list) { return list.slice().sort(function (a, b) { return evTime(a) - evTime(b); }); }
+
+    /* ---------------- reminders ---------------- */
+    function rng(seed) {
+        var h = 1779033703 ^ seed.length, i;
+        for (i = 0; i < seed.length; i++) { h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+        h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); h ^= h >>> 16;
+        var a = h >>> 0;
+        return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    }
+    // The full set of reminder moments for one event: morning of each lead day, an evening one the day before,
+    // a few random nudges per lead day (stable per event so they never repeat), the morning of, and 1h before.
+    function planFor(e) {
+        var st = S(), out = [], base = parseIso(e.date), T = evTime(e).getTime(), n, i;
+        function at(off, h, m) { var d = new Date(base); d.setDate(d.getDate() - off); d.setHours(h, m || 0, 0, 0); return d.getTime(); }
+        for (n = st.nDays; n >= 1; n--) {
+            if (st.nFixed) out.push({ k: 'm' + n, ts: at(n, 9, 0), kind: 'fixed' });
+            if (n === 1 && st.nFixed) out.push({ k: 'e1', ts: at(1, 20, 0), kind: 'fixed' });
+            var r = rng(e.id + '|' + n);
+            for (i = 0; i < st.nRandom; i++) { var mins = 10 * 60 + Math.floor(r() * 11.5 * 60); out.push({ k: 'r' + n + '_' + i, ts: at(n, Math.floor(mins / 60), mins % 60), kind: 'random' }); }
+        }
+        out.push({ k: 'd0', ts: at(0, 8, 0), kind: 'fixed' });
+        if (e.time) out.push({ k: 'h1', ts: T - 3600000, kind: 'fixed' });
+        return out;
+    }
+    var LINES = ['Don’t let this sneak up on you.', 'Heads up, it’s coming.', 'Keep this on your radar.', 'Prepare now, thank yourself later.', 'No excuses, be ready.', 'Quick reminder from Discipline OS.'];
+    function inQuiet(ts) {
+        var st = S(), h = new Date(ts).getHours();
+        if (st.qStart === st.qEnd) return false;
+        return st.qStart > st.qEnd ? (h >= st.qStart || h < st.qEnd) : (h >= st.qStart && h < st.qEnd);
+    }
+    function notify(title, body, tag) {
+        say(title + ' — ' + body, 'info');
+        try { if (navigator.vibrate) navigator.vibrate([60, 40, 60]); } catch (e) { }
+        try {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            var opt = { body: body, tag: tag || 'dos', renotify: true };
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+                navigator.serviceWorker.getRegistration().then(function (reg) {
+                    if (reg && reg.showNotification) reg.showNotification(title, opt); else new Notification(title, opt);
+                }).catch(function () { try { new Notification(title, opt); } catch (x) { } });
+            } else new Notification(title, opt);
+        } catch (e) { }
+    }
+    function check() {
+        var now = Date.now(), fired = jget('dates_fired', {}) || {}, dirty = false, st = S(), due = {};
+        events().forEach(function (e) {
+            if (e.done || e.remind === false) return;
+            var endWin = evTime(e).getTime() + 3 * 3600000;
+            planFor(e).forEach(function (p) {
+                var key = e.id + '|' + p.k;
+                if (fired[key] || p.ts > now) return;
+                if (p.ts < (e.created || 0) || now > endWin) { fired[key] = 1; dirty = true; return; }   // not applicable / too old
+                if (inQuiet(now)) return;                                                              // wait until quiet hours end
+                fired[key] = 1; dirty = true;
+                if (!due[e.id] || p.ts > due[e.id].p.ts) due[e.id] = { e: e, p: p };
+            });
+        });
+        Object.keys(due).forEach(function (id) {
+            var e = due[id].e, p = due[id].p, u = until(e), r = rng(e.id + p.k + 'x');
+            var body = u.t + (e.note ? ' — ' + e.note : '') + (p.kind === 'random' ? '. ' + LINES[Math.floor(r() * LINES.length)] : '');
+            notify('📅 ' + e.title, body, 'date-' + e.id);
+        });
+        // Sunday jog nudge
+        try {
+            var d = new Date(), today = iso(d), k = 'jog|' + today;
+            if (st.jogSun && st.jogRemind && d.getDay() === 0 && d.getHours() >= st.jogHour && d.getHours() < 20 && !fired[k] && !inQuiet(now)) {
+                fired[k] = 1; dirty = true;
+                if (!jget('gym_jog_' + today, null)) notify('🏃 Sunday jog', 'Shoes on. Go for your jog today — then log it in the Gym tab.', 'jog');
+            }
+        } catch (e) { }
+        if (dirty) {
+            var keys = Object.keys(fired);
+            if (keys.length > 600) keys.slice(0, keys.length - 400).forEach(function (x) { delete fired[x]; });
+            jset('dates_fired', fired);
+        }
+        badge();
+    }
+    function badge() {
+        var b = $('dr-bdg-dates'); if (!b) return;
+        var n = events().filter(function (e) { var d = daysTo(e); return !e.done && d >= 0 && d <= S().nDays; }).length;
+        b.hidden = !n; b.textContent = n || '';
+        b.title = n ? 'Important dates coming up' : '';
+    }
+
+    /* ---------------- important dates: UI ---------------- */
+    var calY = new Date().getFullYear(), calM = new Date().getMonth(), editing = null, built = false;
+    function permHTML() {
+        if (!('Notification' in window)) return '<div class="v3-hint">This browser can’t show system notifications. You’ll still get in-app alerts whenever the app is open. (On iPhone, add the site to your Home Screen first.)</div>';
+        var p = Notification.permission;
+        if (p === 'granted') return '<div class="v3-row"><span class="v3-hint" style="margin:0">🔔 Notifications are on.</span><button class="btn-exception muted" onclick="v3Dates.test()">Send test</button></div>';
+        if (p === 'denied') return '<div class="v3-hint">🔕 Notifications are blocked for this site. Allow them in your browser’s site settings, then reload.</div>';
+        return '<div class="v3-row"><span class="v3-hint" style="margin:0">Turn on notifications so reminders reach you.</span><button class="btn-exception" onclick="v3Dates.enable()">🔔 Enable notifications</button></div>';
+    }
+    function buildOnce() {
+        if (built || !$('v3d-root')) return; built = true;
+        $('v3d-root').innerHTML =
+            '<div class="dash-card"><div class="dash-card-title"><span>📅 Important dates</span><small id="v3d-sub"></small></div>' +
+            '<p class="v3-hint">Mark exams, submissions, birthdays, anything that matters. You’ll be reminded 2–3 days ahead (plus a few random nudges each day), the evening before, the morning of, and an hour before if you set a time. Change how many days or how many nudges in Settings. Reminders fire while the app is open or installed on your home screen.</p>' +
+            '<div id="v3d-perm"></div></div>' +
+            '<div id="v3d-soon"></div>' +
+            '<div class="v3-split"><div class="dash-card"><div id="v3d-cal"></div></div>' +
+            '<div class="dash-card"><div class="dash-card-title"><span id="v3d-form-title">➕ Add a date</span></div>' +
+            '<div class="v3-field" style="margin-bottom:10px"><label for="v3d-title">What is it?</label><input id="v3d-title" type="text" maxlength="80" placeholder="e.g. COA exam, project demo" autocomplete="off"></div>' +
+            '<div class="v3-row" style="margin-bottom:10px"><div class="v3-field"><label for="v3d-date">Date</label><input id="v3d-date" type="date"></div>' +
+            '<div class="v3-field"><label for="v3d-time">Time (optional)</label><input id="v3d-time" type="time"></div></div>' +
+            '<div class="v3-field" style="margin-bottom:10px"><label for="v3d-note">Note (optional)</label><input id="v3d-note" type="text" maxlength="120" placeholder="room, what to carry…" autocomplete="off"></div>' +
+            '<div class="v3-opt" style="border-top:0;padding-top:4px"><span><b>Remind me</b><small>Notifications before this date</small></span><label class="v3-sw"><input type="checkbox" id="v3d-remind" checked><i></i></label></div>' +
+            '<div class="v3-btns"><button class="btn-exception" id="v3d-save" onclick="v3Dates.save()">Add date</button><button class="btn-exception muted" id="v3d-cancel" onclick="v3Dates.cancel()" style="display:none">Cancel</button></div>' +
+            '<div class="v3-msg" id="v3d-msg"></div></div></div>' +
+            '<div class="dash-card"><div class="dash-card-title"><span>⏳ Coming up</span></div><div id="v3d-list"></div></div>' +
+            '<div class="dash-card"><div class="dash-card-title"><span>🗂️ Done &amp; past</span></div><div id="v3d-past"></div></div>';
+        $('v3d-date').value = iso(new Date());
+        $('v3d-root').addEventListener('click', function (ev) {
+            var b = ev.target.closest('[data-a]'); if (!b) return;
+            var a = b.getAttribute('data-a'), id = b.getAttribute('data-id');
+            if (a === 'day') { $('v3d-date').value = b.getAttribute('data-d'); renderCal(); }
+            else if (a === 'prev') { calM--; if (calM < 0) { calM = 11; calY--; } renderCal(); }
+            else if (a === 'next') { calM++; if (calM > 11) { calM = 0; calY++; } renderCal(); }
+            else if (a === 'today') { var n = new Date(); calY = n.getFullYear(); calM = n.getMonth(); renderCal(); }
+            else if (a === 'done') toggleDone(id, true);
+            else if (a === 'undo') toggleDone(id, false);
+            else if (a === 'edit') startEdit(id);
+            else if (a === 'del') delEv(id);
+        });
+    }
+    function renderCal() {
+        var el = $('v3d-cal'); if (!el) return;
+        var first = new Date(calY, calM, 1), lead = (first.getDay() + 6) % 7, dim = new Date(calY, calM + 1, 0).getDate();
+        var evs = events().filter(function (e) { return !e.done; }), map = {}, todayIso = iso(new Date()), sel = $('v3d-date') ? $('v3d-date').value : '';
+        evs.forEach(function (e) { (map[e.date] = map[e.date] || []).push(e); });
+        var h = '<div class="v3-cal-head"><button class="btn-exception muted" data-a="prev" aria-label="Previous month">‹</button><h4>' + MONF[calM] + ' ' + calY + '</h4><span style="display:flex;gap:6px"><button class="btn-exception muted" data-a="today">Today</button><button class="btn-exception muted" data-a="next" aria-label="Next month">›</button></span></div><div class="v3-cal-grid">';
+        ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].forEach(function (d) { h += '<div class="v3-cal-dow">' + d + '</div>'; });
+        for (var i = 0; i < lead; i++) h += '<div></div>';
+        for (var d = 1; d <= dim; d++) {
+            var k = calY + '-' + pad(calM + 1) + '-' + pad(d), list = map[k], cls = 'v3-cal-day';
+            if (k === todayIso) cls += ' today';
+            if (k === sel) cls += ' sel';
+            if (list) { cls += ' has'; var dd = Math.round((parseIso(k) - parseIso(todayIso)) / 86400000); if (dd >= 0 && dd <= S().nDays) cls += ' soon'; }
+            h += '<button type="button" class="' + cls + '" data-a="day" data-d="' + k + '"' + (list ? ' title="' + ES(list.map(function (e) { return e.title; }).join(', ')) + '"' : '') + '>' + d + '</button>';
+        }
+        el.innerHTML = h + '</div>';
+    }
+    function evRow(e, past) {
+        var d = parseIso(e.date), u = until(e);
+        return '<div class="v3-ev"><div class="v3-ev-date"><b>' + d.getDate() + '</b><small>' + MON[d.getMonth()] + '</small></div>' +
+            '<div class="v3-ev-main"><b>' + ES(e.title) + (e.remind === false ? ' <small style="display:inline">🔕</small>' : '') + '</b>' +
+            '<small>' + (e.time ? fmtT(e.time) : 'All day') + (e.note ? ' · ' + ES(e.note) : '') + '</small>' +
+            (past ? (e.done ? '<span class="v3-chip">DONE</span>' : '<span class="v3-chip">PASSED</span>') : '<span class="v3-chip ' + u.cls + '">' + u.t.toUpperCase() + '</span>') + '</div>' +
+            '<div class="v3-ev-btns">' + (past ? '<button data-a="undo" data-id="' + e.id + '" title="Move back to upcoming">↩</button>' : '<button data-a="done" data-id="' + e.id + '" title="Mark done">✓</button><button data-a="edit" data-id="' + e.id + '" title="Edit">✏️</button>') +
+            '<button data-a="del" data-id="' + e.id + '" title="Delete">🗑</button></div></div>';
+    }
+    function render() {
+        buildOnce();
+        if (!built) return;
+        var all = sorted(events()), up = [], past = [];
+        all.forEach(function (e) { (e.done || daysTo(e) < 0 ? past : up).push(e); });
+        $('v3d-perm').innerHTML = permHTML();
+        $('v3d-sub').textContent = up.length + ' upcoming';
+        var soon = up.filter(function (e) { return daysTo(e) <= S().nDays; });
+        $('v3d-soon').innerHTML = soon.length ? '<div class="v3-soon"><b>⚡ Needs your attention</b><br>' + soon.map(function (e) { return '• ' + ES(e.title) + ' — ' + until(e).t.toLowerCase(); }).join('<br>') + '</div>' : '';
+        $('v3d-list').innerHTML = up.length ? up.map(function (e) { return evRow(e, false); }).join('') : '<div class="v3-hint" style="margin:0">Nothing marked yet. Pick a day on the calendar and add something.</div>';
+        $('v3d-past').innerHTML = past.length ? past.slice().reverse().map(function (e) { return evRow(e, true); }).join('') : '<div class="v3-hint" style="margin:0">Completed and past dates show up here.</div>';
+        renderCal(); badge();
+    }
+    function formMsg(t, bad) { var m = $('v3d-msg'); if (m) { m.textContent = t || ''; m.className = 'v3-msg ' + (t ? (bad ? 'bad' : 'good') : ''); } }
+    function resetForm() {
+        editing = null; $('v3d-title').value = ''; $('v3d-note').value = ''; $('v3d-time').value = ''; $('v3d-remind').checked = true;
+        $('v3d-form-title').textContent = '➕ Add a date'; $('v3d-save').textContent = 'Add date'; $('v3d-cancel').style.display = 'none';
+    }
+    function startEdit(id) {
+        var e = events().filter(function (x) { return x.id === id; })[0]; if (!e) return;
+        editing = id; $('v3d-title').value = e.title; $('v3d-date').value = e.date; $('v3d-time').value = e.time || ''; $('v3d-note').value = e.note || ''; $('v3d-remind').checked = e.remind !== false;
+        $('v3d-form-title').textContent = '✏️ Edit date'; $('v3d-save').textContent = 'Save changes'; $('v3d-cancel').style.display = '';
+        var d = parseIso(e.date); calY = d.getFullYear(); calM = d.getMonth(); renderCal();
+        $('v3d-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function toggleDone(id, v) { var a = events(); a.forEach(function (e) { if (e.id === id) e.done = v; }); saveEvents(a); render(); }
+    function delEv(id) {
+        var e = events().filter(function (x) { return x.id === id; })[0]; if (!e) return;
+        if (!confirm('Delete "' + e.title + '"?')) return;
+        saveEvents(events().filter(function (x) { return x.id !== id; }));
+        if (editing === id) resetForm();
+        render();
+    }
+
+    window.v3Dates = {
+        render: render,
+        enable: function () {
+            try { Notification.requestPermission().then(function () { render(); if (Notification.permission === 'granted') notify('🔔 Notifications on', 'Reminders for your important dates will show up like this.', 'dos-test'); }); } catch (e) { render(); }
+        },
+        test: function () { notify('📅 Test reminder', 'This is how your date reminders will look.', 'dos-test'); },
+        cancel: function () { resetForm(); formMsg(''); },
+        save: function () {
+            var title = $('v3d-title').value.trim(), date = $('v3d-date').value, time = $('v3d-time').value, note = $('v3d-note').value.trim(), remind = $('v3d-remind').checked;
+            if (!title) { formMsg('Give it a name first.', true); return; }
+            if (!date) { formMsg('Pick a date.', true); return; }
+            var a = events();
+            if (editing) {
+                a.forEach(function (e) {
+                    if (e.id === editing) {
+                        var moved = e.date !== date || (e.time || '') !== time;
+                        e.title = title; e.date = date; e.time = time; e.note = note; e.remind = remind;
+                        if (moved) { e.created = Date.now(); e.done = false; }
+                    }
+                });
+                formMsg('Saved.', false);
+            } else {
+                a.push({ id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: title, date: date, time: time, note: note, remind: remind, done: false, created: Date.now() });
+                formMsg('Added. You’ll be reminded in time.', false);
+            }
+            saveEvents(a); resetForm(); render(); setTimeout(check, 200);
+            if (remind && 'Notification' in window && Notification.permission === 'default') say('Tip: tap “Enable notifications” above so reminders reach you.', 'info');
+        }
+    };
+
+    /* ---------------- settings ---------------- */
+    var pinFails = 0;
+    function opt(title, sub, ctl) { return '<div class="v3-opt"><span><b>' + title + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span>' + ctl + '</div>'; }
+    function sw(id, on, fn) { return '<label class="v3-sw"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + ' onchange="' + fn + '"><i></i></label>'; }
+    function sel(id, val, opts, fn) { return '<select id="' + id + '" onchange="' + fn + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (String(o[0]) === String(val) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'; }
+    function hours() { var o = []; for (var h = 0; h < 24; h++) o.push([h, pad(h) + ':00']); return o; }
+    function renderSettings() {
+        var root = $('v3s-root'); if (!root) return;
+        var st = S(), perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+        var permTxt = perm === 'granted' ? 'On for this device' : perm === 'denied' ? 'Blocked in browser settings' : perm === 'unsupported' ? 'Not supported here' : 'Not enabled yet';
+        var muted = localStorage.getItem('lg_mute') === '1';
+        root.innerHTML =
+            '<div class="dash-card"><div class="dash-card-title"><span>🔐 Security</span><small>Password</small></div>' +
+            '<p class="v3-hint">Change the 6-digit password used on the lock screen. You’ll need the current one. The password is stored only on this device, so change it on each device you use.</p>' +
+            '<div class="v3-row"><div class="v3-field"><label for="v3s-cur">Current password</label><input id="v3s-cur" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••••"></div>' +
+            '<div class="v3-field"><label for="v3s-new">New password</label><input id="v3s-new" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="6 digits"></div>' +
+            '<div class="v3-field"><label for="v3s-new2">Confirm new</label><input id="v3s-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="repeat"></div></div>' +
+            '<div class="v3-btns"><button class="btn-exception" onclick="v3S.changePin()">Change password</button><button class="btn-exception muted" onclick="lockApp()">🔒 Lock app now</button></div>' +
+            '<div class="v3-msg" id="v3s-pin-msg"></div></div>' +
+
+            '<div class="dash-card"><div class="dash-card-title"><span>🔔 Notifications</span><small>' + permTxt + '</small></div>' +
+            opt('System notifications', 'Allow reminders to pop up on this device', perm === 'granted' ? '<button class="btn-exception muted" onclick="v3Dates.test()">Send test</button>' : (perm === 'default' ? '<button class="btn-exception" onclick="v3Dates.enable();setTimeout(v3S.render,800)">Enable</button>' : '')) +
+            opt('Start reminding', 'How many days before an important date reminders begin', sel('v3s-nd', st.nDays, [[1, '1 day before'], [2, '2 days before'], [3, '3 days before'], [4, '4 days before'], [5, '5 days before'], [7, '1 week before']], "v3S.set('nDays',+this.value)")) +
+            opt('Fixed reminders', 'Morning of each lead day, evening before, morning of the day, and 1 hour before (if a time is set)', sw('v3s-nf', st.nFixed, "v3S.set('nFixed',this.checked)")) +
+            opt('Random nudges', 'Extra surprise reminders per lead day, at random times between 10:00 and 21:30', sel('v3s-nr', st.nRandom, [[0, 'None'], [1, '1 per day'], [2, '2 per day'], [3, '3 per day'], [4, '4 per day']], "v3S.set('nRandom',+this.value)")) +
+            opt('Quiet hours from', 'No reminders between these hours (they wait until quiet hours end)', sel('v3s-qs', st.qStart, hours(), "v3S.set('qStart',+this.value)")) +
+            opt('Quiet hours until', '', sel('v3s-qe', st.qEnd, hours(), "v3S.set('qEnd',+this.value)")) +
+            '<div class="v3-btns"><button class="btn-exception muted" onclick="switchTab(\'dates\')">📅 Open important dates</button><button class="btn-exception muted" onclick="v3S.clearFired()">Reset reminder history</button></div></div>' +
+
+            '<div class="dash-card"><div class="dash-card-title"><span>🏋️ Gym &amp; jogging</span><small>Split: Mon/Thu bicep · Tue/Fri shoulder · Wed/Sat chest</small></div>' +
+            opt('Jog option on Sundays', 'Shows a “Go for a jog” button on the Sunday rest card in the Gym tab', sw('v3s-js', st.jogSun, "v3S.set('jogSun',this.checked)")) +
+            opt('Sunday jog reminder', 'A nudge on Sundays if you haven’t logged a jog yet', sw('v3s-jr', st.jogRemind, "v3S.set('jogRemind',this.checked)")) +
+            opt('Remind me from', 'Earliest time on Sunday for the jog nudge', sel('v3s-jh', st.jogHour, [[5, '05:00'], [6, '06:00'], [7, '07:00'], [8, '08:00'], [9, '09:00'], [10, '10:00'], [16, '16:00'], [17, '17:00']], "v3S.set('jogHour',+this.value)")) +
+            '<div class="v3-btns"><button class="btn-exception muted" onclick="switchTab(\'gym\')">Open Gym</button></div></div>' +
+
+            '<div class="dash-card"><div class="dash-card-title"><span>🎨 Appearance &amp; feel</span></div>' +
+            opt('Theme', 'Switch between dark and light', '<button class="btn-exception muted" onclick="toggleTheme()">Toggle theme</button>') +
+            opt('Lite effects', 'Turn off decorative animation and blur (good for older phones)', '<button class="btn-exception muted" onclick="toggleFx()">Toggle Lite</button>') +
+            opt('Lock-screen sounds', 'Beeps and the unlock chime on the login screen', sw('v3s-snd', !muted, "v3S.sound(this.checked)")) + '</div>' +
+
+            '<div class="dash-card"><div class="dash-card-title"><span>💾 Data &amp; sync</span></div>' +
+            opt('Sync across devices', 'Set or change the sync code', '<button class="btn-exception muted" onclick="syncPromptCode()">Open sync</button>') +
+            opt('Re-sync now', 'Pull and push everything again', '<button class="btn-exception muted" onclick="syncResync()">Re-sync</button>') +
+            opt('Backup', 'Download everything as a file', '<button class="btn-exception muted" onclick="exportData()">⬇ Export</button>') +
+            opt('Restore', 'Import a backup file', '<label class="btn-exception muted" style="cursor:pointer">⬆ Import<input type="file" accept="application/json,.json" style="display:none" onchange="importData(this)"></label>') + '</div>' +
+
+            '<div class="dash-card"><div class="dash-card-title"><span>⚙️ Reset</span></div>' +
+            '<p class="v3-hint">Puts reminder and jog options back to their defaults. Your habits, gym logs and dates are not touched.</p>' +
+            '<div class="v3-btns"><button class="btn-exception muted" onclick="v3S.resetAll()">Reset options to default</button></div></div>';
+    }
+    function pinMsg(t, ok) { var m = $('v3s-pin-msg'); if (m) { m.textContent = t; m.className = 'v3-msg ' + (ok ? 'good' : 'bad'); } }
+    window.v3S = {
+        render: renderSettings,
+        set: function (k, v) { var p = {}; p[k] = v; saveS(p); badge(); },
+        sound: function (on) { try { if (on) localStorage.removeItem('lg_mute'); else localStorage.setItem('lg_mute', '1'); } catch (e) { } },
+        clearFired: function () { try { localStorage.removeItem('dates_fired'); } catch (e) { } say('Reminder history cleared.', 'info'); },
+        resetAll: function () { if (!confirm('Reset reminder and jog options to defaults?')) return; try { localStorage.removeItem('app_settings'); } catch (e) { } renderSettings(); say('Options reset.', 'info'); },
+        changePin: function () {
+            var cur = $('v3s-cur').value, n1 = $('v3s-new').value, n2 = $('v3s-new2').value, lockT = 0;
+            try { lockT = +(sessionStorage.getItem('pin_lock') || 0); } catch (e) { }
+            if (Date.now() < lockT) { pinMsg('Too many wrong attempts. Try again in ' + Math.ceil((lockT - Date.now()) / 1000) + 's.', false); return; }
+            if (cur !== CORRECT_PIN) {
+                pinFails++;
+                if (pinFails >= 5) { pinFails = 0; try { sessionStorage.setItem('pin_lock', Date.now() + 30000); } catch (e) { } pinMsg('Wrong password 5 times. Locked for 30 seconds.', false); }
+                else pinMsg('Current password is wrong.', false);
+                return;
+            }
+            if (!/^\d{6}$/.test(n1)) { pinMsg('New password must be exactly 6 digits.', false); return; }
+            if (n1 === cur) { pinMsg('New password must be different from the current one.', false); return; }
+            if (n1 !== n2) { pinMsg('The two new passwords don’t match.', false); return; }
+            if (!setAppPin(n1)) { pinMsg('Could not save the new password (storage blocked).', false); return; }
+            pinFails = 0; $('v3s-cur').value = ''; $('v3s-new').value = ''; $('v3s-new2').value = '';
+            pinMsg('Password changed. Use the new one next time you unlock.', true); say('Password changed.', 'win');
+        }
+    };
+
+    /* ---------------- Sunday jog ---------------- */
+    function jogGet(i) { return jget('gym_jog_' + i, null); }
+    function paceOf(j) { if (!j || !j.km || !j.min) return ''; var p = j.min / j.km, m = Math.floor(p), s = Math.round((p - m) * 60); if (s === 60) { m++; s = 0; } return m + ':' + pad(s) + ' /km'; }
+    window.v3JogBlock = function (i) {
+        if (!S().jogSun) return '';
+        var j = jogGet(i);
+        if (!j) return '<button class="btn-exception" style="padding:4px 10px; font-size:11.5px; margin-top:6px;" data-act="jog" data-date="' + i + '">🏃 Go for a jog instead</button>';
+        var bits = []; if (j.km) bits.push(j.km + ' km'); if (j.min) bits.push(j.min + ' min'); var pc = paceOf(j); if (pc) bits.push(pc);
+        return '<div class="v3-jog">🏃 <b>Jog done</b>' + (bits.length ? ' · ' + bits.join(' · ') : '') + (j.note ? '<br>' + ES(j.note) : '') +
+            '<div class="v3-jog-b"><button data-act="jog" data-date="' + i + '">✏️ Edit</button><button data-act="jogdel" data-date="' + i + '">✕ Remove</button></div></div>';
+    };
+    window.v3JogPill = function (fromIso, toIso) {
+        var n = 0, km = 0, d = parseIso(fromIso), end = toIso;
+        for (var c = 0; c < 8 && iso(d) <= end; c++) { var j = jogGet(iso(d)); if (j) { n++; km += +j.km || 0; } d.setDate(d.getDate() + 1); }
+        return n ? '<div class="gym-stat-pill">🏃 ' + n + ' jog' + (n > 1 ? 's' : '') + (km ? ' · ' + (Math.round(km * 10) / 10) + ' km' : '') + '</div>' : '';
+    };
+    function jogModal() {
+        var m = $('v3-jog-modal'); if (m) return m;
+        m = document.createElement('div'); m.id = 'v3-jog-modal'; m.className = 'modal-overlay';
+        m.innerHTML = '<div class="modal-card"><h3 style="margin-bottom:6px;font-size:22px;">🏃 Sunday jog</h3><p class="v3-hint" id="v3j-sub"></p>' +
+            '<div class="v3-row" style="margin-bottom:10px"><div class="v3-field"><label for="v3j-km">Distance (km)</label><input id="v3j-km" type="number" step="0.1" min="0" inputmode="decimal" placeholder="optional"></div>' +
+            '<div class="v3-field"><label for="v3j-min">Time (minutes)</label><input id="v3j-min" type="number" step="1" min="0" inputmode="numeric" placeholder="optional"></div></div>' +
+            '<div class="v3-field"><label for="v3j-note">Note</label><input id="v3j-note" type="text" maxlength="100" placeholder="route, how it felt…" autocomplete="off"></div>' +
+            '<div class="v3-msg" id="v3j-pace"></div>' +
+            '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;"><button class="btn-exception muted" onclick="v3JogClose()">Cancel</button><button class="btn-exception" onclick="v3JogSave()">Save jog</button></div></div>';
+        document.body.appendChild(m);
+        var upd = function () { var km = parseFloat($('v3j-km').value), mn = parseFloat($('v3j-min').value); $('v3j-pace').className = 'v3-msg good'; $('v3j-pace').textContent = km > 0 && mn > 0 ? 'Pace: ' + paceOf({ km: km, min: mn }) : ''; };
+        $('v3j-km').addEventListener('input', upd); $('v3j-min').addEventListener('input', upd);
+        return m;
+    }
+    var jogIso = null;
+    window.v3JogOpen = function (i) {
+        var m = jogModal(), j = jogGet(i) || {}; jogIso = i;
+        var d = parseIso(i); $('v3j-sub').textContent = d.getDate() + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() + ' · mark it done and add numbers if you like.';
+        $('v3j-km').value = j.km || ''; $('v3j-min').value = j.min || ''; $('v3j-note').value = j.note || ''; $('v3j-pace').textContent = paceOf(j) ? 'Pace: ' + paceOf(j) : '';
+        m.classList.add('show');
+    };
+    window.v3JogClose = function () { var m = $('v3-jog-modal'); if (m) m.classList.remove('show'); };
+    window.v3JogSave = function () {
+        if (!jogIso) return;
+        var km = parseFloat($('v3j-km').value), mn = parseFloat($('v3j-min').value);
+        jset('gym_jog_' + jogIso, { km: km > 0 ? Math.round(km * 100) / 100 : 0, min: mn > 0 ? Math.round(mn) : 0, note: $('v3j-note').value.trim(), ts: Date.now() });
+        v3JogClose(); say('Jog logged. Keep it regular. 🏃', 'win');
+        if (typeof renderGymSection === 'function') renderGymSection();
+    };
+    window.v3JogDelete = function (i) {
+        if (!confirm('Remove this jog?')) return;
+        try { localStorage.removeItem('gym_jog_' + i); } catch (e) { }
+        if (typeof renderGymSection === 'function') renderGymSection();
+    };
+
+    /* ---------------- boot ---------------- */
+    setTimeout(function () { badge(); check(); }, 4000);
+    setInterval(check, 30000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+    window.addEventListener('focus', function () { check(); });
 })();
 </script>
 
