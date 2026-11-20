@@ -13,8 +13,14 @@
     <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Oswald:wght@500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
     <script src="jarvis/perf.js?v=2"></script>
     <!-- Cloud sync: only used if you set a sync code with the "Sync" button -->
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+    <script>
+        /* Firebase is only needed when a sync code is set: loaded on demand so it never blocks the first paint */
+        window.__loadFb = function () {
+            if (window.__fbP) return window.__fbP;
+            var ld = function (u) { return new Promise(function (ok, no) { var x = document.createElement('script'); x.src = u; x.onload = ok; x.onerror = no; document.head.appendChild(x); }); };
+            return window.__fbP = ld('https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js').then(function () { return ld('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js'); });
+        };
+    </script>
     <script>
         // Apply saved theme before first paint so there is no flash
         try { var _t = localStorage.getItem('theme'); document.documentElement.setAttribute('data-theme', _t === 'goggins' ? 'goggins' : 'mark7'); } catch (e) {}
@@ -1260,6 +1266,15 @@ html.fx-lite .section.active, html.fx-lite .section.active > * { animation: none
 html.fx-lite .reactor.draw .rx-seg { animation: none; }
 html.fx-lite .rx-seg.on, html.fx-lite .rx-seg.lead, html.fx-lite .reactor-core .streak-num, html.fx-lite .brand-logo { filter: none; }
 html.fx-paused *, html.fx-paused *::before, html.fx-paused *::after { animation-play-state: paused !important; }
+
+/* ===== audio priority (generated): while audio plays, freeze heavy decorations and drop backdrop blur ===== */
+html.aud-bal :is(.rx-spin-a, .rx-spin-b, .rx-spin-c, .rx-orbit, .rx-breathe, .gym-ring-spin, .sysdot, .stark-hud-status i, .flame.lit, .timer-card.running, .brand-logo, .reactor-core .streak-num, .ins-bar .tr i, .gym-pr-bar i, .rpt-bar i, .gym-mbar-track i, .ins-twin .tr i, .wd-track i, .reactor.draw .rx-seg, #visor *, .vz-flicker > *, .vz-reticle .sp-a, .vz-reticle .sp-b, .vz-reticle .tri, .m7x-scope .sweep, .m7x-scope .ticks, #m7x-fab .fd, .cs-suit .rcs, .cs-suit .beam, .cs-radar .sw, .cs-radar .bl, .cs-bars i, .m7x-flash, #m7x-console.open, .pl-box, .cs-log div, .ops-chart .ln, .ops-pie .spin, .ops-pie .spin2, .ops-scan .r1, .ops-scan .r2, .ops-scan .core, .ops-news .run span, .m7w-chrome .sw, :is(.section.fx3-go *,#fx3-beam,.fx3-rip)) { animation-play-state: paused !important; }
+html.aud-bal :is(nav, .qotd-overlay, .modal-overlay, .ib-p, .dash-card, .home-stat-box, .wd-card, .bunk-bank-card, .punish-card, .aar-card, .timer-card, .detailed-breakdown-card, .month-selector, .table-wrapper, .exc-card, .stark-hud) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.aud-bal *::before, html.aud-bal *::after { animation-play-state: paused !important; }
+html.aud-bal #fx-canvas, html.aud-max #fx-canvas { visibility: hidden; }
+html.aud-max, html.aud-max body { scroll-behavior: auto; }
+html.aud-max :is(nav, .modal-overlay, .dash-card, .home-stat-box, .exc-card) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.aud-bal .qp-eq i, html.aud-max .qp-eq i { animation-play-state: running !important; }
 @media (prefers-reduced-motion: reduce) { html[data-theme]::before, html[data-theme]::after, html[data-theme] nav::after { animation: none !important; } }
     </style>
 
@@ -2075,7 +2090,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 @media (prefers-reduced-motion: reduce) { #drawer .nav-btn { animation: none !important; } }
 @media (max-height: 640px) { .dr-jarvis small { display: none; } .dr-group { margin-top: 8px; } }
 </style>
-<link rel="stylesheet" href="jarvis/jarvis.css?v=15">
+<link rel="stylesheet" href="jarvis/jarvis.css?v=16">
 <link rel="stylesheet" href="jarvis/mk7hud.css?v=1">
 </head>
 <body>
@@ -3221,6 +3236,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 
         function syncInit() {
             if (!syncCode || firebaseConfig.apiKey === "PASTE_YOUR_API_KEY") { syncUpdateBtn(); return; }
+            if (typeof firebase === 'undefined') { window.__loadFb().then(syncInit).catch(() => { syncState = 'error'; syncUpdateBtn(); }); return; }
             try {
                 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 syncDb = firebase.firestore();
@@ -4084,30 +4100,86 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
             qpSaveState();
         }
 
+        /* ---------- audio priority: while any audio plays, quiet the heavy decorative layers so playback never starves ---------- */
+        window.__aud = (function () {
+            const src = new Set(), H = document.documentElement; let cls = '', offT = 0;
+            const mode = () => { try { return localStorage.getItem('jv_aud') || 'bal'; } catch (e) { return 'bal'; } };
+            function apply() {
+                const m = src.size ? mode() : 'off', c = m === 'bal' ? 'aud-bal' : m === 'max' ? 'aud-max' : '';
+                if (c === cls) return;
+                if (cls) H.classList.remove(cls);
+                if (c) H.classList.add(c);
+                cls = c;
+                H.classList.toggle('fx-paused', c === 'aud-max' || document.hidden);
+                try { fxCanvasSync(); } catch (e) { }
+            }
+            return {
+                set(k, on) {
+                    clearTimeout(offT);
+                    if (on) { src.add(k); apply(); }
+                    else { src.delete(k); offT = setTimeout(apply, 700); }      // short grace so quote-to-quote hops do not flicker the page
+                },
+                get on() { return !!cls; }, refresh: apply, mode
+            };
+        })();
+        /* ---------- quote audio engine: whole clip in memory, next clip prefetched, stall recovery ---------- */
+        const QP_BLOBS = new Map(), QP_WAIT = new Map();
+        let qpCurN = 0, qpNextN = 0, qpTok = 0, qpStallT = 0, qpFillPct = -1;
+        function qpUrl(n) { return QP_DIR + QP_PREFIX + n + QP_EXT; }
+        function qpFetch(n) {
+            if (QP_BLOBS.has(n)) return Promise.resolve(QP_BLOBS.get(n));
+            if (QP_WAIT.has(n)) return QP_WAIT.get(n);
+            const pr = fetch(qpUrl(n)).then(r => { if (!r.ok) throw new Error('http ' + r.status); return r.blob(); }).then(b => {
+                const u = URL.createObjectURL(b); QP_BLOBS.set(n, u);
+                if (QP_BLOBS.size > 6) for (const k of QP_BLOBS.keys()) { if (k !== qpCurN && k !== qpNextN) { try { URL.revokeObjectURL(QP_BLOBS.get(k)); } catch (e) { } QP_BLOBS.delete(k); break; } }
+                return u;
+            }).finally(() => QP_WAIT.delete(n));
+            QP_WAIT.set(n, pr); return pr;
+        }
+        function qpHold(on) { try { window.__aud.set('qp', on); } catch (e) { } try { if (window.__jarvis && window.__jarvis.audioHold) window.__jarvis.audioHold(on); } catch (e) { } }
+        function qpPrefetchNext() {
+            if (!qpOn || qpAvailable() < 2) return;
+            if (!qpNextN || qpMissing.has(qpNextN)) qpNextN = qpPick();
+            qpFetch(qpNextN).catch(() => { });
+        }
+
         function qpEnsureAudio() {
             if (qpAudio) return qpAudio;
             qpAudio = new Audio();
-            qpAudio.preload = 'none';
+            qpAudio.preload = 'auto';
             qpAudio.volume = qpGetVolume() / 100;
-            qpAudio.addEventListener('ended', () => { if (qpOn) qpLoad(); });
+            qpAudio.addEventListener('ended', () => { qpHold(false); if (qpOn) qpLoad(); });
             qpAudio.addEventListener('timeupdate', () => {
-                if (qpAudio.duration) $("qp-fill").style.width = (qpAudio.currentTime / qpAudio.duration * 100) + '%';
+                if (!qpAudio.duration) return;
+                const pc = Math.round(qpAudio.currentTime / qpAudio.duration * 250) / 2.5;       // repaint only when the bar really moved
+                if (pc !== qpFillPct) { qpFillPct = pc; $("qp-fill").style.width = pc + '%'; }
             });
-            qpAudio.addEventListener('playing', () => { qpFailRun = 0; qotdSyncPlayBtn(); });
-            qpAudio.addEventListener('pause', () => qotdSyncPlayBtn());
+            qpAudio.addEventListener('playing', () => { qpFailRun = 0; clearTimeout(qpStallT); qpHold(true); if (qpOn) $("qp-status").textContent = 'Playing…'; qpUi(true); qotdSyncPlayBtn(); qpPrefetchNext(); });
+            qpAudio.addEventListener('pause', () => { clearTimeout(qpStallT); if (!qpAudio.ended) qpHold(false); qotdSyncPlayBtn(); });
+            qpAudio.addEventListener('waiting', () => { if (!qpOn || qpAudio.paused) return; clearTimeout(qpStallT); qpStallT = setTimeout(qpRecover, 2500); });
+            qpAudio.addEventListener('stalled', () => { if (!qpOn || qpAudio.paused) return; clearTimeout(qpStallT); qpStallT = setTimeout(qpRecover, 3500); });
             qpAudio.addEventListener('error', qpOnError);
             qpMediaSession();
             return qpAudio;
         }
+        function qpRecover() {                    // a clip froze mid-way: reload it from memory (or the network) and resume at the same spot
+            if (!qpOn || !qpAudio || qpAudio.paused || !qpCurN) return;
+            const t = qpAudio.currentTime, tok = qpTok;
+            qpFetch(qpCurN).then(u => {
+                if (tok !== qpTok || !qpOn) return;
+                const a = qpAudio; a.src = u; a.load();
+                a.addEventListener('loadedmetadata', function f() { a.removeEventListener('loadedmetadata', f); try { a.currentTime = t; } catch (e) { } a.play().catch(() => { }); });
+            }).catch(() => { try { qpAudio.play().catch(() => { }); } catch (e) { } });
+        }
 
         function qpOnError() {
             if (!qpOn || !qpAudio || !qpAudio.getAttribute('src')) return;
-            const m = /(\d+)\.mp3/.exec(qpAudio.getAttribute('src') || '');
-            if (m) qpMissing.add(parseInt(m[1], 10));
+            if (qpCurN) qpMissing.add(qpCurN);
+            QP_BLOBS.delete(qpCurN);
             qpSaveState();
             qpFailRun++;
-            if (qpFailRun <= 3 && qpAvailable() > 0) { qpLoad(); return; }   // quietly try another one
-            qpOn = false;
+            if (qpFailRun <= 3 && qpAvailable() > 0) { qpNextN = 0; qpLoad(); return; }   // quietly try another one
+            qpOn = false; qpHold(false);
             qpUi(false, 'Could not load the quotes - check the quotes folder');
         }
 
@@ -4148,15 +4220,21 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
         // load + play one quote (a number, or a random one when n is omitted)
         function qpLoad(n) {
             const a = qpEnsureAudio();
-            if (n === undefined) n = qpPick(); else qpMarkPlayed(n);
-            a.src = QP_DIR + QP_PREFIX + n + QP_EXT;
-            $("qp-fill").style.width = '0%';
-            qpUi(true, 'Playing…');
-            a.play().catch(e => {
-                if (e && e.name === 'AbortError') return;       // a newer load replaced this one
-                console.warn('audio', e);
-                qpUi(false, 'Tap play to start');
-            });
+            if (n === undefined) { n = qpNextN && !qpMissing.has(qpNextN) ? qpNextN : qpPick(); } else qpMarkPlayed(n);
+            qpNextN = 0; qpCurN = n; const tok = ++qpTok; clearTimeout(qpStallT);
+            qpFillPct = -1; $("qp-fill").style.width = '0%';
+            qpUi(true, QP_BLOBS.has(n) ? 'Playing…' : 'Loading…');
+            const go = u => {
+                if (tok !== qpTok) return;
+                a.src = u;
+                const pr = a.play();
+                if (pr && pr.catch) pr.catch(e => {
+                    if (e && e.name === 'AbortError') return;       // a newer load replaced this one
+                    console.warn('audio', e);
+                    qpUi(false, 'Tap play to start');
+                });
+            };
+            qpFetch(n).then(go, () => go(qpUrl(n)));                // no fetch (file://, blocked)? fall back to streaming the file directly
         }
         function qpToggle() {
             if (!qpOn) { qpOn = true; qpLoad(); return; }
@@ -4165,7 +4243,7 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
         }
         function qpNext() { qpOn = true; qpLoad(); }
         function qpStop() {
-            qpOn = false;
+            qpOn = false; qpTok++; qpCurN = 0; qpHold(false);
             if (qpAudio) { qpAudio.pause(); qpAudio.removeAttribute('src'); qpAudio.load(); }
             $("qp-fill").style.width = '0%';
             qpUi(false, 'Stopped - press play for a random quote');
@@ -4240,14 +4318,14 @@ html.fx-lite #drawer .nav-btn, html.fx-mid #drawer .nav-btn { animation: none !i
 
         function qotdSyncPlayBtn() {
             const b = $("qotd-play"); if (!b) return;
-            const mine = !!(qpAudio && qpOn && !qpAudio.paused && qpAudio.getAttribute('src') === QP_DIR + QP_PREFIX + qotdAudioN + QP_EXT);
+            const mine = !!(qpAudio && qpOn && !qpAudio.paused && qpCurN === qotdAudioN);
             b.classList.toggle('on', mine);
             $("qotd-play-ic").textContent = mine ? '❚❚' : '▶';
             $("qotd-play-tx").textContent = mine ? 'Pause' : "Hear a quote";
         }
         function qotdPlay() {
             const src = QP_DIR + QP_PREFIX + qotdAudioN + QP_EXT;
-            if (qpAudio && qpOn && qpAudio.getAttribute('src') === src) {     // already loaded: toggle
+            if (qpAudio && qpOn && qpCurN === qotdAudioN) {     // already loaded: toggle
                 if (qpAudio.paused) { qpAudio.play().catch(() => { }); qpUi(true, 'Playing…'); }
                 else { qpAudio.pause(); qpUi(false, 'Paused'); }
                 qotdSyncPlayBtn();
@@ -6892,7 +6970,7 @@ function m7() { return document.documentElement.getAttribute('data-theme') === '
 const fxRM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 function fxLite() { try { return localStorage.getItem('fx_lite') === '1'; } catch (e) { return false; } }
 function fxCalm() { return fxLite() || !!(fxRM && fxRM.matches); }
-function fxOn() { return !fxCalm() && !document.hidden; }
+function fxOn() { return !fxCalm() && !document.hidden && !(window.__aud && window.__aud.on); }
 function applyFx() {
     document.documentElement.classList.toggle('fx-lite', fxCalm());
     const b = $('fx-toggle');
@@ -9309,29 +9387,15 @@ html.fx-mid #m7w-lock :is(.ro, .rm, .ri, .s, .ch), html.fx-mid #m7w-beam { anima
     -webkit-mask-image: linear-gradient(180deg, transparent, #000 24%, #000 76%, transparent); mask-image: linear-gradient(180deg, transparent, #000 24%, #000 76%, transparent); }
 #m7w-frame .lad .col { position: absolute; left: 0; top: 50%; will-change: transform; }
 #m7w-frame .lad { opacity: .6; }
-#m7w-frame .ladmark, #m7w-frame .altread { opacity: .75; }
-#m7w-frame .radar { opacity: .72; }
+#m7w-frame .ladmark { opacity: .75; }
 #m7w-frame .lad .col span { display: block; position: relative; height: 44px; padding-left: 19px; font: 600 10px/44px var(--font-hud); letter-spacing: .05em; color: rgba(var(--m7w-gn), .9); text-shadow: 0 0 7px rgba(var(--m7w-gn), .65); white-space: nowrap; }
 #m7w-frame .lad .col span small { font-size: 7.5px; opacity: .75; }
 #m7w-frame .lad .col span::before { content: ""; position: absolute; left: 0; top: 21px; width: 13px; height: 1px; background: rgba(var(--m7w-gn), .9); box-shadow: 0 0 5px rgba(var(--m7w-gn), .8); }
 #m7w-frame .lad .col span::after { content: ""; position: absolute; left: 0; top: 33px; width: 6px; height: 1px; background: rgba(var(--m7w-gn), .5); box-shadow: 0 -11px 0 rgba(var(--m7w-gn), .5), 0 -22px 0 rgba(var(--m7w-gn), .5); }
 #m7w-frame .ladmark { position: absolute; left: 6px; top: 50%; width: 0; height: 0; margin-top: -37px; border: 5px solid transparent; border-left: 8px solid rgb(var(--m7w-or)); filter: drop-shadow(0 0 4px rgba(var(--m7w-or), .95)); }
-#m7w-frame .altread { position: absolute; left: 8px; top: 50%; margin-top: 94px; padding: 2px 6px; font: 700 8.5px/1.2 var(--font-hud); letter-spacing: .16em; color: #eaffff; background: rgba(2, 10, 22, .72); border: 1px solid rgba(var(--m7w-gn), .5); white-space: nowrap; }
-#m7w-frame .altread b { color: rgb(var(--m7w-gn)); font-weight: 700; }
-#m7w-frame .radar { position: absolute; left: 8px; top: 50%; margin-top: 138px; width: 92px; height: 92px; }
-#m7w-frame .radar svg { width: 100%; height: 100%; overflow: visible; display: block; }
-#m7w-frame .radar .rg { fill: none; stroke: rgba(var(--m7w-cy), .55); stroke-width: .9; }
-#m7w-frame .radar .rg2 { fill: none; stroke: rgba(var(--m7w-cy), .25); stroke-width: .6; stroke-dasharray: 1.5 3; }
-#m7w-frame .radar .fill { fill: rgba(4, 22, 44, .55); }
-#m7w-frame .radar .sweep { transform-origin: 46px 46px; animation: m7wRing 4.8s linear infinite; }
-#m7w-frame .radar .ok { fill: rgb(var(--m7w-cy)); filter: drop-shadow(0 0 3px rgba(var(--m7w-cy), 1)); }
-#m7w-frame .radar .pd { fill: rgb(var(--m7w-or)); filter: drop-shadow(0 0 4px rgba(var(--m7w-or), 1)); animation: m7wChev 1.1s steps(2) infinite; }
-#m7w-frame .radar .lb { font: 600 6px var(--font-hud); letter-spacing: .16em; fill: rgba(var(--m7w-cy), .85); }
 #m7w-frame .vso { position: absolute; right: 18px; bottom: 74px; font: 600 8px var(--font-hud); letter-spacing: .24em; color: rgba(var(--m7w-cy), .65); text-shadow: 0 0 6px rgba(var(--m7w-cy), .6); }
 @media (max-width: 1099px) { #m7w-frame { display: none !important; } }
-@media (max-height: 640px) { #m7w-frame .radar, #m7w-frame .altread { display: none; } }
-html.fx-mid #m7w-frame .radar .sweep, html.fx-mid #m7w-frame .radar .pd { animation: none !important; }
-
+@media (max-height: 640px) { html.fx-mid 
 /* =====================================================================
    7. HOME MONITORS  (DISCIPLINE INDEX + CORE SIMULATION + news crawl)
 ===================================================================== */
@@ -9437,8 +9501,7 @@ html.fx-mid #m7w-frame .radar .sweep, html.fx-mid #m7w-frame .radar .pd { animat
     .ops-card { border-radius: 3px 12px 3px 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    #m7w-beam, #m7w-lock :is(.ro, .rm, .ri, .s, .ch), #m7w-frame .radar :is(.sweep, .pd), .ops-chart :is(.ln, .ring), .ops-pie :is(.spin, .spin2), .ops-scan :is(.r1, .r2, .core), .ops-news .run span, .ops-feed .bar::after,
-    html[data-theme="mark7"] .section.m7w-enter, html[data-theme="mark7"] .section.m7w-enter * { animation: none !important; }
+    #m7w-beam, #m7w-lock :is(.ro, .rm, .ri, .s, .ch),     html[data-theme="mark7"] .section.m7w-enter, html[data-theme="mark7"] .section.m7w-enter * { animation: none !important; }
     .ops-chart .ln { stroke-dashoffset: 0; }
 }
 html.fx-lite :is(#m7w-beam, #m7w-vig) { display: none !important; }
@@ -9826,22 +9889,10 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
         }
         f.innerHTML =
             '<div class="tape"><div class="strip">' + labels + '</div></div><i class="caret"></i><div class="hdg">HDG <b>000</b></div>' +
-            '<div class="lad"><div class="col">' + rows + '</div></div><i class="ladmark"></i><div class="altread">ALT <b>000000</b></div>' +
-            '<div class="radar"></div><div class="vso">VSO-18348</div>';
+            '<div class="lad"><div class="col">' + rows + '</div></div><i class="ladmark"></i>' +
+            '<div class="vso">VSO-18348</div>';
         D.body.appendChild(f);
-        F.el = f; F.strip = f.querySelector('.strip'); F.col = f.querySelector('.col'); F.hdg = f.querySelector('.hdg b'); F.alt = f.querySelector('.altread b');
-        F.radar = f.querySelector('.radar');
-        var s = sv('svg', { viewBox: '0 0 92 92', fill: 'none' }, F.radar);
-        sv('circle', { 'class': 'fill', cx: 46, cy: 46, r: 44 }, s);
-        sv('circle', { 'class': 'rg', cx: 46, cy: 46, r: 44 }, s);
-        sv('circle', { 'class': 'rg2', cx: 46, cy: 46, r: 30 }, s);
-        sv('circle', { 'class': 'rg2', cx: 46, cy: 46, r: 15 }, s);
-        sv('path', { 'class': 'rg', d: 'M46 2V90M2 46H90', opacity: .45 }, s);
-        var sw = sv('g', { 'class': 'sweep' }, s);
-        sv('path', { d: 'M46 46 L46 2 A44 44 0 0 1 72 10 Z', fill: 'rgba(79,216,255,.2)' }, sw);
-        sv('path', { d: 'M46 46 L46 2', stroke: 'rgba(191,243,255,.9)', 'stroke-width': 1 }, sw);
-        F.bl = sv('g', {}, s);
-        F.lb = sv('text', { 'class': 'lb', x: 46, y: 104, 'text-anchor': 'middle' }, s);
+        F.el = f; F.strip = f.querySelector('.strip'); F.col = f.querySelector('.col'); F.hdg = f.querySelector('.hdg b');
         W.addEventListener('pointermove', function (e) { F.mx = e.clientX / Math.max(1, innerWidth); frameWake(); }, { passive: true });
         W.addEventListener('scroll', frameWake, { passive: true });
         frameTargets(); F.hdgV = F.hdgT; F.altV = F.altT; framePaint(); radarRefresh();
@@ -9857,7 +9908,6 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
         F.hdg.textContent = pad(Math.round(F.hdgV) % 360, 3);
         var ly = ((14000 - F.altV) / 1000) * 44 + 22;
         F.col.style.transform = 'translateY(' + (-ly).toFixed(1) + 'px)';
-        F.alt.textContent = pad(Math.round(F.altV), 6);
     }
     function frameStep() {
         F.raf = 0;
@@ -9868,16 +9918,7 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
         framePaint();
         if (Math.abs(dh) > .15 || Math.abs(F.altT - F.altV) > .5) F.raf = requestAnimationFrame(frameStep);
     }
-    function radarRefresh() {
-        if (!F.bl) return;
-        var s = dayScore(new Date()), n = clamp(s.possible, 0, 14), done = clamp(s.done, 0, n);
-        while (F.bl.firstChild) F.bl.removeChild(F.bl.firstChild);
-        for (var i = 0; i < n; i++) {
-            var a = (i * 137.5) * Math.PI / 180, r = 9 + ((i * 53) % 31) / 31 * 29;
-            sv('circle', { 'class': i < done ? 'ok' : 'pd', cx: (46 + Math.cos(a) * r).toFixed(1), cy: (46 + Math.sin(a) * r).toFixed(1), r: i < done ? 1.8 : 2.2 }, F.bl);
-        }
-        F.lb.textContent = 'CONTACTS ' + pad(done, 2) + '/' + pad(n, 2);
-    }
+    function radarRefresh() { /* radar + ALT readout removed */ }
     function hudWanted() { return S.ready && S.hud && isM7() && !calm() && !booting() && !D.hidden && innerWidth >= 1100; }
     function hudSync() {
         if (!F.el) return;
@@ -10211,7 +10252,7 @@ html.fx-lite .section.m7w-enter, html.fx-lite .section.m7w-enter * { animation: 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
-<script src="jarvis/jarvis.js?v=20" defer></script>
+<script src="jarvis/jarvis.js?v=21" defer></script>
 <script src="jarvis/holo.js?v=4" defer></script>
 <script src="jarvis/holobody.js?v=1" defer></script>
 <script src="jarvis/musclemap.js?v=5" defer></script>
