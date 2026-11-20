@@ -104,6 +104,16 @@ const list = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and 
 const cap = x => x ? x[0].toUpperCase() + x.slice(1) : x;
 const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 const today = () => new Date();
+/* ---------- v15 PREFERENCES (everything you can customise lives here, saved in this browser) ---------- */
+const PREF_DEF = { addr: 'sir', accent: 'cyan', zoom: 100, opac: 100, side: 'left', orb: 68, vol: 100, pitch: 100, type: 'normal', chime: 1, mich: 1,
+  sleep: 'auto', tele: 1, chips: 1, edge: 1, react: 1, ripple: 1, sweep: 1, bars: 1, prog: 1, perf: 'auto', aud: 'bal', fps: 0 };
+let extHold = false;
+let PREF = Object.assign({}, PREF_DEF);
+try { Object.assign(PREF, JSON.parse(lsGet('jv_prefs') || '{}')); } catch (e) { }
+lsSet('jv_aud', PREF.aud);
+const prefSave = () => lsSet('jv_prefs', JSON.stringify(PREF));
+const addr = t => { const a = PREF.addr; return !a || a === 'sir' || typeof t !== 'string' ? t : t.replace(/\bsir\b/g, a).replace(/\bSir\b/g, cap(a)); };     // "sir" -> whatever you want to be called
+const ptype = () => ({ instant: 0, fast: 24, normal: 60, slow: 120 })[PREF.type] === undefined ? 60 : ({ instant: 0, fast: 24, normal: 60, slow: 120 })[PREF.type];
 const curTab = () => { const s = document.querySelector('.section.active'); return s ? s.id.replace('tab-', '') : 'home'; };
 const idle = (fn, ms) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: ms || 3000 }) : setTimeout(fn, 60));
 /* Spoken habit names. The list is DERIVED from HABITS (index.html) so there is one source of truth; HN_VOICE only
@@ -249,16 +259,169 @@ async function importFirst(urls) {                                   // try pinn
 const CTX = { list: [], last: [], acts: [], at: 0, said: '', exc: '', excAt: 0, cls: null };
 
 /* =====================================================================
+   v15 — CUSTOMISE panel, effects and the performance governor
+   ===================================================================== */
+const PF_GROUPS = [
+  ['Look', [
+    ['seg', 'addr', 'Call me', [['sir', 'Sir'], ['boss', 'Boss'], ['chief', 'Chief'], ['captain', 'Captain'], ["ma'am", "Ma'am"]]],
+    ['txt', 'addr', 'Or a name'],
+    ['sw', 'accent', 'Accent', [['cyan', '#38bdf8'], ['ice', '#dff3ff'], ['gold', '#fbbf24'], ['green', '#34d399'], ['violet', '#a78bfa'], ['red', '#f87171']]],
+    ['rng', 'zoom', 'Panel size', [85, 125, 5, '%']],
+    ['rng', 'opac', 'Panel opacity', [40, 100, 5, '%']],
+    ['seg', 'side', 'Dock side', [['left', 'Left'], ['right', 'Right']]],
+    ['rng', 'orb', 'Orb size', [52, 88, 2, 'px']]
+  ]],
+  ['Voice', [
+    ['rng', 'vol', 'Voice volume', [20, 100, 5, '%']],
+    ['rng', 'pitch', 'Voice pitch', [70, 130, 5, '%']],
+    ['seg', 'type', 'Reply typing', [['instant', 'Instant'], ['fast', 'Fast'], ['normal', 'Normal'], ['slow', 'Slow']]],
+    ['tg', 'chime', 'UI chimes'],
+    ['tg', 'mich', 'Pause mic while audio plays']
+  ]],
+  ['Behaviour', [
+    ['seg', 'sleep', 'Auto-sleep', [['auto', 'Auto'], ['20', '20 s'], ['60', '1 min'], ['180', '3 min'], ['never', 'Never']]],
+    ['tg', 'tele', 'Day snapshot card'],
+    ['tg', 'chips', 'Quick-command chips']
+  ]],
+  ['Effects', [
+    ['tg', 'edge', 'Screen-edge brackets'],
+    ['tg', 'react', 'Voice-reactive edge glow'],
+    ['tg', 'ripple', 'Touch ripples'],
+    ['tg', 'sweep', 'Reply scan sweep'],
+    ['tg', 'bars', 'Waveform bars'],
+    ['tg', 'prog', 'Scroll progress line']
+  ]],
+  ['Performance', [
+    ['seg', 'perf', 'Effects level', [['auto', 'Auto'], ['full', 'Full'], ['lite', 'Lite']]],
+    ['seg', 'aud', 'Smooth audio', [['off', 'Off'], ['bal', 'Balanced'], ['max', 'Max']]],
+    ['tg', 'fps', 'FPS meter']
+  ]]
+];
+let pfRoot = null, rippleN = 0;
+function buildPrefs(set) {
+  const box = document.createElement('div'); box.id = 'jv-prefs';
+  box.innerHTML = PF_GROUPS.map((g, gi) => '<details class="pf-g"' + (gi === 0 ? ' open' : '') + '><summary>' + g[0] + '</summary>' + g[1].map(c => {
+    const [ty, k, lb, o] = c;
+    if (ty === 'seg') return '<div class="pf-r"><label>' + lb + '</label><div class="pf-seg" data-k="' + k + '">' + o.map(x => '<button type="button" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div></div>';
+    if (ty === 'sw') return '<div class="pf-r"><label>' + lb + '</label><div class="pf-sw" data-k="' + k + '">' + o.map(x => '<button type="button" data-v="' + x[0] + '" title="' + x[0] + '" style="--c:' + x[1] + '"></button>').join('') + '</div></div>';
+    if (ty === 'rng') return '<div class="pf-r"><label>' + lb + '</label><div class="pf-rg"><input type="range" data-k="' + k + '" min="' + o[0] + '" max="' + o[1] + '" step="' + o[2] + '"><output data-o="' + k + '" data-u="' + o[3] + '"></output></div></div>';
+    if (ty === 'txt') return '<div class="pf-r"><label>' + lb + '</label><input class="pf-tx" type="text" maxlength="14" data-k="' + k + '" placeholder="e.g. Yuvraj" autocomplete="off" spellcheck="false"></div>';
+    return '<div class="pf-r"><label>' + lb + '</label><button type="button" class="pf-tg" data-k="' + k + '" aria-pressed="false"><i></i></button></div>';
+  }).join('') + '</details>').join('') + '<div class="pf-r pf-foot"><button type="button" id="pf-reset">Reset all customisation</button></div>';
+  const head = set.querySelector('.jv-sethead'); head.parentNode.insertBefore(box, head.nextSibling);
+  pfRoot = box;
+  box.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.id === 'pf-reset') { PREF = Object.assign({}, PREF_DEF); prefSave(); PF_KEYS().forEach(k => prefApply(k)); prefSync(); return; }
+    const k = b.parentNode.dataset && b.parentNode.dataset.k || b.dataset.k; if (!k) return;
+    if (b.classList.contains('pf-tg')) prefSet(k, PREF[k] ? 0 : 1); else if (b.dataset.v !== undefined) prefSet(k, b.dataset.v);
+  });
+  box.addEventListener('input', e => {
+    const t = e.target, k = t.dataset && t.dataset.k; if (!k) return;
+    if (t.type === 'range') prefSet(k, +t.value, true); else if (t.type === 'text') prefSet(k, t.value.trim() || 'sir', true);
+  });
+  prefSync();
+}
+const PF_KEYS = () => Object.keys(PREF_DEF);
+function prefSet(k, v, quiet) { PREF[k] = v; prefSave(); prefApply(k); if (!quiet) prefSync(); else prefOut(); }
+function prefOut() { if (!pfRoot) return; pfRoot.querySelectorAll('output[data-o]').forEach(o => { o.textContent = PREF[o.dataset.o] + o.dataset.u; }); }
+function prefSync() {
+  if (!pfRoot) return;
+  pfRoot.querySelectorAll('.pf-seg,.pf-sw').forEach(g => { const v = String(PREF[g.dataset.k]); g.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); });
+  pfRoot.querySelectorAll('.pf-tg').forEach(b => { const on = !!PREF[b.dataset.k]; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  pfRoot.querySelectorAll('input[type=range]').forEach(i => { i.value = PREF[i.dataset.k]; });
+  pfRoot.querySelectorAll('input.pf-tx').forEach(i => { if (document.activeElement !== i) i.value = PREF[i.dataset.k] === 'sir' || ['boss', 'chief', 'captain', "ma'am"].includes(PREF[i.dataset.k]) ? '' : PREF[i.dataset.k]; });
+  prefOut();
+}
+function prefApply(k) {
+  if (!root) return; const v = PREF[k], H = document.documentElement;
+  switch (k) {
+    case 'accent': root.dataset.accent = v; break;
+    case 'zoom': root.style.setProperty('--jv-zoom', v / 100); break;
+    case 'opac': root.style.setProperty('--jv-op', (v / 100).toFixed(2)); break;
+    case 'side': root.dataset.side = v; break;
+    case 'orb': root.style.setProperty('--jv-orb', v + 'px'); root.style.setProperty('--jv-dy', (v - 68) + 'px'); break;
+    case 'vol': if (NEURAL.master) NEURAL.master.gain.value = v / 100; if (ackA) try { ackA.volume = Math.min(1, .8 * v / 100); } catch (e) { } break;
+    case 'aud': lsSet('jv_aud', v); try { window.__aud && __aud.refresh(); } catch (e) { } break;
+    case 'perf': perfLevel(v === 'lite' ? 2 : 0); break;          // own classes only: perf.js and the app's Lite switch stay untouched
+    case 'fps': fpsMeter(!!v); break;
+    case 'prog': root.setAttribute('data-pf-prog', v ? 1 : 0); if (v) progTick(); break;
+    case 'addr': break;
+    default: root.setAttribute('data-pf-' + k, v ? 1 : 0);       // plain on/off effect and layout switches are handled in CSS
+  }
+}
+function prefApplyAll() { PF_KEYS().forEach(k => { if (k !== 'perf' || PREF.perf === 'lite') prefApply(k); }); }
+
+/* ---------- effects: all pointer-events:none, GPU-only, and switched off in Lite mode ---------- */
+function rippleAt(x, y) {
+  if (!PREF.ripple || document.hidden) return; const H = document.documentElement;
+  if (H.classList.contains('fx-lite') || H.classList.contains('aud-bal') || H.classList.contains('aud-max') || H.classList.contains('jv-lowfx')) return;
+  const box = $('jv-rips'); if (!box) return;
+  let r = box.children[rippleN++ % 3]; if (!r) { r = document.createElement('i'); box.appendChild(r); }
+  r.style.left = x + 'px'; r.style.top = y + 'px';
+  if (r.animate) { if (r._a) r._a.cancel(); r._a = r.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: .55 }, { transform: 'translate(-50%,-50%) scale(1.6)', opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.2,.7,.2,1)' }); }
+}
+function replySweep() {
+  if (!PREF.sweep) return; const H = document.documentElement; if (H.classList.contains('fx-lite') || H.classList.contains('jv-lowfx') || !el.panel || el.panel.hidden) return;
+  const s = el.panel.querySelector('.jv-sw'); if (!s || !s.animate) return;
+  if (s._a) s._a.cancel(); s._a = s.animate([{ transform: 'translateY(-4px)', opacity: 0 }, { opacity: .9, offset: .15 }, { transform: 'translateY(' + (el.panel.offsetHeight + 4) + 'px)', opacity: 0 }], { duration: 650, easing: 'ease-out' });
+}
+let progRaf = 0;
+function progTick() {
+  if (progRaf || !PREF.prog) return;
+  progRaf = requestAnimationFrame(() => {
+    progRaf = 0; const p = $('jv-prog'); if (!p) return;
+    const d = document.documentElement, max = d.scrollHeight - innerHeight, v = max > 8 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+    p.style.transform = 'scaleX(' + v.toFixed(3) + ')';
+  });
+}
+/* ---------- performance governor: measures real frame time and steps effects down (and back up) by itself ---------- */
+let glowEl = null, glowO = '', perfAdded = false, perfLvl = 0, perfOk = 0, fpsEl = 0, fpsRaf = 0, fpsLast = 0;
+function perfLevel(l) {
+  perfLvl = l; const H = document.documentElement;
+  if (l >= 1) { if (!H.classList.contains('fx-mid')) { H.classList.add('fx-mid'); perfAdded = true; } }
+  else if (perfAdded) { H.classList.remove('fx-mid'); perfAdded = false; }
+  H.classList.toggle('jv-lowfx', l >= 2);
+}
+function perfSample() {
+  if (document.hidden || PREF.perf !== 'auto') return;
+  const H = document.documentElement; if (H.classList.contains('aud-bal') || H.classList.contains('aud-max') || speaking) return;
+  let n = 0, last = 0, tot = 0, worst = 0;
+  const f = t => {
+    if (last) { const d = t - last; if (d < 250) { tot += d; n++; if (d > worst) worst = d; } } last = t;
+    if (n < 70) return requestAnimationFrame(f);
+    const avg = tot / n;
+    if (avg > 36 && perfLvl < 2) { perfLevel(perfLvl + 1); perfOk = 0; }
+    else if (avg < 19 && perfLvl > 0 && ++perfOk >= 3) { perfLevel(perfLvl - 1); perfOk = 0; }
+    else if (avg >= 19) perfOk = 0;
+  };
+  requestAnimationFrame(f);
+}
+function fpsMeter(on) {
+  const b = $('jv-fps'); if (!b) return; b.hidden = !on; cancelAnimationFrame(fpsRaf); if (!on) return;
+  let frames = 0; fpsLast = performance.now();
+  const f = t => { frames++; if (t - fpsLast >= 1000) { b.textContent = Math.round(frames * 1000 / (t - fpsLast)) + ' FPS · FX L' + perfLvl + (PREF.perf === 'lite' ? ' LITE' : ''); frames = 0; fpsLast = t; } fpsRaf = requestAnimationFrame(f); };
+  fpsRaf = requestAnimationFrame(f);
+}
+/* a quote or any other audio is playing: release the microphone so it cannot duck / interrupt playback (and stop it hearing the clip) */
+function audioHold(on) {
+  if (!PREF.mich) return; on = !!on; if (on === extHold) return; extHold = on; clearTimeout(restartT);
+  if (on) { try { stopRec(); micClose(); micStatus(); } catch (e) { } }
+  else restartT = setTimeout(() => { try { if (want()) start(); micStatus(); } catch (e) { } }, 500);
+}
+
+/* =====================================================================
    UI
    ===================================================================== */
 function build() {
   root = document.createElement('div');
   root.id = 'jv-root'; root.dataset.state = 'off';
   root.innerHTML =
+    '<i id="jv-glow" aria-hidden="true"></i><i id="jv-prog" aria-hidden="true"></i><div id="jv-rips" aria-hidden="true"><i></i><i></i><i></i></div><div id="jv-fps" hidden></div>' +
     '<div id="jv-edge" aria-hidden="true"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>' +
     '<div id="jv-pop" aria-live="polite"></div>' +
     '<div id="jv-panel" hidden role="dialog" aria-label="Jarvis">' +
-      '<i class="jv-c tl"></i><i class="jv-c tr"></i><i class="jv-c bl"></i><i class="jv-c br"></i>' +
+      '<i class="jv-c tl"></i><i class="jv-c tr"></i><i class="jv-c bl"></i><i class="jv-c br"></i><i class="jv-sw"></i>' +
       '<div class="jv-top"><span class="jv-title">J.A.R.V.I.S.</span><span id="jv-state"></span>' +
         '<span class="jv-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>' +
         '<button class="jv-ico" id="jv-gear" aria-label="Jarvis settings" aria-expanded="false" title="Settings: voice, brain, microphone">&#9881;</button>' +
@@ -308,11 +471,16 @@ function build() {
   document.body.appendChild(root);
   (function () {                       // v12: every tuning switch lives behind the gear button, so the panel opens clean
     const set = document.createElement('div'); set.id = 'jv-settings'; set.hidden = true;
-    set.innerHTML = '<div class="jv-sethead"><b>SETTINGS</b><span>voice · brain · microphone</span><button type="button" class="jv-ico" id="jv-setx" aria-label="Close settings">&#10005;</button></div>';
+    set.innerHTML = '<div class="jv-sethead"><b>SETTINGS</b><span>customise · voice · brain · mic</span><button type="button" class="jv-ico" id="jv-setx" aria-label="Close settings">&#10005;</button></div>';
     const sub = root.querySelector('.jv-sub');
     sub.parentNode.insertBefore(set, sub.nextSibling);
     set.appendChild(root.querySelector('.jv-ai')); set.appendChild($('jv-log')); set.appendChild(root.querySelector('.jv-hint'));
+    buildPrefs(set);
   })();
+  glowEl = $('jv-glow'); prefApplyAll();
+  document.addEventListener('pointerdown', e => rippleAt(e.clientX, e.clientY), { passive: true, capture: true });
+  addEventListener('scroll', progTick, { passive: true }); addEventListener('resize', progTick, { passive: true }); progTick();
+  setTimeout(perfSample, 7000); setInterval(perfSample, 30000);
   ['pop', 'panel', 'state', 'heard', 'reply', 'dock', 'mic', 'wake', 'sound', 'close', 'form', 'in', 'clock', 'tele', 'ring', 'pct', 'today', 'streak', 'month', 'next', 'ai', 'model', 'aist', 'aibar', 'voice', 'rate', 'vmode', 'c0', 'lv', 'meter', 'fchip', 'eng', 'mst', 'lmode', 'awake', 'hlog', 'log', 'gear', 'settings', 'att', 'attw', 'setx'].forEach(k => el[k] = $('jv-' + k));
   bars = [].slice.call(root.querySelectorAll('.jv-bars i')); root.classList.add('viz');
 }
@@ -416,19 +584,21 @@ const LABEL = { off: 'STANDBY', wake: 'SAY “JARVIS”', listen: 'LISTENING…'
 function setState() {
   const s = speaking ? 'speak' : (aiBusy || aiLoading) ? 'think' : S.active ? 'listen' : S.wake ? 'wake' : 'off';
   root.dataset.state = s;
+  try { window.__aud && __aud.set('jv', s === 'speak'); } catch (e) { }
   el.state.textContent = SR ? LABEL[s] : 'TYPE A COMMAND';
   el.wake.classList.toggle('on', S.wake);
   el.sound.classList.toggle('off', muted);
   setAi(); if (s !== 'off' && s !== 'wake') kick(.1);
 }
 let heardRaf = 0, heardTxt = '';
-function showHeard(t) { heardTxt = t; if (!heardRaf) heardRaf = requestAnimationFrame(() => { heardRaf = 0; el.heard.textContent = heardTxt; }); }
+function showHeard(t) { heardTxt = addr(t); if (!heardRaf) heardRaf = requestAnimationFrame(() => { heardRaf = 0; el.heard.textContent = heardTxt; }); }
 let typeRaf = 0;
 function showReply(t) {                  // typed-out reveal (instant in Lite mode / reduced motion)
-  cancelAnimationFrame(typeRaf); el.reply.classList.remove('typing');
+  t = addr(t); cancelAnimationFrame(typeRaf); el.reply.classList.remove('typing'); replySweep();
   const calm = document.documentElement.classList.contains('fx-lite') || (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches);
-  if (calm || t.length < 6) { el.reply.textContent = t; return; }
-  let i = 0; const stepBy = Math.max(2, Math.ceil(t.length / 60));
+  const pt = ptype();
+  if (calm || t.length < 6 || !pt) { el.reply.textContent = t; return; }
+  let i = 0; const stepBy = Math.max(2, Math.ceil(t.length / pt));
   el.reply.classList.add('typing');
   const step = () => { i = Math.min(t.length, i + stepBy); el.reply.textContent = t.slice(0, i); if (i < t.length) typeRaf = requestAnimationFrame(step); else el.reply.classList.remove('typing'); };
   step();
@@ -466,7 +636,7 @@ function openPanel() {
 function closePanel() { el.panel.hidden = true; toggleSettings(false); showHeard(''); try { el.reply.textContent = idleLine(); } catch (e) { } clearInterval(clockT); clockT = 0; cancelAnimationFrame(typeRaf); }
 function armIdle(ms) {
   clearTimeout(idleT);
-  idleT = setTimeout(() => { if ((aiBusy || aiLoading) && Date.now() - aiBusyAt < 150000) armIdle(8000); else sleep(); }, el.settings && !el.settings.hidden ? Math.max(ms, 90000) : ms);     // v11: never sleep mid-thought (v12: nor while settings are open)
+  idleT = setTimeout(() => { if ((aiBusy || aiLoading) && Date.now() - aiBusyAt < 150000) armIdle(8000); else sleep(); }, PREF.sleep === 'never' ? 6e6 : el.settings && !el.settings.hidden ? Math.max(ms, 90000) : PREF.sleep !== 'auto' ? Math.max(ms, +PREF.sleep * 1000) : ms);     // v11: never sleep mid-thought (v12: nor while settings are open)
 }
 function sleep() {                       // back to wake-word mode (or fully off)
   clearTimeout(idleT); clearTimeout(ackT);
@@ -490,13 +660,13 @@ function stopVoice() {
   playTok++; try { if (ackA) { ackA.pause(); ackUntil = 0; } } catch (e) { }
   if (cur) { try { cur.pause(); } catch (e) { } clearTimeout(cur._t); cur = null; }
   TTS.q = []; TTS.cur = null; TTS.open = false; clearTimeout(TTS.t); clearTimeout(TTS.w); ttsU = null; try { if (synth) synth.cancel(); } catch (e) { }
-  try { if (NEURAL.src) { NEURAL.src.onended = null; NEURAL.src.stop(); } } catch (e) { } NEURAL.src = null; NEURAL.pre = null; NEURAL.playing = false;
+  try { if (NEURAL.src) { NEURAL.src.onended = null; NEURAL.src.stop(); } } catch (e) { } NEURAL.src = null; NEURAL.pre = null; NEURAL.playing = false; njTok++; NJ.clear();
   speaking = false; guardUntil = Date.now() + 200; releaseHold();
 }
 function say(kind) {
   if (muted || !CLIPS[kind]) return;
   stopVoice();
-  const a = clip(pick(CLIPS[kind])), tok = ++playTok;
+  const a = clip(pick(CLIPS[kind])), tok = ++playTok; a.volume = Math.min(1, PREF.vol / 100);
   cur = a; speaking = true; guardUntil = Infinity; actAt = Date.now(); setState();
   const fin = () => {
     if (tok !== playTok) return;
@@ -513,7 +683,7 @@ function say(kind) {
 /* =====================================================================
    LISTENING — continuous recognition, restarts itself, never talks over Jarvis
    ===================================================================== */
-const want = () => !!SR && !document.hidden && !locked && !hold && (S.wake || S.active);
+const want = () => !!SR && !document.hidden && !locked && !hold && !extHold && (S.wake || S.active);
 const ignored = new Set(), woke = new Set();
 const LANGS = [LANG, 'en-US', ''];       // fallback chain if a device rejects a language
 function start() {
@@ -1278,7 +1448,7 @@ function logClick(e) {
 let chimeCtx = null;
 function chimeInit() { try { const AC = window.AudioContext || window.webkitAudioContext; if (AC && !chimeCtx) chimeCtx = NEURAL.ctx || new AC(); if (chimeCtx && chimeCtx.state === 'suspended') chimeCtx.resume(); } catch (e) { } }
 function chime(kind) {
-  if (muted) return;
+  if (muted || !PREF.chime) return;
   try {
     const c = chimeCtx; if (c && c.state === 'running') {
       const t0 = c.currentTime, f = kind === 'err' ? [330, 247] : [740, 988];
@@ -1594,13 +1764,222 @@ function knowQ(n, raw) {
   return wiki(q, 'en').then(r => r ? (DETAIL ? R('According to Wikipedia, ' + r.full) : Object.assign(R('According to Wikipedia, ' + r.text), r.full.length > r.text.length + 20 ? { more: 'According to Wikipedia, ' + r.full } : {})) : miss());
 }
 const clockq = n => n.split(' ').length <= 7 && /^(what|whats|tell me|say|current|show)\b/.test(n) && /\b(time|date|day)\b/.test(n) && !/\b(in|of|for|on|until|till|before|after|since|between)\b/.test(n);
+
+/* =====================================================================
+   MORE BRAIN (v15) — notes & lists, currency, dictionary, number bases, maths helpers,
+   gym calculators, quiz / riddles, stopwatch, moon, sunrise & sunset, battery.
+   ===================================================================== */
+const notesGet = () => { try { return JSON.parse(lsGet('jv_notes') || '[]'); } catch (e) { return []; } };
+const notesSet = a => lsSet('jv_notes', JSON.stringify(a.slice(-80)));
+const CUR = { usd: 'usd|us dollars?|dollars?|bucks', inr: 'inr|rupees?|rs', eur: 'eur|euros?', gbp: 'gbp|pounds?|sterling', jpy: 'jpy|yen', aud: 'aud|australian dollars?', cad: 'cad|canadian dollars?', chf: 'chf|francs?', cny: 'cny|yuan|renminbi', sgd: 'sgd|singapore dollars?' };
+const CUR_RE = Object.values(CUR).join('|'), CUR_NAME = { usd: 'US dollars', inr: 'rupees', eur: 'euros', gbp: 'pounds', jpy: 'yen', aud: 'Australian dollars', cad: 'Canadian dollars', chf: 'Swiss francs', cny: 'yuan', sgd: 'Singapore dollars' };
+const curCode = w => { for (const k in CUR) if (new RegExp('^(?:' + CUR[k] + ')$').test(w)) return k; return null; };
+const spaced = s => String(s).split('').join(' ');
+const gcd = (a, b) => b ? gcd(b, a % b) : a;
+const SW = { t: 0, laps: 0, last: 0 };
+const durTxt = ms => { const s = Math.round(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60); return h ? `${h} hour${h > 1 ? 's' : ''} ${m % 60} minutes` : m ? `${m} minute${m > 1 ? 's' : ''} ${s % 60} seconds` : `${s} seconds`; };
+const SYN = 29.530588853, NEWMOON0 = Date.UTC(2000, 0, 6, 18, 14);
+function moonNow() { const d = ((Date.now() - NEWMOON0) / 864e5) % SYN, ph = (d + SYN) % SYN, f = ph / SYN; return { age: ph, f, lit: Math.round((1 - Math.cos(2 * Math.PI * f)) / 2 * 100) }; }
+function moonName(f) { return f < .03 || f > .97 ? 'a new moon' : f < .22 ? 'a waxing crescent' : f < .28 ? 'a first quarter' : f < .47 ? 'a waxing gibbous' : f < .53 ? 'a full moon' : f < .72 ? 'a waning gibbous' : f < .78 ? 'a last quarter' : 'a waning crescent'; }
+
+/* ---- quiz bank: [topic, question, accepted keywords (|), spoken answer, optional fact] ---- */
+const QBANK = [
+  ['os', 'Which scheduling algorithm can starve long processes?', 'sjf|shortest job|srtf|shortest remaining', 'Shortest Job First', 'It always favours short jobs, so long ones may wait forever.'],
+  ['os', 'What is it called when processes wait forever for resources held by each other?', 'deadlock', 'Deadlock', 'It needs mutual exclusion, hold and wait, no pre-emption and circular wait.'],
+  ['os', 'Which page replacement algorithm suffers from Belady\'s anomaly?', 'fifo|first in first out', 'FIFO'],
+  ['os', 'How many necessary conditions must hold together for a deadlock?', '4|four', 'Four'],
+  ['os', 'Which memory technique divides memory into fixed size blocks called frames?', 'paging|page', 'Paging'],
+  ['os', 'What is the smallest unit of CPU scheduling inside a process?', 'thread', 'A thread'],
+  ['os', 'Which system call creates a new process in Unix?', 'fork', 'fork'],
+  ['coa', 'What does ALU stand for?', 'arithmetic logic unit|arithmetic and logic unit', 'Arithmetic Logic Unit'],
+  ['coa', 'Which is faster: cache, RAM or a hard disk?', 'cache', 'Cache'],
+  ['coa', 'What does RISC stand for?', 'reduced instruction set', 'Reduced Instruction Set Computer'],
+  ['coa', 'Which addressing mode keeps the operand inside the instruction itself?', 'immediate', 'Immediate addressing'],
+  ['coa', 'What is overlapping the stages of several instructions called?', 'pipelin', 'Pipelining'],
+  ['coa', 'Which register holds the address of the next instruction?', 'program counter|pc', 'The program counter'],
+  ['dcn', 'How many layers does the OSI model have?', '7|seven', 'Seven'],
+  ['dcn', 'Which OSI layer is responsible for routing?', 'network|3|three', 'The network layer'],
+  ['dcn', 'Which protocol turns domain names into IP addresses?', 'dns|domain name', 'DNS'],
+  ['dcn', 'Which is connection oriented, TCP or UDP?', 'tcp', 'TCP'],
+  ['dcn', 'How many bits is an IPv4 address?', '32', 'Thirty two'],
+  ['dcn', 'Which device forwards frames using MAC addresses?', 'switch', 'A switch'],
+  ['dcn', 'Which protocol hands out IP addresses automatically?', 'dhcp', 'DHCP'],
+  ['daa', 'What is the worst case time complexity of quicksort?', 'n squared|n 2|n2|quadratic', 'N squared'],
+  ['daa', 'What is the time complexity of binary search?', 'log', 'Order of log n'],
+  ['daa', 'Which design technique does Dijkstra\'s algorithm use?', 'greedy', 'Greedy'],
+  ['daa', 'Which technique stores answers to overlapping subproblems?', 'dynamic|memoi', 'Dynamic programming'],
+  ['daa', 'What is the time complexity of merge sort?', 'n log n|nlogn|n log', 'N log n'],
+  ['daa', 'Which data structure does breadth first search use?', 'queue', 'A queue'],
+  ['daa', 'Which data structure does depth first search use?', 'stack|recursion', 'A stack'],
+  ['gk', 'What is the capital of Australia?', 'canberra', 'Canberra'],
+  ['gk', 'How many states does India have?', '28|twenty eight', 'Twenty eight'],
+  ['gk', 'Which planet is called the red planet?', 'mars', 'Mars'],
+  ['gk', 'What is the chemical symbol for gold?', 'au', 'A U'],
+  ['gk', 'Who wrote the Indian national anthem?', 'tagore|rabindranath', 'Rabindranath Tagore'],
+  ['gk', 'Which is the largest ocean on Earth?', 'pacific', 'The Pacific'],
+  ['gk', 'Who is known as the Missile Man of India?', 'kalam', 'Dr A P J Abdul Kalam'],
+  ['riddle', 'I have keys but no locks, and space but no room. What am I?', 'keyboard', 'A keyboard'],
+  ['riddle', 'What gets wetter the more it dries?', 'towel', 'A towel'],
+  ['riddle', 'I speak without a mouth and hear without ears. What am I?', 'echo', 'An echo'],
+  ['riddle', 'What has a head and a tail but no body?', 'coin', 'A coin'],
+  ['riddle', 'The more of me you take, the more you leave behind. What am I?', 'footstep|steps', 'Footsteps'],
+  ['riddle', 'What has many teeth but cannot bite?', 'comb', 'A comb'],
+  ['riddle', 'What goes up but never comes down?', 'age', 'Your age']
+];
+const QTOPIC = { os: /\b(os|operating systems?)\b/, coa: /\b(coa|architecture|organi[sz]ation)\b/, dcn: /\b(dcn|cn|networks?|networking)\b/, daa: /\b(daa|algorithms?|complexity)\b/, gk: /\b(gk|general|knowledge|trivia)\b/, riddle: /\briddles?\b/ };
+const QZ = { q: null, at: 0, right: 0, asked: 0, topic: '', seen: new Set() };
+function quizAsk(topic) {
+  let pool = QBANK.filter(x => topic ? x[0] === topic : x[0] !== 'riddle');
+  let fresh = pool.filter(x => !QZ.seen.has(x[1])); if (!fresh.length) { pool.forEach(x => QZ.seen.delete(x[1])); fresh = pool; }
+  const q = pick(fresh); QZ.seen.add(q[1]); QZ.q = q; QZ.at = Date.now(); QZ.topic = topic || '';
+  return R(q[1], 'ok');
+}
+function quizTurn(n) {                                   // called only while a question is open
+  const q = QZ.q; if (!q) return null;
+  if (/^(stop|end|quit|exit|enough|cancel)( the)?( quiz| game| riddle| trivia)?$/.test(n)) { const sc = QZ.asked ? ` You scored ${QZ.right} out of ${QZ.asked}.` : ''; QZ.q = null; QZ.right = QZ.asked = 0; return R('Quiz closed, sir.' + sc); }
+  if (/^(repeat|say again|again)( the)?( question)?$/.test(n)) return R(q[1]);
+  if (/^(hint|give me a hint|a hint)$/.test(n)) return R(`It begins with ${q[3][0].toUpperCase()}, sir.`);
+  if (/^(i give up|give up|skip|pass|next|i dont know|dont know|no idea|what is the answer|answer|tell me the answer|reveal)( please)?$/.test(n)) { QZ.asked++; QZ.q = null; return R(`The answer is ${q[3]}.${q[4] ? ' ' + q[4] : ''} Say quiz me for another.`, 'warn'); }
+  if (n.split(' ').length > 12 || habitsIn(n).length || ACT_WORD.test(n)) return null;
+  const ok = q[2].split('|').some(k => new RegExp('(^| )' + k.replace(/[.*+?^${}()[\]\\]/g, '\\$&')).test(n));
+  QZ.asked++; QZ.q = null;
+  if (ok) { QZ.right++; return R(`${V('qzok', ['Correct, sir!', 'Spot on, sir!', 'Exactly right, sir!'])} ${q[4] || ''} Score ${QZ.right} of ${QZ.asked}. Say quiz me for another.`.replace(/\s+/g, ' ')); }
+  return R(`Not quite, sir. It is ${q[3]}. ${q[4] || ''} Score ${QZ.right} of ${QZ.asked}. Say quiz me for another.`.replace(/\s+/g, ' '), 'warn');
+}
+
+async function sunQ(n) {
+  const m = /\b(?:in|at|for)\s+([a-z][a-z ]*?)(?:\s+(?:today|tomorrow|tonight|now))?$/.exec(n);
+  const g = m ? await geocode(m[1].trim()) : await here();
+  if (!g) return R(m ? `I could not find ${m[1]} on the map, sir.` : 'I need your location for that, sir. Allow location access, or say the name of a city.', 'huh');
+  try {
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}&daily=sunrise,sunset&timezone=auto&forecast_days=1`)).json();
+    const f = s => new Date(s).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }), up = j.daily.sunrise[0], dn = j.daily.sunset[0], where = m ? ' in ' + cap(g.name || m[1]) : '';
+    return /sunrise/.test(n) && !/sunset/.test(n) ? R(`Sunrise${where} is at ${f(up)} today, sir.`) : /sunset/.test(n) && !/sunrise/.test(n) ? R(`Sunset${where} is at ${f(dn)} today, sir.`) : R(`Sunrise${where} is at ${f(up)} and sunset at ${f(dn)}, sir.`);
+  } catch (e) { return R('I could not reach the sky service just now, sir.', 'err'); }
+}
+function curParse(raw) {
+  const t = raw.toLowerCase().replace(/,/g, ''); let m, a, b, amt;
+  if ((m = new RegExp('(?:(\\d+(?:\\.\\d+)?)\\s*)?\\b(' + CUR_RE + ')\\b\\s*(?:to|in|into|equals?)\\s*\\b(' + CUR_RE + ')\\b').exec(t))) { a = curCode(m[2]); b = curCode(m[3]); amt = m[1] ? +m[1] : 1; }
+  else if ((m = new RegExp('how (?:many|much)\\s+\\b(' + CUR_RE + ')\\b.*?(?:in|for|per|is|are)\\s*(\\d+(?:\\.\\d+)?)?\\s*\\b(' + CUR_RE + ')\\b').exec(t))) { b = curCode(m[1]); a = curCode(m[3]); amt = m[2] ? +m[2] : 1; }
+  return a && b && a !== b ? { a, b, amt } : null;
+}
+async function curQ(c) {
+  const { a, b, amt } = c;
+  try {
+    const j = await (await fetch(`https://api.frankfurter.app/latest?amount=${amt}&from=${a.toUpperCase()}&to=${b.toUpperCase()}`)).json(), v = j.rates && j.rates[b.toUpperCase()];
+    if (v == null) throw 0;
+    return R(`${numFmt(amt)} ${CUR_NAME[a]} is about ${numFmt(+v.toFixed(2))} ${CUR_NAME[b]} at today's rate, sir.`);
+  } catch (e) { return R('I could not fetch the exchange rate right now, sir. Check your connection.', 'err'); }
+}
+async function defQ(w) {
+  try {
+    const j = await (await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w))).json();
+    const mn = j[0] && j[0].meanings && j[0].meanings[0], d = mn && mn.definitions && mn.definitions[0];
+    if (!d) return null;
+    const syn = (mn.synonyms || []).slice(0, 3);
+    return R(`${cap(w)}, ${mn.partOfSpeech}: ${d.definition.replace(/\.$/, '')}.${syn.length ? ' Similar: ' + list(syn) + '.' : ''}`);
+  } catch (e) { return null; }
+}
+
+function moreQ(n, raw) {
+  let m; const t = raw.toLowerCase().replace(/,/g, '');
+  /* ---- quiz / riddle ---- */
+  if (/^(quiz me|test me|trivia|ask me a (question|trivia)|give me a (quiz|riddle)|tell me a riddle|riddle me|another (question|one|riddle)|next question)\b/.test(n) || /\b(riddle|quiz me|quiz)\b/.test(n) && /^(quiz|riddle|ask|tell|give|another)/.test(n)) {
+    let tp = ''; for (const k in QTOPIC) if (QTOPIC[k].test(n)) tp = k; if (/\briddle/.test(n)) tp = 'riddle';
+    if (/^(another|next)\b/.test(n) && !tp) tp = QZ.topic;
+    return quizAsk(tp);
+  }
+  if (QZ.q && /^(repeat|say again) (the )?question$/.test(n)) return R(QZ.q[1]);
+  /* ---- notes & lists ---- */
+  if ((m = /^(?:take a note|make a note|note down|note that|note|remember that|jot down|add a note)\s+(.{2,})$/.exec(n)) || (m = /^add (.{2,}?) to (?:my )?(?:shopping |grocery |to ?do )?(?:list|notes)$/.exec(n))) {
+    const rc = raw.trim().replace(/[.!?]+$/, ''), rm = /^(?:take a note|make a note|note down|note that|note|remember that|jot down|add a note)[\s,:]+(.{2,})$/i.exec(rc) || /^add (.{2,}?) to (?:my )?(?:shopping |grocery |to ?do )?(?:list|notes)$/i.exec(rc);
+    const txt = (rm ? rm[1] : m[1]).trim(), a = notesGet(); a.push({ t: txt, at: Date.now() }); notesSet(a);
+    return R(`Noted, sir: ${txt}.`, 'done');
+  }
+  if (/^(?:what(?:s| are| is)|read|show|list|any)\b.*\b(?:my )?(?:notes?|list)\b/.test(n) && !/\b(habit|reminder|gym|timetable)\b/.test(n)) {
+    const a = notesGet(); return a.length ? R(`You have ${plural(a.length, 'note')}: ` + a.slice(-5).map(x => x.t).join('. ') + '.') : R('Your notes are empty, sir. Say, note that, followed by anything.');
+  }
+  if (/^(?:clear|delete|erase|wipe)\b.*\b(?:notes?|list)\b/.test(n)) { notesSet([]); return R('All notes cleared, sir.', 'done'); }
+  if (/^(?:delete|remove|undo)\b.*\blast (?:note|item)\b/.test(n)) { const a = notesGet(); a.pop(); notesSet(a); return R('Last note removed, sir.', 'done'); }
+  /* ---- currency ---- */
+  if ((m = curParse(raw))) return curQ(m);
+  /* ---- dictionary & spelling ---- */
+  if ((m = /^(?:how (?:do you|do i|to) spell|spell)(?: the word)? ([a-z]{2,25})$/.exec(n))) return R(`${cap(m[1])} is spelt ${spaced(m[1].toUpperCase())}.`);
+  if ((m = /^(?:define|definition of|what(?:s| is) the (?:meaning|definition) of|meaning of|what does) (?:the word )?([a-z]{3,25})(?: mean)?$/.exec(n)) && !/^(my|the|a|an|it|this|that)$/.test(m[1])) return defQ(m[1]).then(r => r || knowQ('define ' + m[1], 'define ' + m[1]));
+  /* ---- number bases (binary / hex / octal) ---- */
+  if ((m = /^(?:convert |what(?:s| is) )?(?:the )?(\d+) (?:in|to|into|as) (binary|hex|hexadecimal|octal)$/.exec(n)) || (m = /^(?:what(?:s| is) )?(?:the )?(binary|hex|hexadecimal|octal) (?:of|for) (\d+)$/.exec(n)) && (m = [m[0], m[2], m[1]])) {
+    const v = +m[1], b = /bin/.test(m[2]) ? 2 : /oct/.test(m[2]) ? 8 : 16, nm = b === 2 ? 'binary' : b === 8 ? 'octal' : 'hexadecimal';
+    return R(`${v} in ${nm} is ${spaced(v.toString(b).toUpperCase())}.`);
+  }
+  if ((m = /^(?:convert |what(?:s| is) )?(?:the )?(?:(binary|hex|hexadecimal|octal) )?([0-9a-f]+)(?: (binary|hex|hexadecimal|octal))? (?:in|to|into) decimal$/.exec(n)) && (m[1] || m[3])) {
+    const k = m[1] || m[3], b = /bin/.test(k) ? 2 : /oct/.test(k) ? 8 : 16, v = parseInt(m[2], b);
+    if (!isNaN(v) && v.toString(b) === m[2].replace(/^0+(?=.)/, '').toLowerCase()) return R(`${spaced(m[2].toUpperCase())} in ${k === 'hex' ? 'hexadecimal' : k} is ${v} in decimal.`);
+  }
+  /* ---- maths helpers ---- */
+  if ((m = /\b(?:factorial of (\d{1,3})|(\d{1,3}) factorial)\b/.exec(n))) { const k = +(m[1] || m[2]); if (k > 170) return R('That factorial is beyond what I can hold, sir.', 'huh'); let f = 1; for (let i = 2; i <= k; i++) f *= i; return R(`${k} factorial is ${numFmt(f)}.`); }
+  if ((m = /\bis (\d{1,12}) (?:a )?prime(?: number)?\b/.exec(n))) { const k = +m[1]; let p = k > 1; for (let i = 2; i * i <= k && p; i++) if (k % i === 0) { p = false; } return R(p ? `Yes, ${k} is a prime number.` : k < 2 ? `No, ${k} is not prime.` : `No, ${k} is not prime. It divides by ${(() => { for (let i = 2; i * i <= k; i++) if (k % i === 0) return i; })()}.`); }
+  if ((m = /\b(gcd|hcf|highest common factor|greatest common divisor|lcm|least common multiple)\b (?:of )?(\d+) (?:and|comma)? ?(\d+)/.exec(n))) { const a = +m[2], b = +m[3], g = gcd(a, b); return /gcd|hcf|highest|greatest/.test(m[1]) ? R(`The GCD of ${a} and ${b} is ${g}.`) : R(`The LCM of ${a} and ${b} is ${numFmt(a / g * b)}.`); }
+  if ((m = /\b(\d{1,3})(?:st|nd|rd|th)? fibonacci\b|\bfibonacci (?:number )?(\d{1,3})\b/.exec(n))) { const k = +(m[1] || m[2]); let a = 0, b = 1; for (let i = 1; i < k; i++) [a, b] = [b, a + b]; return R(`Fibonacci number ${k} is ${numFmt(k < 1 ? 0 : b)}.`); }
+  if ((m = /\bcube root of (\d+(?:\.\d+)?)/.exec(t))) return R(`The cube root of ${m[1]} is ${numFmt(Math.cbrt(+m[1]))}.`);
+  if ((m = /\b(?:log|logarithm)(?: base (\d+))? of (\d+(?:\.\d+)?)/.exec(t))) { const b = +(m[1] || 10); return R(`Log of ${m[2]} to base ${b} is ${numFmt(Math.log(+m[2]) / Math.log(b))}.`); }
+  if ((m = /\b(\d+(?:\.\d+)?) is what (?:percent|percentage) of (\d+(?:\.\d+)?)/.exec(t))) return R(`${m[1]} is ${numFmt(+m[1] / +m[2] * 100)} percent of ${m[2]}.`);
+  if ((m = /\b(\d+(?:\.\d+)?) (?:percent|%) (?:off|discount)(?: on| of)? (\d+(?:\.\d+)?)/.exec(t))) { const p = +m[1], v = +m[2]; return R(`${p} percent off ${numFmt(v)} saves ${numFmt(v * p / 100)}, so you pay ${numFmt(v * (1 - p / 100))}.`); }
+  if ((m = /\b(?:split|divide) (\d+(?:\.\d+)?) (?:between|among|amongst|by|with|across) (\d+)/.exec(t))) return R(`${numFmt(+m[1])} split ${m[2]} ways is ${numFmt(+m[1] / +m[2])} each.`);
+  if ((m = /\b(\d+(?:\.\d+)?) (?:percent|%) tip (?:on|for) (\d+(?:\.\d+)?)/.exec(t))) { const v = +m[2], tp = v * +m[1] / 100; return R(`The tip is ${numFmt(tp)}, making the total ${numFmt(v + tp)}.`); }
+  /* ---- gym calculators ---- */
+  if (/\bbmi\b/.test(n) && (m = /(\d{2,3}(?:\.\d+)?) ?(?:kg|kilos?|kilograms?)\b.*?(\d{2,3}) ?(?:cm|centimet\w+)|(\d{2,3}) ?(?:cm|centimet\w+).*?(\d{2,3}(?:\.\d+)?) ?(?:kg|kilos?|kilograms?)/.exec(t))) {
+    const kg = +(m[1] || m[4]), cm = +(m[2] || m[3]), b = kg / Math.pow(cm / 100, 2), c = b < 18.5 ? 'underweight' : b < 25 ? 'in the healthy range' : b < 30 ? 'overweight' : 'in the obese range';
+    return R(`Your BMI is ${numFmt(+b.toFixed(1))}, which is ${c}. It ignores muscle, so treat it as a rough guide, sir.`);
+  }
+  if (/\b(one rep max|1rm|max lift|estimated max)\b/.test(n) && (m = /(\d+(?:\.\d+)?)\s*(?:kg|kilos?)?\s*(?:for|x|times|by)\s*(\d{1,2})\s*(?:reps?|times)?/.exec(t))) {
+    const w = +m[1], r = +m[2], e = r === 1 ? w : w * (1 + r / 30);
+    return R(`${numFmt(w)} kilograms for ${r} reps gives an estimated one rep max of about ${Math.round(e)} kilograms.`);
+  }
+  if ((m = /\bplates? (?:for|to make|to load)\s*(\d+(?:\.\d+)?)/.exec(t))) {
+    const tot = +m[1]; if (tot < 20) return R('That is lighter than the 20 kilogram bar, sir.', 'huh');
+    let side = (tot - 20) / 2; const out = []; [25, 20, 15, 10, 5, 2.5, 1.25].forEach(p => { const k = Math.floor(side / p + 1e-9); if (k) { out.push(`${k} of ${p}`); side -= k * p; } });
+    return R(side > .01 ? `With a 20 kilogram bar I can only get close to ${numFmt(tot - side * 2)}. Per side: ${list(out)}.` : out.length ? `For ${numFmt(tot)} kilograms on a 20 kilogram bar, load per side: ${list(out)}.` : 'Just the bar, sir.');
+  }
+  if (/\bprotein\b/.test(n) && (m = /(\d{2,3}) ?(?:kg|kilos?|kilograms?)/.exec(t))) { const k = +m[1]; return R(`At ${k} kilograms, a lifter usually aims for ${Math.round(k * 1.6)} to ${Math.round(k * 2.2)} grams of protein a day, sir.`); }
+  /* ---- age from birth date ---- */
+  if ((m = new RegExp('\\b(?:born|birthday|birth date|dob)\\b.*?(\\d{1,2})(?:st|nd|rd|th)? (?:of )?' + MRE + ' (\\d{4})').exec(n))) {
+    const b = new Date(+m[3], MON3.indexOf(m[2].slice(0, 3)), +m[1]), now = today(); let y = now.getFullYear() - b.getFullYear(), mo = now.getMonth() - b.getMonth(); if (now.getDate() < b.getDate()) mo--; if (mo < 0) { y--; mo += 12; }
+    return R(`You are ${plural(y, 'year')} and ${plural(mo, 'month')} old, sir.`);
+  }
+  /* ---- moon ---- */
+  if (/\bmoon\b/.test(n) && /\b(phase|tonight|today|looking|full|new|lit|illuminat\w*)\b/.test(n)) {
+    const mo = moonNow();
+    if (/\b(next|when)\b.*\bfull\b/.test(n)) { const d = Math.ceil(((.5 - mo.f + 1) % 1) * SYN); return R(`The next full moon is in about ${plural(d, 'day')}, sir.`); }
+    if (/\b(next|when)\b.*\bnew\b/.test(n)) { const d = Math.ceil(((1 - mo.f) % 1) * SYN); return R(`The next new moon is in about ${plural(d, 'day')}, sir.`); }
+    return R(`Tonight's moon is ${moonName(mo.f)}, about ${mo.lit} percent lit, sir.`);
+  }
+  /* ---- sunrise & sunset ---- */
+  if (/\b(sunrise|sunset|sun rise|sun set|when does the sun)\b/.test(n)) return sunQ(n.replace(/sun (rise|set)/, 'sun$1'));
+  /* ---- device ---- */
+  if (/\b(battery)\b/.test(n) && /\b(level|left|percent|percentage|status|how much|charging|check)\b/.test(n)) {
+    if (!navigator.getBattery) return R('This browser does not expose the battery to me, sir.', 'huh');
+    return navigator.getBattery().then(b => R(`Battery is at ${Math.round(b.level * 100)} percent${b.charging ? ' and charging' : ''}, sir.`)).catch(() => R('I could not read the battery, sir.', 'huh'));
+  }
+  if (/^(am i|are we|is the internet|is my internet) (online|connected|working|up)/.test(n)) return R(navigator.onLine ? 'Yes, you are online, sir.' : 'No, the browser reports you are offline, sir.');
+  /* ---- stopwatch ---- */
+  if (/^(start|begin|run) (a |the )?stop ?watch\b/.test(n)) { SW.t = Date.now(); SW.laps = 0; SW.last = SW.t; return R('Stopwatch running, sir.', 'done'); }
+  if (SW.t && /^(lap|split)\b/.test(n)) { const now = Date.now(); SW.laps++; const l = now - SW.last; SW.last = now; return R(`Lap ${SW.laps}: ${durTxt(l)}. Total ${durTxt(now - SW.t)}.`); }
+  if (/\bstop ?watch\b/.test(n) && /\b(stop|end|check|time|how long|read)\b/.test(n)) { if (!SW.t) return R('No stopwatch is running, sir. Say start stopwatch.', 'huh'); const e = Date.now() - SW.t; if (/\b(stop|end)\b/.test(n)) SW.t = 0; return R(`${/\b(stop|end)\b/.test(n) ? 'Stopped at' : 'Running at'} ${durTxt(e)}, sir.`); }
+  /* ---- fun ---- */
+  if (/\btongue twister\b/.test(n)) return R(pick(['Peter Piper picked a peck of pickled peppers.', 'She sells sea shells by the sea shore.', 'How much wood would a woodchuck chuck if a woodchuck could chuck wood?', 'Red lorry, yellow lorry, red lorry, yellow lorry.', 'Fresh fried fish, fish fresh fried, fried fish fresh, fish fried fresh.']));
+  if (/\b(what else can you do|what can you do (?:besides|apart)|new (?:skills|features|abilities)|what(?:s| is) new)\b/.test(n)) return R('Beyond your habits, I can take notes, convert currencies and units, define words, switch numbers to binary or hex, solve factorials, primes and GCD, work out gym plates, one rep max and BMI, quiz you on OS, networks, architecture and algorithms, tell riddles, run a stopwatch, check the moon, sunrise, sunset and battery.');
+  return null;
+}
+
 function general(n, raw) {               // returns R, a Promise of R, or null (= not a general question: use the habit commands)
   if (n.split(' ').length > 40 || clockq(n)) return null;
   let r;
+  if (QZ.q && Date.now() - QZ.at < 180000 && (r = quizTurn(n))) return r;
   if ((r = remindQ(n))) return r;
   if ((r = chat(n))) return r;
   if ((r = calc(raw))) return r;
   if ((r = convert(raw))) return r;
+  if ((r = moreQ(n, raw))) return r;
   if ((r = dateQ(n))) return r;
   if ((r = randoms(n))) return r;
   if (/\b(weather|temperature|forecast|will it rain|is it raining|umbrella)\b/.test(n)) return weatherQ(n);
@@ -2386,7 +2765,7 @@ function neuralPrep() {                  // must run inside a tap so the phone l
   if (NEURAL.ctx) { try { if (NEURAL.ctx.state === 'suspended') NEURAL.ctx.resume(); } catch (e) { } return; }
   try {
     const AC = window.AudioContext || window.webkitAudioContext; NEURAL.ctx = new AC();
-    NEURAL.an = NEURAL.ctx.createAnalyser(); NEURAL.an.fftSize = 256; NEURAL.an.connect(NEURAL.ctx.destination); NEURAL.buf = new Uint8Array(256);
+    NEURAL.an = NEURAL.ctx.createAnalyser(); NEURAL.an.fftSize = 256; NEURAL.master = NEURAL.ctx.createGain(); NEURAL.master.gain.value = PREF.vol / 100; NEURAL.an.connect(NEURAL.master); NEURAL.master.connect(NEURAL.ctx.destination); NEURAL.buf = new Uint8Array(256);
     NEURAL.fx = jvVoiceChain(NEURAL.ctx, NEURAL.an);
   } catch (e) { NEURAL.ctx = null; }
 }
@@ -2424,8 +2803,12 @@ function ensureNeural() {
   setAi();
   return NEURAL.loading;
 }
+let NJ = new Map(), njTok = 0;
+function neuralJob(t) { let p = NJ.get(t); if (!p) { p = neuralGen(t); NJ.set(t, p); } return p; }
+function neuralWarm() { if (NEURAL.on && NEURAL.eng) TTS.q.slice(0, 2).forEach(x => neuralJob(x.t)); }       // start rendering the next two sentences the moment they are queued, not when the previous one ends
 function neuralGen(text) {               // one sentence at a time (the model cannot run two jobs at once)
-  NEURAL.chain = NEURAL.chain.then(() => NEURAL.eng.generate(text, { voice: NEURAL.voices[NEURAL.vi % NEURAL.voices.length], speed: Math.max(.5, Math.min(1.6, TTS.rate * VSLOTS[NEURAL.vi % VSLOTS.length].prof.rate)) })).catch(() => null);
+  const gt = njTok;
+  NEURAL.chain = NEURAL.chain.then(() => gt !== njTok ? null : NEURAL.eng.generate(text, { voice: NEURAL.voices[NEURAL.vi % NEURAL.voices.length], speed: Math.max(.5, Math.min(1.6, TTS.rate * VSLOTS[NEURAL.vi % VSLOTS.length].prof.rate)) })).catch(() => null);
   return NEURAL.chain;
 }
 function neuralLevel() {
@@ -2497,7 +2880,7 @@ function ttsNext() {
   const nxt = () => {
     if (TTS.cur !== mark || tok !== playTok) return;
     clearTimeout(TTS.t); clearTimeout(TTS.w); TTS.cur = null; actAt = Date.now();
-    if (TTS.q.length) setTimeout(() => { if (tok === playTok) ttsNext(); }, x.gap); else ttsNext();
+    if (TTS.q.length) setTimeout(() => { if (tok === playTok) ttsNext(); }, NEURAL.on && NEURAL.eng ? Math.min(x.gap, 110) : x.gap); else ttsNext();
   };
   if (NEURAL.on && NEURAL.eng) neuralSay(x, tok, mark, nxt); else browserSay(x, tok, mark, nxt);
 }
@@ -2507,7 +2890,7 @@ function browserSay(x, tok, mark, nxt, retry) {
   const u = new SpeechSynthesisUtterance(x.t), sl = retry ? null : pickVoice(), v = sl && sl.voice;
   if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-GB';
   const nat = v && /natural|neural|online/i.test(v.name), pf = x.pf || { pitch: .93 };
-  u.rate = Math.max(.5, Math.min(2, TTS.rate * x.rate)); u.pitch = Math.max(.2, Math.min(2, (nat ? 1 - (1 - pf.pitch) * .6 : pf.pitch) + x.pitch)); u.volume = x.vol;
+  u.rate = Math.max(.5, Math.min(2, TTS.rate * x.rate)); u.pitch = Math.max(.2, Math.min(2, ((nat ? 1 - (1 - pf.pitch) * .6 : pf.pitch) + x.pitch) * PREF.pitch / 100)); u.volume = Math.min(1, x.vol * PREF.vol / 100);
   mark.u = u;
   u.onstart = () => { began = true; TTS.fails = 0; clearTimeout(TTS.w); };
   u.onboundary = () => { began = true; lastBound = Date.now(); actAt = lastBound; kick(1); };       // every word pulses the orb and bars
@@ -2531,9 +2914,8 @@ function browserSay(x, tok, mark, nxt, retry) {
 }
 function neuralSay(x, tok, mark, nxt) {
   const fallback = () => { if (mark.fb || TTS.cur !== mark || tok !== playTok) return; mark.fb = true; browserSay(x, tok, mark, nxt); };
-  const job = NEURAL.pre && NEURAL.pre.t === x.t ? NEURAL.pre.p : neuralGen(x.t);
-  NEURAL.pre = null;
-  const nq = TTS.q[0]; if (nq) NEURAL.pre = { t: nq.t, p: neuralGen(nq.t) };             // render the next sentence while this one plays
+  const job = neuralJob(x.t); NJ.delete(x.t);
+  neuralWarm();                                                                                   // keep two sentences rendered ahead of what is playing
   clearTimeout(TTS.t); TTS.t = setTimeout(fallback, 9000);                                           // too slow on this device: browser voice for this sentence
   job.then(a => {
     if (mark.fb || TTS.cur !== mark || tok !== playTok) return;
@@ -2560,10 +2942,10 @@ function speakBegin() {
   stopVoice(); TTS.open = true; speaking = true; guardUntil = Infinity; actAt = Date.now(); holdRec(); setState(); return true;
 }
 function speakPush(t) {
-  if (!speaking) return;
+  if (!speaking) return; t = addr(t);
   const pars = String(t).split(/\n+/);
   pars.forEach((par, pi) => { const cs = chunks(speechify(par)); cs.forEach((c, i) => TTS.q.push(shape(c, pi < pars.length - 1 && i === cs.length - 1))); });
-  actAt = Date.now(); ttsNext();
+  actAt = Date.now(); neuralWarm(); ttsNext();
 }
 function speakEnd() { TTS.open = false; if (speaking && !TTS.cur && !TTS.q.length) ttsDone(); }
 function speakText(t) { if (speakBegin()) { speakPush(t); speakEnd(); } }
@@ -2571,8 +2953,8 @@ function kick(a) { env = Math.max(env, a || 1); if (!vizRaf && !document.hidden 
 const bg = { base: 0, n: 0, t: 0, was: '' };
 function vizTick(t) {                    // bars + orb follow real mic / speech level; also watches for talk-over (barge-in)
   vizRaf = 0; const st = root.dataset.state;
-  if (st === 'off' || st === 'wake' || document.hidden) { el.mic.style.removeProperty('--lvl'); el.lv.style.transform = ''; bars.forEach(b => b.style.transform = ''); bg.n = 0; bg.was = st; return; }
-  if (TOUCH && t - (bg.last || 0) < 30) { vizRaf = requestAnimationFrame(vizTick); return; } bg.last = t;     // ~30 fps on phones
+  if (st === 'off' || st === 'wake' || document.hidden) { el.mic.style.removeProperty('--lvl'); el.lv.style.transform = ''; bars.forEach(b => b.style.transform = ''); bg.n = 0; bg.was = st; if (glowEl && glowO) { glowO = ''; glowEl.style.opacity = ''; } return; }
+  if (t - (bg.last || 0) < (TOUCH ? 30 : 22)) { vizRaf = requestAnimationFrame(vizTick); return; } bg.last = t;     // ~30 fps on phones
   const l = mic ? micLevel() : 0;
   if (st === 'listen' && mic) env = Math.max(env, Math.min(1, l * 3.2));
   if (st === 'speak' && mic) {
@@ -2583,7 +2965,8 @@ function vizTick(t) {                    // bars + orb follow real mic / speech 
   bg.was = st;
   el.lv.style.transform = 'scaleX(' + Math.min(1, l * 3).toFixed(2) + ')';
   if (st === 'speak') { if (NEURAL.playing) env = Math.max(env, Math.min(1, neuralLevel() * 2.4)); else if (Date.now() - lastBound > 380) env = Math.max(env, .32 + .28 * Math.abs(Math.sin(t / 95))); }   // voices without word events still pulse
-  env *= .9; const base = st === 'think' ? .25 : st === 'speak' ? .3 : .18;
+  env *= .9; if (glowEl && PREF.react) { const o = (.05 + Math.min(env, 1) * .75).toFixed(2); if (o !== glowO) { glowO = o; glowEl.style.opacity = o; } }
+  const base = st === 'think' ? .25 : st === 'speak' ? .3 : .18;
   bars.forEach((b, i) => b.style.transform = 'scaleY(' + Math.min(1, base + env * (.55 + .45 * Math.sin(t / 110 + i * 1.4))).toFixed(2) + ')');
   el.mic.style.setProperty('--lvl', (.85 + Math.min(env, 1) * .6).toFixed(2));
   vizRaf = requestAnimationFrame(vizTick);
@@ -3424,7 +3807,7 @@ function nudge(msg) {
   if (TTS.full && canSpeak()) speakText(msg); else say('warn');
   return true;
 }
-window.__jarvis = { brain: { smartVoice, jbPlan, jbBrief, jbNight, jbNav }, nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { screenParse, screenCmd, SC, VSLOTS, pickVoice, setVoiceByWord, cycleVoice, ensureAI, excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
+window.__jarvis = { audioHold, prefs: () => PREF, setPref: prefSet, brain: { smartVoice, jbPlan, jbBrief, jbNight, jbNav }, nudge, history: openHistory, mode: modeNow, scan: { punishScan, patternScan }, run: t => run(norm(t), t, 'typed'), evaluate, say, exec, _t: { screenParse, screenCmd, SC, VSLOTS, pickVoice, setVoiceByWord, cycleVoice, ensureAI, excVoice, excWhenParse, normD, numWords, stripFillers, metaCmd, voiceList, speechify, chunks, shape, calc, convert, dateQ, parseDay, resolveRefs, splitCmds, fixAsr, fuzzyIdx, wakeHit, stripWake, norm, general, remindQ, chat, CTX, HEARD, heardAdd, heardResult, learnFix, applyLearned, bestAlt, fuzzyFix, cleanHeard, vocabScore } };
 /* =====================================================================
    v20 — ONE VOICE PER ANSWER  (added patch: nothing above this block was changed or removed)
    Why Jarvis used to switch voices and repeat: with the AI brain (FAST / SMART) loaded, the neural voice renders each

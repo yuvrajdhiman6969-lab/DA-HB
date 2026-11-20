@@ -111,7 +111,7 @@
     linear-gradient(180deg,rgba(56,189,248,.08),transparent 38%),
     repeating-linear-gradient(0deg,rgba(56,189,248,.045) 0 1px,transparent 1px 18px),
     repeating-linear-gradient(90deg,rgba(56,189,248,.045) 0 1px,transparent 1px 18px),
-    var(--jv-bg);
+    color-mix(in srgb,var(--jv-bg) calc(var(--jv-op,1) * 100%),transparent);
   border:1px solid var(--jv-line);
   box-shadow:0 14px 44px rgba(0,0,0,.65),0 0 26px color-mix(in srgb,var(--jv) 14%,transparent),inset 0 0 40px color-mix(in srgb,var(--jv) 7%,transparent);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
@@ -361,7 +361,7 @@ html.fx-mid #jv-panel::after{display:none}
 #jv-gear.on{background:rgba(56,189,248,.22);color:#fff;opacity:1;box-shadow:0 0 10px rgba(56,189,248,.35)}
 #jv-gear{font-size:16px}
 #jv-settings{margin:0 0 10px;padding:8px 9px 9px;border:1px solid var(--jv-line);background:rgba(4,16,30,.72);
-  max-height:46vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  max-height:58vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
 #jv-settings[hidden]{display:none}
 .jv-sethead{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px dashed rgba(56,189,248,.22);
@@ -430,3 +430,63 @@ html.fx-lite #jv-ztag,html.fx-mid #jv-ztag{transition:none}
 /* the model / voice buttons: the AI one says clearly that it is optional */
 #jv-ai:not(.on){opacity:.9}
 @media print{#jv-ztag{display:none!important}}
+
+/* =====================================================================
+   v15 — customise panel, accent themes, view-safe effects, performance
+   ===================================================================== */
+#jv-root[data-accent=ice]:not([data-mode=goggins]):not([data-state=speak]):not([data-state=think]):not([data-tone=bad]){--jv:#dff3ff;--jv-soft:#ffffff;--jv-line:rgba(223,243,255,.3)}
+#jv-root[data-accent=gold]:not([data-mode=goggins]):not([data-state=speak]):not([data-state=think]):not([data-tone=bad]){--jv:#fbbf24;--jv-soft:#ffe9a8;--jv-line:rgba(251,191,36,.32)}
+#jv-root[data-accent=green]:not([data-mode=goggins]):not([data-state=speak]):not([data-state=think]):not([data-tone=bad]){--jv:#34d399;--jv-soft:#a7f3d0;--jv-line:rgba(52,211,153,.3)}
+#jv-root[data-accent=violet]:not([data-mode=goggins]):not([data-state=speak]):not([data-state=think]):not([data-tone=bad]){--jv:#a78bfa;--jv-soft:#d9ccff;--jv-line:rgba(167,139,250,.3)}
+#jv-root[data-accent=red]:not([data-mode=goggins]):not([data-state=speak]):not([data-state=think]):not([data-tone=bad]){--jv:#f87171;--jv-soft:#fecaca;--jv-line:rgba(248,113,113,.32)}
+/* size, side, orb */
+#jv-panel{zoom:var(--jv-zoom,1);max-width:calc((100vw - 28px) / var(--jv-zoom,1));margin-bottom:var(--jv-dy,0px)}
+.jv-orb{width:var(--jv-orb,68px);height:var(--jv-orb,68px)}
+#jv-root[data-side=right] #jv-dock{left:auto;right:14px;flex-direction:row-reverse}
+#jv-root[data-side=right] #jv-panel{left:auto;right:14px}
+/* on/off switches */
+#jv-root[data-pf-edge="0"] #jv-edge,#jv-root[data-pf-react="0"] #jv-glow,#jv-root[data-pf-prog="0"] #jv-prog,#jv-root[data-pf-bars="0"] .jv-bars,
+#jv-root[data-pf-tele="0"] .jv-tele,#jv-root[data-pf-chips="0"] .jv-chips{display:none!important}
+/* settings: customise block */
+#jv-prefs{margin-bottom:8px}
+.pf-g{border:1px solid rgba(56,189,248,.16);margin-bottom:5px;background:rgba(56,189,248,.03)}
+.pf-g>summary{cursor:pointer;list-style:none;padding:8px 10px;font:600 10px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--jv-soft);user-select:none}
+.pf-g>summary::-webkit-details-marker{display:none}
+.pf-g>summary::after{content:"+";float:right;color:var(--jv-or);font-size:13px;line-height:.8}
+.pf-g[open]>summary::after{content:"\2013"}
+.pf-r{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 10px;min-height:32px}
+.pf-r label{flex:0 0 38%;font:500 11px/1.25 'IBM Plex Sans',sans-serif;color:#9fc4d8}
+.pf-seg{display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end}
+.pf-seg button{padding:5px 8px;cursor:pointer;font:600 10px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.06em;border:1px solid rgba(56,189,248,.28);background:transparent;color:#8fb6cc}
+.pf-seg button.on{background:color-mix(in srgb,var(--jv) 24%,transparent);color:#fff;border-color:var(--jv)}
+.pf-sw{display:flex;gap:8px}
+.pf-sw button{width:20px;height:20px;padding:0;border-radius:50%;border:2px solid transparent;background:var(--c);cursor:pointer;box-shadow:0 0 0 1px rgba(255,255,255,.2)}
+.pf-sw button.on{border-color:#fff;box-shadow:0 0 9px var(--c)}
+.pf-rg{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex:1}
+.pf-rg input{width:112px;accent-color:var(--jv);touch-action:pan-y}
+.pf-rg output{min-width:40px;text-align:right;font:600 10px/1 'Chakra Petch',monospace;color:var(--jv-soft)}
+.pf-tx{width:112px;padding:5px 7px;background:rgba(0,0,0,.35);border:1px solid rgba(56,189,248,.3);color:#e6f6ff;font:12px 'IBM Plex Sans',sans-serif;outline:0}
+.pf-tx:focus{border-color:var(--jv)}
+.pf-tg{position:relative;flex:none;width:38px;height:20px;padding:0;border-radius:10px;cursor:pointer;border:1px solid rgba(56,189,248,.4);background:rgba(0,0,0,.35)}
+.pf-tg i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#6b8da1;transition:transform .15s,background .15s}
+.pf-tg.on{border-color:var(--jv)}
+.pf-tg.on i{transform:translateX(18px);background:var(--jv)}
+.pf-foot{justify-content:center;padding-top:8px}
+#pf-reset{padding:7px 12px;cursor:pointer;font:600 10px/1 'Chakra Petch','IBM Plex Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;border:1px solid rgba(255,107,107,.45);background:rgba(255,107,107,.08);color:#ffb4b4}
+/* view-safe effects: fixed, click-through, compositor-only */
+#jv-glow{position:fixed;inset:0;z-index:948;pointer-events:none;opacity:0;box-shadow:inset 0 0 90px 4px var(--jv);will-change:opacity;transition:opacity .12s linear}
+#jv-prog{position:fixed;top:0;left:0;right:0;height:2px;z-index:949;pointer-events:none;transform-origin:0 50%;transform:scaleX(0);opacity:.9;will-change:transform;background:linear-gradient(90deg,transparent,var(--jv) 35%,var(--jv-soft));box-shadow:0 0 8px var(--jv)}
+#jv-rips{position:fixed;inset:0;z-index:947;pointer-events:none;overflow:hidden}
+#jv-rips i{position:absolute;left:-120px;top:-120px;width:90px;height:90px;border-radius:50%;border:1.5px solid var(--jv);opacity:0;transform:translate(-50%,-50%) scale(.2);will-change:transform,opacity}
+.jv-sw{position:absolute;left:0;right:0;top:0;height:2px;z-index:3;pointer-events:none;opacity:0;background:linear-gradient(90deg,transparent,var(--jv),transparent);box-shadow:0 0 12px var(--jv)}
+#jv-fps{position:fixed;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:970;padding:2px 7px;pointer-events:none;font:600 9px/1.5 'Chakra Petch',monospace;letter-spacing:.1em;color:var(--jv-soft);background:rgba(2,10,22,.72);border:1px solid var(--jv-line)}
+#jv-fps[hidden]{display:none}
+/* performance: Lite / auto-throttle / audio priority never freeze Jarvis itself */
+html.fx-lite #jv-glow,html.fx-lite #jv-rips,html.fx-lite .jv-sw,html.jv-lowfx #jv-glow,html.jv-lowfx #jv-rips,html.jv-lowfx .jv-sw{display:none!important}
+html.fx-paused #jv-root *,html.fx-paused #jv-root *::before,html.fx-paused #jv-root *::after{animation-play-state:running!important}
+html.jv-lowfx *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.jv-lowfx *::before,html.jv-lowfx *::after{animation-play-state:paused!important}
+html.jv-lowfx #fx-canvas{visibility:hidden}
+html.jv-lowfx #jv-root *,html.jv-lowfx #jv-root *::before,html.jv-lowfx #jv-root *::after{animation-play-state:running!important}
+@media (prefers-reduced-motion:reduce){#jv-glow,#jv-rips,.jv-sw{display:none!important}}
+html.aud-bal #jv-root *,html.aud-bal #jv-root *::before,html.aud-bal #jv-root *::after,html.aud-max #jv-root *,html.aud-max #jv-root *::before,html.aud-max #jv-root *::after{animation-play-state:running!important}
